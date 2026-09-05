@@ -783,50 +783,42 @@ export const createProtocolReader = ({
       identity,
     );
     const launchBlock = BigInt(manifest.launch.blockNumber);
-    const candidateWindow = await readWithRetry(async () => {
-      if (permanentIdentityCandidateReader === undefined) {
-        throw new Error("Indexed permanent identity history is unavailable");
-      }
-      const window = await permanentIdentityCandidateReader(
-        launchBlock,
-        latestBlock.number,
-      );
-      if (
-        window.fromBlock !== launchBlock ||
-        window.throughBlock < launchBlock ||
-        window.throughBlock > latestBlock.number ||
-        window.indexedThroughTime === undefined
-      ) {
-        throw new Error("Indexed permanent identity coverage is invalid");
-      }
-      return {
-        ...window,
-        indexedThroughTime: window.indexedThroughTime,
-      };
-    }).then(
-      (window) => ({
-        status: "complete" as const,
-        window,
-        permanentObservation: {
-          permanentObservedBlock: window.throughBlock,
-          permanentObservedAt: Number(window.indexedThroughTime),
-        },
-      }),
-      (cause: unknown) => ({
-        failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
-        status: "unavailable" as const,
-        permanentObservation: {},
-      }),
-    );
-    const block = latestBlock;
-    const permanentBlock =
-      candidateWindow.status === "complete"
-        ? {
-            number: candidateWindow.window.throughBlock,
-            timestamp: candidateWindow.window.indexedThroughTime,
-          }
-        : latestBlock;
-    const [base, claimGateAllows] = await Promise.all([
+    const [candidateWindow, base] = await Promise.all([
+      readWithRetry(async () => {
+        if (permanentIdentityCandidateReader === undefined) {
+          throw new Error("Indexed permanent identity history is unavailable");
+        }
+        const window = await permanentIdentityCandidateReader(
+          launchBlock,
+          latestBlock.number,
+        );
+        if (
+          window.fromBlock !== launchBlock ||
+          window.throughBlock < launchBlock ||
+          window.throughBlock > latestBlock.number ||
+          window.indexedThroughTime === undefined
+        ) {
+          throw new Error("Indexed permanent identity coverage is invalid");
+        }
+        return {
+          ...window,
+          indexedThroughTime: window.indexedThroughTime,
+        };
+      }).then(
+        (window) => ({
+          status: "complete" as const,
+          window,
+          permanentObservation: {
+            permanentObservedBlock: window.throughBlock,
+            permanentObservedAt: Number(window.indexedThroughTime),
+          },
+        }),
+        (cause: unknown) => ({
+          failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
+          status: "unavailable" as const,
+          permanentObservation: {},
+        }),
+      ),
       executeRead(
         copy.reader.walletSummary,
         () =>
@@ -849,12 +841,19 @@ export const createProtocolReader = ({
                 args: [owner],
               },
             ],
-            block.number,
+            latestBlock.number,
           ),
         identity,
       ),
-      readClaimAllowed(owner, permanentBlock.number),
     ]);
+    const block = latestBlock;
+    const permanentBlock =
+      candidateWindow.status === "complete"
+        ? {
+            number: candidateWindow.window.throughBlock,
+            timestamp: candidateWindow.window.indexedThroughTime,
+          }
+        : latestBlock;
     const liquidBalanceWei = successful<bigint>(
       base[0],
       identity.liquidToken.displayName,
@@ -1000,11 +999,38 @@ export const createProtocolReader = ({
           args: [owner, BigInt(index)],
         }) as const satisfies ContractReadRequest,
     );
-    const transientResults = await executeRead(
-      copy.reader.walletCollectibles,
-      () => transport.readMany(transientReads, block.number),
-      identity,
-    );
+    const [transientResults, permanentHoldings, claimGateAllows] =
+      await Promise.all([
+        executeRead(
+          copy.reader.walletCollectibles,
+          () => transport.readMany(transientReads, block.number),
+          identity,
+        ),
+        candidateWindow.status === "unavailable"
+          ? {
+              failure: candidateWindow.failure,
+              identityIds: [] as number[],
+              status: "unavailable" as const,
+            }
+          : readWithRetry(() =>
+              transport.permanentIdentityIds(
+                owner,
+                candidateWindow.window.identityIds,
+                permanentBlock.number,
+              ),
+            ).then(
+              (identityIds) => ({
+                identityIds: [...identityIds],
+                status: "complete" as const,
+              }),
+              (cause: unknown) => ({
+                failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
+                identityIds: [] as number[],
+                status: "unavailable" as const,
+              }),
+            ),
+        readClaimAllowed(owner, permanentBlock.number),
+      ]);
     const transientIdentityIds = transientResults.map((result, index) =>
       Number(
         successful<bigint>(
@@ -1014,30 +1040,6 @@ export const createProtocolReader = ({
         ),
       ),
     );
-    const permanentHoldings =
-      candidateWindow.status === "unavailable"
-        ? {
-            failure: candidateWindow.failure,
-            identityIds: [] as number[],
-            status: "unavailable" as const,
-          }
-        : await readWithRetry(() =>
-            transport.permanentIdentityIds(
-              owner,
-              candidateWindow.window.identityIds,
-              permanentBlock.number,
-            ),
-          ).then(
-            (identityIds) => ({
-              identityIds: [...identityIds],
-              status: "complete" as const,
-            }),
-            (cause: unknown) => ({
-              failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
-              identityIds: [] as number[],
-              status: "unavailable" as const,
-            }),
-          );
     const permanentIdentityIds = permanentHoldings.identityIds;
     const allIdentityIds = [...transientIdentityIds, ...permanentIdentityIds];
     const detailReads = allIdentityIds.flatMap(

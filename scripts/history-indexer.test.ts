@@ -1,5 +1,7 @@
 import { Buffer } from "node:buffer";
 import { copyFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -38,6 +40,7 @@ import {
   type HistoryChainSource,
 } from "./history-indexer/synchronize.ts";
 import { selectInitialSynchronization } from "./history-indexer.ts";
+import { createViemHistoryPublicClient } from "./history-indexer/viem-client.ts";
 
 const fixtureManifest = decodeProtocolDeploymentManifest(
   JSON.parse(readFileSync("deployments/31337.json", "utf8")) as unknown,
@@ -332,29 +335,90 @@ describe("canonical RPC event source", () => {
     ).toEqual({ id: config.canonicalPool.poolId });
   });
 
-  it("classifies provider throttling as a typed retryable failure", async () => {
-    const config = configuration();
-    const client: HistoryPublicClient = {
-      getChainId: async () => config.chainId,
-      getBlock: async ({ blockNumber } = {}) => header(blockNumber ?? 20n),
-      getLogs: async () =>
-        Promise.reject(Object.assign(new Error("rate limit"), { status: 429 })),
-    };
-    const result = await Effect.runPromise(
-      Effect.either(
-        createHistoryChainSource(client, config).getEvents(10n, 20n),
-      ),
-    );
-
-    expect(result._tag).toBe("Left");
-    if (result._tag === "Left") {
-      expect(result.left).toMatchObject({
-        _tag: "HistoryRpcError",
-        retryable: true,
-        rangeTooLarge: false,
+  it.each([
+    { status: 503, code: -32603, recoverable: true },
+    { status: 429, code: -32603, recoverable: true },
+    { status: 200, code: -32603, recoverable: true },
+    { status: 200, code: -32602, recoverable: false },
+  ])(
+    "synchronizes after transient HTTP $status / RPC $code failures, but rejects invalid requests",
+    async ({ status, code, recoverable }) => {
+      const config = configuration({ launchBlock: 20n });
+      const store = openHistoryStore(temporaryDatabasePath(), config);
+      let rejectNextRequest = true;
+      const server = createServer(async (request, response) => {
+        let body = "";
+        for await (const chunk of request) body += String(chunk);
+        const rpcRequest = JSON.parse(body) as {
+          id: number;
+          method: string;
+        };
+        const rejected = rejectNextRequest;
+        rejectNextRequest = false;
+        response.writeHead(rejected ? status : 200, {
+          "content-type": "application/json",
+        });
+        const block = header(20n);
+        response.end(
+          JSON.stringify({
+            id: rpcRequest.id,
+            jsonrpc: "2.0",
+            ...(rejected
+              ? {
+                  error:
+                    status === 200
+                      ? { code, message: "Provider request failed" }
+                      : "Provider request failed",
+                }
+              : {
+                  result:
+                    rpcRequest.method === "eth_chainId"
+                      ? `0x${config.chainId.toString(16)}`
+                      : rpcRequest.method === "eth_getLogs"
+                        ? []
+                        : {
+                            number: "0x14",
+                            hash: block.blockHash,
+                            parentHash: block.parentHash,
+                            timestamp: `0x${block.blockTimestamp.toString(16)}`,
+                          },
+                }),
+          }),
+        );
       });
-    }
-  });
+      await new Promise<void>((resolve) =>
+        server.listen(0, "127.0.0.1", resolve),
+      );
+      try {
+        const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+        const source = createHistoryChainSource(
+          createViemHistoryPublicClient(url, config),
+          config,
+        );
+        const result = await Effect.runPromise(
+          Effect.either(
+            synchronizeHistory({ configuration: config, source, store }),
+          ),
+        );
+        if (recoverable) {
+          expect(result).toMatchObject({
+            _tag: "Right",
+            right: { indexedThroughBlock: 20n, state: "complete" },
+          });
+          expect(store.readCheckpoint()?.blockNumber).toBe(20n);
+        } else {
+          expect(result).toMatchObject({
+            _tag: "Left",
+            left: { _tag: "HistoryRpcError", retryable: false },
+          });
+          expect(store.readCheckpoint()).toBeUndefined();
+        }
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+        store.close();
+      }
+    },
+  );
 
   it("classifies an ordinary fetch outage as retryable", async () => {
     const config = configuration();

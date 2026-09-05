@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ContractFunctionExecutionError,
   ContractFunctionRevertedError,
@@ -867,64 +867,97 @@ describe("deep protocol reader", () => {
     expect(wallet.collectibles.permanent[0]?.claimEligible).toBe(true);
   });
 
-  it("keeps balances current while retaining permanent holdings at their verified checkpoint", async () => {
-    const transport = new FakeTransport();
-    transport.pendingDiscoveryCount = 0n;
-    const readMany = transport.readMany.bind(transport);
-    transport.readMany = async (requests, blockNumber) =>
-      (await readMany(requests, blockNumber)).map((result, index) => {
-        const request = requests[index];
-        const current = blockNumber === 100_500n;
-        if (request?.functionName === "transientCount") {
-          return { status: "success", value: current ? 1n : 0n };
-        }
-        if (request?.functionName !== "balanceOf") return result;
-        return {
-          status: "success",
-          value:
-            request.contract === "weth"
-              ? current
-                ? 93_000_000_000_000_000n
-                : 100_000_000_000_000_000n
-              : current
-                ? 1_173_097_920_514_834_959n
-                : 0n,
-        };
-      }) as ContractReadResults<typeof requests>;
-    const history: Pick<ProtocolHistoryReader, "permanentIdentityCandidates"> =
-      {
-        permanentIdentityCandidates: async (fromBlock, toBlock) => ({
-          identityIds: [1493],
-          fromBlock,
-          throughBlock: toBlock - 2n,
-          coverage: "partial",
-          indexedThroughTime: 998n,
-        }),
+  it("reads independent wallet evidence within three network stages while preserving both block identities", async () => {
+    vi.useFakeTimers();
+    try {
+      const transport = new FakeTransport();
+      transport.pendingDiscoveryCount = 0n;
+      const networkLatency = () =>
+        new Promise((resolve) => setTimeout(resolve, 100));
+      const readMany = transport.readMany.bind(transport);
+      transport.readMany = async (requests, blockNumber) => {
+        await networkLatency();
+        return (await readMany(requests, blockNumber)).map((result, index) => {
+          const request = requests[index];
+          const current = blockNumber === 100_500n;
+          if (request?.functionName === "transientCount") {
+            return { status: "success", value: current ? 1n : 0n };
+          }
+          if (request?.functionName !== "balanceOf") return result;
+          return {
+            status: "success",
+            value:
+              request.contract === "weth"
+                ? current
+                  ? 93_000_000_000_000_000n
+                  : 100_000_000_000_000_000n
+                : current
+                  ? 1_173_097_920_514_834_959n
+                  : 0n,
+          };
+        }) as ContractReadResults<typeof requests>;
       };
-    const reader = createProtocolReader({
-      manifest,
-      identity: selectIdentityConfiguration("orbit-4444"),
-      history,
-      transport,
-    });
+      const permanentIdentityIds =
+        transport.permanentIdentityIds.bind(transport);
+      transport.permanentIdentityIds = async (...args) => {
+        await networkLatency();
+        return permanentIdentityIds(...args);
+      };
+      let historyRequests = 0;
+      const history: Pick<
+        ProtocolHistoryReader,
+        "permanentIdentityCandidates"
+      > = {
+        permanentIdentityCandidates: async (fromBlock, toBlock) => {
+          historyRequests += 1;
+          await networkLatency();
+          return {
+            identityIds: [1493],
+            fromBlock,
+            throughBlock: toBlock - 2n,
+            coverage: "partial",
+            indexedThroughTime: 998n,
+          };
+        },
+      };
+      const reader = createProtocolReader({
+        manifest,
+        identity: selectIdentityConfiguration("orbit-4444"),
+        history,
+        transport,
+      });
 
-    const wallet = await reader.readWallet(owner);
+      let completed = false;
+      const walletRead = reader.readWallet(owner).then((wallet) => {
+        completed = true;
+        return wallet;
+      });
+      await vi.advanceTimersByTimeAsync(300);
+      expect(completed).toBe(true);
+      const wallet = await walletRead;
 
-    expect(transport.permanentCandidates).toEqual([1493]);
-    expect(transport.permanentBlock).toBe(100_498n);
-    expect(wallet.observedBlock).toBe(100_500n);
-    expect(wallet.observedAt).toBe(1_000);
-    expect(wallet.liquidToken.rawWei).toBe(1_173_097_920_514_834_959n);
-    expect(wallet.settlementToken.rawWei).toBe(93_000_000_000_000_000n);
-    expect(new Set(transport.readBlocks)).toEqual(
-      new Set([100_498n, 100_500n]),
-    );
-    expect(wallet.collectibles).toMatchObject({
-      permanentHoldingsStatus: "complete",
-      permanentObservedBlock: 100_498n,
-      permanentObservedAt: 998,
-    });
-    expect(wallet.collectibles.permanent[0]?.identityId).toBe(1493);
+      expect(historyRequests).toBe(1);
+      expect(transport.readBlocks).toHaveLength(5);
+      expect(transport.permanentReadAttempts).toBe(1);
+      expect(transport.permanentCandidates).toEqual([1493]);
+      expect(transport.permanentBlock).toBe(100_498n);
+      expect(wallet.observedBlock).toBe(100_500n);
+      expect(wallet.observedAt).toBe(1_000);
+      expect(wallet.liquidToken.rawWei).toBe(1_173_097_920_514_834_959n);
+      expect(wallet.settlementToken.rawWei).toBe(93_000_000_000_000_000n);
+      expect(new Set(transport.readBlocks)).toEqual(
+        new Set([100_498n, 100_500n]),
+      );
+      expect(wallet.collectibles).toMatchObject({
+        permanentHoldingsStatus: "complete",
+        permanentObservedBlock: 100_498n,
+        permanentObservedAt: 998,
+      });
+      expect(wallet.collectibles.permanent[0]?.identityId).toBe(1493);
+    } finally {
+      await vi.runAllTimersAsync();
+      vi.useRealTimers();
+    }
   });
 
   it("preserves balances and enumerable holdings when permanent history is unavailable", async () => {

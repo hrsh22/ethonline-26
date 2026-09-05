@@ -97,14 +97,51 @@ authorized wallet revoked the admin session; a direct Diagnostics revisit again
 returned to sign-in. This also checked revocation through Disconnect, not just
 the separate Sign out button.
 
-## Remaining limits
+## Disconnect diagnosis and follow-up
 
-#25 remains open. Real WalletConnect disconnect intermittently left the wallet
-connected after rejected signing, then succeeded on retry. Pending/error feedback
-does not prove the SDK teardown cause fixed. At 375px the real cancellation screen
-had no horizontal overflow; the pending disconnect state was observed, but its
-short-lived layout was not measured. Automated browser coverage remains separate
-from these live checks.
+The follow-up resolved #25 without changing wallet teardown. In a fresh Chrome
+page, wallet `0x91551CDDd026d760232fF64E97A66d053b0e4F77` rejected a real funding
+proof. At 1200px, Disconnect occupied x=12..227, y=726..770. Its center, 119.5,748,
+was inside Next.js's **Collapse issues badge** button at x=108.23..132.23,
+y=732..756. DOM hit testing returned `NEXTJS-PORTAL`, not the wallet button.
+Clicking Disconnect collapsed that badge, produced no app-handler trace, and
+left the wallet connected. An unobstructed click reached the handler and the
+real peer received session deletion. The apparent retry was the first click
+that actually reached the app, not evidence of a relay or SDK teardown failure.
+
+The fix uses Next.js's documented `devIndicators.position` option to move the
+development badge to the bottom-right. With the expanded badge still visible,
+the same rejected-proof journey now hit Disconnect, showed pending teardown,
+then showed Connect wallet on the first click. The peer confirmed session
+deletion. No connector state, browser storage, or SDK code was patched, and all
+temporary diagnostic logs were removed. Production does not render this badge.
+
+At 375px, a fresh peer `0x6649082426dB257B39598FACaD6728284773B3D8` repeated the
+rejection. The 44x44 Disconnect control was unobstructed, document width equalled
+viewport width at 375px, and its first click returned to Connect wallet. This
+measures the cancellation layout and action, not the short-lived pending layout.
+
+The stalled development server's cause was also captured. Its expired terminal
+session left stderr closed; the Node debugger observed uncaught `write EPIPE`
+errors and sampling showed repeated exception logging at 101% CPU. Even static
+HTTP requests timed out. Restarting the existing launcher with owner-only,
+file-backed logs restored warm `/faucet` responses in 23.4ms. The history and API
+workers use the same durable output handling during extended verification.
+This explains the captured web stall, not the earlier history process exit,
+whose final log remains unavailable.
+
+#30 independently reproduced a temporary JSON-RPC `-32603` error terminating
+history synchronization. Recognizing viem's existing `InternalRpcError` now
+uses the existing finite Effect retries; real HTTP/viem checks cover recovery
+to a committed checkpoint and continued rejection of invalid requests.
+
+#31 removes two serial waits between independent wallet reads. With controlled
+100ms external latency, the median fell from 511ms to 307ms, with unchanged RPC
+counts and separate current-balance/indexed-ownership block identities. This is
+a controlled comparison, not a promised live-network latency. No dependencies
+or caching layer were added.
+
+## Remaining limits
 
 No live Stock Reward claim, creator withdrawal, protocol pause, or automatic
 treasury replenishment was submitted. The zero-reward claim path was disabled,
@@ -115,8 +152,11 @@ not changed. Live web/API/history/funding services were restored afterward.
 
 ## Final checks
 
+The final uninterrupted root `pnpm test` run passed after the follow-up fixes,
+including the production browser matrix and local deployment integration.
+
 - `pnpm check:ci`: formatting, lint, TypeScript, deployment schema and manifest checks passed.
-- `pnpm test:scripts:ci`: 448 tests passed.
+- `pnpm test:scripts:ci`: 451 tests passed after the history-recovery follow-up.
 - `pnpm -r --if-present test`: config 137, protocol 253, API 139, web 783,
   contracts 184 unit checks, four stateful invariants, and four gas checks passed.
 - `pnpm --dir apps/web test:release`: optimized build and 101 browser/HTTP cases passed.
@@ -129,7 +169,8 @@ gas snapshots and a component test was still being edited; it failed formatting.
 The final complete `check:ci` run passed after those writes settled.
 
 Independent Standards and Spec reviews passed after the native-ETH gap they found
-was fixed. Both retain #25 as an unresolved diagnostic issue. No new dependencies
-were added. The full PR's non-test TypeScript under `apps/*/src` and
-`packages/*/src` is 1,052 lines smaller than main; total repository lines increased
+was fixed. Both follow-up reviews also passed for #25, #30, and #31; the live
+disconnect evidence above supersedes the earlier unresolved diagnosis. No new
+dependencies were added. The full PR's non-test TypeScript under `apps/*/src` and
+`packages/*/src` is 1,050 lines smaller than main; total repository lines increased
 because of behavioral tests and verification records.

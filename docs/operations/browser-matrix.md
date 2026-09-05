@@ -35,6 +35,36 @@ pnpm --dir apps/web exec playwright install chromium
 Playwright pins its own Chromium build. CI must run the same command before the
 matrix; the browser is not vendored into the repository.
 
+## Long-lived local verification
+
+`pnpm dev` is a foreground command. When an agent's terminal session expires,
+its output pipes may close while Next.js stays alive. On 2026-09-05 this left
+the server at 101% CPU with every HTTP request timing out: the Node debugger
+captured `write EPIPE`, and Next.js repeatedly tried to log that error to the
+same closed stderr pipe. This was a process-launch failure, not slow rendering.
+
+For local verification that must outlive a terminal session, use a process
+supervisor or give the existing launcher file-backed output and no terminal
+input. From the repository root:
+
+```bash
+pnpm build:packages
+mkdir -p .data
+umask 077
+nohup node scripts/staging-web.ts dev </dev/null >>.data/web-dev.log 2>&1 &
+echo "Web launcher PID: $!"
+curl --max-time 30 --fail http://127.0.0.1:3000/faucet --output /dev/null
+```
+
+Record the launcher PID. Verify its identity with `ps` before stopping it with
+`kill -TERM <launcher-pid>`; do not kill every Node process. `.data` is ignored
+by Git, and newly created logs are owner-only. Keep logs local and do not print
+environment files. Apply the same output handling to individually launched
+history/API workers, but never start a second history writer or funding signer.
+Use a real supervisor when automatic restart is required; `nohup` does not
+restart crashed services. A listening port alone is not readiness: require a
+successful page response and the API's `/readyz` response before browser checks.
+
 ## What fails a run
 
 - a console error, excluding the browser's generic `Failed to load resource`
