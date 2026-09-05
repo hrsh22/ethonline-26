@@ -121,6 +121,29 @@ Review the diff before committing. Baselines are captured at 1440 px for the
 marked routes only; adding more is a deliberate choice, since every baseline is
 a file a reviewer must inspect.
 
+## Chrome connection recovery
+
+The user authorizes agents to launch Chrome, open its extension-enabled profile,
+and open or claim project test tabs without asking again. This permission covers
+browser testing for this repository, not new access grants, security changes,
+extension installation, credential handling, or transaction approvals.
+
+1. Load the current Chrome skill and reuse a working browser connection. An empty
+   tab list is valid; only a disconnected browser needs reconnection.
+2. If connection fails, follow the skill's bundled extension and native-host
+   diagnostics. A running Chrome process does not prove a usable window exists.
+3. When those checks pass, use `node scripts/open-chrome-window.js --browser chrome`
+   from the current Chrome plugin root. It selects the extension-enabled profile.
+   Wait two seconds, reconnect once, and verify a real page through the plugin.
+4. Use the Computer Use skill for native UI fallback. If it reports
+   `cgWindowNotFound`, retry after opening that profile window. Leave user-owned
+   Chrome windows open after testing. Request user action only if the remaining
+   recovery requires a new grant, reinstall, or another restricted action.
+
+Verified on 2026-09-05: the extension and native-host checks passed while no
+browser was connected and Computer Use could not find a Chrome window. Opening
+the selected Profile 1 restored both plugins without installation or new grants.
+
 ## Manual Chrome checklist
 
 Scripted success is not accepted as the only proof. Before a release, one
