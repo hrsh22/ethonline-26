@@ -60,9 +60,7 @@ export type PublicStatusSnapshotInput = {
 export type ProtocolFunds = {
   readonly creatorWeth: bigint | undefined;
   readonly liquidityLockedWeth: bigint | undefined;
-  readonly liquidityQueuedWeth: bigint | undefined;
   readonly liquidityWaitingWeth: bigint | undefined;
-  readonly rewardPotWeth: bigint | undefined;
   readonly rewardWethWaiting: bigint | undefined;
 };
 
@@ -89,9 +87,7 @@ export const deriveProtocolFunds = (
   return {
     creatorWeth: health.market.creatorPotWeth,
     liquidityLockedWeth,
-    liquidityQueuedWeth: health.operations.protocolOwnedLiquidity.queuedWeth,
     liquidityWaitingWeth,
-    rewardPotWeth: health.market.rewardPotWeth,
     rewardWethWaiting,
   };
 };
@@ -167,7 +163,11 @@ export const derivePublicStatusModel = (health: PublicStatusSnapshotInput) => {
       pending: health.collection.pendingDiscoveryCount,
       available: health.collection.availableIdentityCount,
     },
-    funds: deriveProtocolFunds(health),
+    funds: {
+      ...deriveProtocolFunds(health),
+      rewardPotWeth: health.market.rewardPotWeth,
+      liquidityQueuedWeth: health.operations.protocolOwnedLiquidity.queuedWeth,
+    },
     rewardActivity: {
       epochCount: health.operations.rewardEpochCount,
       historyStatus: health.operations.rewardHistoryStatus,
