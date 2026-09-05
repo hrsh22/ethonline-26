@@ -121,6 +121,68 @@ const jsonResponse = (body: unknown, status = 200) =>
   });
 
 describe("indexed history readers", () => {
+  it("normalizes an unobserved checkpoint without inventing coverage", async () => {
+    const readers = createIndexedHistoryReaders({
+      identity,
+      manifest,
+      fetcher: async () =>
+        jsonResponse({
+          manifest: manifestEnvelope,
+          snapshot: {
+            generation: "starting",
+            canonicalRevision: 0,
+            blockNumber: null,
+            blockHash: null,
+          },
+          status: { state: "partial", coverage: { fromBlock: "10" }, head: {} },
+        }),
+    });
+    await expect(readers.status()).resolves.toMatchObject({
+      snapshot: {
+        generation: "starting",
+        canonicalRevision: 0,
+        blockNumber: undefined,
+        blockHash: undefined,
+      },
+      status: {
+        state: "partial",
+        coverage: {
+          fromBlock: 10n,
+          indexedThroughBlock: undefined,
+          indexedThroughTime: undefined,
+        },
+        head: { observedBlock: undefined, lagBlocks: undefined },
+      },
+    });
+  });
+
+  it.each([
+    { snapshot: snapshotEnvelope({ blockNumber: "01" }) },
+    { snapshot: snapshotEnvelope({ blockNumber: "0x64" }) },
+    { snapshot: { ...snapshotEnvelope(), blockHash: null } },
+    {
+      snapshot: snapshotEnvelope({
+        canonicalRevision: Number.MAX_SAFE_INTEGER + 1,
+      }),
+    },
+    { manifest: { ...manifestEnvelope, fingerprint: "0x12" } },
+    {
+      status: {
+        state: "partial",
+        coverage: { fromBlock: "10", indexedThroughBlock: null },
+        head: {},
+      },
+    },
+  ])("rejects malformed history envelope evidence %#", async (override) => {
+    const readers = createIndexedHistoryReaders({
+      identity,
+      manifest,
+      fetcher: async () =>
+        jsonResponse({ ...responseBody({ items: [] }), ...override }),
+    });
+    await expect(readers.status()).rejects.toThrow();
+  });
+
   it("reads the current index position without a chain-head dependency", async () => {
     const requests: string[] = [];
     const fetcher: typeof fetch = async (input) => {

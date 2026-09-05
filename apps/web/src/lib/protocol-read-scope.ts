@@ -8,7 +8,7 @@ export const shouldLoadMarketHistory = (pathname: string): boolean =>
   pathname === "/market";
 
 export const shouldLoadPublicStatus = (pathname: string): boolean =>
-  pathname === "/status" || pathname === "/market";
+  ["/", "/learn", "/admin/sign-in", "/status", "/market"].includes(pathname);
 
 export const getProtocolHealthReadScope = (
   pathname: string,

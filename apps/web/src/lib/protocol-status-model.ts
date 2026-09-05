@@ -1,4 +1,6 @@
 import type { ProtocolHealthCheck } from "@orbit/protocol/health";
+import type { PublicStatusModel } from "@orbit/protocol/public-status-codec";
+export type { PublicStatusModel } from "@orbit/protocol/public-status-codec";
 import type {
   createProtocolReader,
   RewardHistoryEvent,
@@ -30,7 +32,10 @@ export type PublicStatusSnapshotInput = {
   readonly market: Pick<
     ProtocolHealthSnapshot["market"],
     "creatorPotWeth" | "liquidityPotWeth" | "rewardPotWeth"
-  >;
+  > & {
+    readonly price?:
+      { readonly wethPerLiquidTokenWei?: bigint | undefined } | undefined;
+  };
   readonly operations: Pick<
     ProtocolOperations,
     "rewardEpochCount" | "rewardHistory" | "rewardHistoryStatus"
@@ -55,7 +60,9 @@ export type PublicStatusSnapshotInput = {
 export type ProtocolFunds = {
   readonly creatorWeth: bigint | undefined;
   readonly liquidityLockedWeth: bigint | undefined;
+  readonly liquidityQueuedWeth: bigint | undefined;
   readonly liquidityWaitingWeth: bigint | undefined;
+  readonly rewardPotWeth: bigint | undefined;
   readonly rewardWethWaiting: bigint | undefined;
 };
 
@@ -82,7 +89,9 @@ export const deriveProtocolFunds = (
   return {
     creatorWeth: health.market.creatorPotWeth,
     liquidityLockedWeth,
+    liquidityQueuedWeth: health.operations.protocolOwnedLiquidity.queuedWeth,
     liquidityWaitingWeth,
+    rewardPotWeth: health.market.rewardPotWeth,
     rewardWethWaiting,
   };
 };
@@ -151,6 +160,7 @@ export const derivePublicStatusModel = (health: PublicStatusSnapshotInput) => {
     network: health.deployment.network,
     observedAt: health.deployment.observedAt,
     observedBlock: health.deployment.observedBlock,
+    priceWethPerLiquidTokenWei: health.market.price?.wethPerLiquidTokenWei,
     collection: {
       permanent: health.collection.permanentCount,
       transient: health.collection.transientCount,
@@ -169,10 +179,8 @@ export const derivePublicStatusModel = (health: PublicStatusSnapshotInput) => {
         amount: track.rawLiability,
       })),
     },
-  } as const;
+  } as const satisfies PublicStatusModel;
 };
-
-export type PublicStatusModel = ReturnType<typeof derivePublicStatusModel>;
 
 const unavailableKeeperAttemptEvidence =
   (): ProtocolOperations["keeperAttemptEvidence"] => ({

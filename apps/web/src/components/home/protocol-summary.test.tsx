@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 
 const protocolState = vi.hoisted(() => ({ protocol: undefined as unknown }));
@@ -7,24 +8,26 @@ vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => protocolState.protocol,
 }));
 
-import { RewardTracksPanel } from "./home-boards";
+import { FeeRoutingPanel, RewardTracksPanel } from "./home-boards";
 import { ProtocolSummary } from "./protocol-summary";
 
 describe("protocol summary", () => {
   it("keeps block-level proof on Status instead of the home summary", () => {
     protocolState.protocol = {
       deploymentAvailable: true,
-      health: {
-        health: { status: "healthy", observedBlock: 123n },
-        deployment: { launched: true },
+      publicStatus: {
+        health: "healthy",
+        freshness: "fresh",
+        observedBlock: 123n,
         collection: {
-          availableIdentityCount: 4_400,
-          permanentCount: 4,
-          transientCount: 8,
+          available: 4_400,
+          permanent: 4,
+          transient: 8,
         },
+        funds: {},
       },
-      healthError: null,
-      healthPending: false,
+      publicStatusError: null,
+      publicStatusPending: false,
     };
 
     const html = renderToStaticMarkup(<ProtocolSummary />);
@@ -38,9 +41,9 @@ describe("protocol summary", () => {
   it("does not call an unobserved launch state not launched while health loads", () => {
     protocolState.protocol = {
       deploymentAvailable: true,
-      health: undefined,
-      healthError: null,
-      healthPending: true,
+      publicStatus: undefined,
+      publicStatusError: null,
+      publicStatusPending: true,
     };
 
     const html = renderToStaticMarkup(<ProtocolSummary />);
@@ -61,9 +64,9 @@ describe("protocol summary", () => {
   it("never exposes raw health-read failures on the public home page", () => {
     protocolState.protocol = {
       deploymentAvailable: true,
-      health: undefined,
-      healthError: new Error("private RPC URL failed"),
-      healthPending: false,
+      publicStatus: undefined,
+      publicStatusError: new Error("private RPC URL failed"),
+      publicStatusPending: false,
     };
 
     const html = renderToStaticMarkup(<ProtocolSummary />);
@@ -80,10 +83,10 @@ describe("protocol summary", () => {
   it("does not claim a refresh is active when deployment is unavailable", () => {
     protocolState.protocol = {
       deploymentAvailable: false,
-      health: undefined,
-      healthError: null,
-      healthPending: false,
-      healthRefreshing: false,
+      publicStatus: undefined,
+      publicStatusError: null,
+      publicStatusPending: false,
+      publicStatusRefreshing: false,
     };
 
     const html = renderToStaticMarkup(<ProtocolSummary />);
@@ -91,47 +94,76 @@ describe("protocol summary", () => {
     expect(html).toContain("Base Sepolia deployment pending");
     expect(html).not.toContain("Refreshing…");
   });
+
+  it("keeps prior census values visibly stale when the public refresh fails", () => {
+    protocolState.protocol = {
+      deploymentAvailable: true,
+      publicStatus: {
+        health: "healthy",
+        collection: {
+          available: 4_400,
+          permanent: 4,
+          transient: 8,
+          pending: 32,
+        },
+        funds: { rewardPotWeth: 2n * 10n ** 18n },
+      },
+      publicStatusError: new Error("private RPC detail"),
+      publicStatusPending: false,
+      publicStatusRefreshing: false,
+    };
+    const html = renderToStaticMarkup(<ProtocolSummary />);
+    expect(html).toContain("Showing last-known snapshot");
+    expect(html).toContain("4,400");
+    expect(html).not.toContain("private RPC detail");
+  });
 });
 
 describe("reward tracks board", () => {
   it("pairs each track label with that track's own liability", () => {
     protocolState.protocol = {
       deploymentAvailable: true,
-      health: {
-        rewards: {
-          tracks: [1, 2, 3, 4].map((track) => ({
-            track,
-            rawLiability: BigInt(track) * 10n ** 18n,
-          })),
+      publicStatus: {
+        rewardActivity: {
+          collectorLiability: [
+            { track: "NVDAc", amount: 4n * 10n ** 18n },
+            { track: "AAPLc", amount: 1n * 10n ** 18n },
+            { track: "METAc", amount: 3n * 10n ** 18n },
+            { track: "GOOGLc", amount: 2n * 10n ** 18n },
+          ],
         },
       },
-      healthError: null,
-      healthPending: false,
+      publicStatusError: null,
+      publicStatusPending: false,
     };
 
-    const html = renderToStaticMarkup(<RewardTracksPanel />);
+    const dom = new JSDOM(renderToStaticMarkup(<RewardTracksPanel />));
+    const terms = [...dom.window.document.querySelectorAll("dt")];
 
-    // `rewards.tracks` is a dense array in track order. Indexing it by the
-    // track id read one track high, so AAPLc showed GOOGLc's liability and the
-    // fourth track was permanently "Unavailable" on a healthy read.
+    // Liability belongs to the named track, independent of response order.
     for (const [label, amount] of [
       ["AAPLc", "1"],
       ["GOOGLc", "2"],
       ["METAc", "3"],
       ["NVDAc", "4"],
     ]) {
-      const row = html.slice(html.indexOf(`>${label}<`));
-      expect(row.slice(0, 400)).toContain(amount);
+      const term = terms.find((node) => node.textContent === label);
+      expect(
+        term?.nextElementSibling?.textContent?.replace(/\s/gu, ""),
+      ).toContain(`${amount}${label}`);
     }
-    expect(html).not.toContain("Not observed yet");
+    expect(dom.window.document.body.textContent).not.toContain(
+      "Not observed yet",
+    );
+    dom.window.close();
   });
 
   it("marks a genuinely unread track as unavailable rather than zero", () => {
     protocolState.protocol = {
       deploymentAvailable: true,
-      health: { rewards: { tracks: [] } },
-      healthError: null,
-      healthPending: false,
+      publicStatus: { rewardActivity: { collectorLiability: [] } },
+      publicStatusError: null,
+      publicStatusPending: false,
     };
 
     const html = renderToStaticMarkup(<RewardTracksPanel />);
@@ -139,4 +171,25 @@ describe("reward tracks board", () => {
     expect(html).toContain("Not observed yet");
     expect(html).not.toContain(">0<");
   });
+});
+
+it("keeps home fee pots distinct from aggregated waiting funds", () => {
+  protocolState.protocol = {
+    publicStatus: {
+      funds: {
+        rewardPotWeth: 2n * 10n ** 18n,
+        rewardWethWaiting: 22n * 10n ** 18n,
+        liquidityQueuedWeth: 5n * 10n ** 18n,
+        liquidityWaitingWeth: 55n * 10n ** 18n,
+        creatorWeth: 3n * 10n ** 18n,
+        liquidityLockedWeth: 6n * 10n ** 18n,
+      },
+    },
+  };
+  const dom = new JSDOM(renderToStaticMarkup(<FeeRoutingPanel />));
+  const values = [...dom.window.document.querySelectorAll("dd")].map(
+    (node) => node.textContent,
+  );
+  expect(values).toEqual(["2WETH", "5WETH", "3WETH", "6WETH"]);
+  dom.window.close();
 });

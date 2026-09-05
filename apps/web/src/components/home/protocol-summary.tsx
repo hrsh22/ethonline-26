@@ -23,14 +23,14 @@ import { useProtocolClient } from "@/providers/protocol-client-provider";
  * six times, and block-level proof stays on the status route.
  */
 type ProtocolClient = ReturnType<typeof useProtocolClient>;
-type Health = NonNullable<ProtocolClient["health"]>;
+type PublicStatus = NonNullable<ProtocolClient["publicStatus"]>;
 
 const readState = ({
   deploymentAvailable,
-  health,
-  healthError,
-  healthPending,
-  healthRefreshing,
+  publicStatus,
+  publicStatusError,
+  publicStatusPending,
+  publicStatusRefreshing,
 }: ProtocolClient) => {
   if (!deploymentAvailable) {
     return {
@@ -40,24 +40,24 @@ const readState = ({
       tone: "blocked",
     } as const;
   }
-  if (healthError !== null && healthError !== undefined) {
+  if (publicStatusError !== null && publicStatusError !== undefined) {
     return {
       description:
-        health === undefined
+        publicStatus === undefined
           ? "The public protocol snapshot could not be read. No private connection detail is shown."
           : "The latest refresh failed. The figures below remain from the last successful public snapshot.",
       title:
-        health === undefined
+        publicStatus === undefined
           ? applicationCopy.common.readFailed
           : "Showing last-known snapshot",
-      tone: health === undefined ? "error" : "stale",
+      tone: publicStatus === undefined ? "error" : "stale",
     } as const;
   }
-  if (healthPending || healthRefreshing) {
+  if (publicStatusPending || publicStatusRefreshing) {
     return {
       description: "Reading the latest public Base Sepolia protocol snapshot.",
       title:
-        health === undefined
+        publicStatus === undefined
           ? "Loading protocol health"
           : "Refreshing protocol health",
       tone: "loading",
@@ -86,9 +86,9 @@ const wethValue = (
     <Amount unit="WETH" value={value} />
   );
 
-const healthBadge = (health: Health | undefined) => {
-  if (health === undefined) return undefined;
-  const status = health.health.status;
+const healthBadge = (model: PublicStatus | undefined) => {
+  if (model === undefined) return undefined;
+  const status = model.health;
   const tone =
     status === "healthy"
       ? "success"
@@ -106,7 +106,7 @@ const unreadableLiveCounts = (
   protocol: ProtocolClient,
   reason: string,
 ): React.ReactElement =>
-  protocol.healthPending || protocol.healthRefreshing ? (
+  protocol.publicStatusPending || protocol.publicStatusRefreshing ? (
     <span>Refreshing…</span>
   ) : (
     <Unavailable reason={reason} />
@@ -147,31 +147,31 @@ function DeploymentBoard({
 }
 
 function CensusBoard({
-  health,
+  model,
   unreadable,
 }: {
-  readonly health: Health;
+  readonly model: PublicStatus;
   readonly unreadable: string;
 }) {
-  const price = health.market?.price?.wethPerLiquidTokenWei;
+  const price = model.priceWethPerLiquidTokenWei;
   return (
     <MetricGroup columns={6} label={applicationCopy.home.census}>
       <Metric
         label={applicationCopy.home.launchedCount}
         tone="live"
-        value={countValue(health.collection.permanentCount, unreadable)}
+        value={countValue(model.collection.permanent, unreadable)}
       />
       <Metric
         label={applicationCopy.home.groundedCount}
-        value={countValue(health.collection.transientCount, unreadable)}
+        value={countValue(model.collection.transient, unreadable)}
       />
       <Metric
         label={applicationCopy.home.pendingCount}
-        value={countValue(health.collection.pendingDiscoveryCount, unreadable)}
+        value={countValue(model.collection.pending, unreadable)}
       />
       <Metric
         label={applicationCopy.home.availableCount}
-        value={countValue(health.collection.availableIdentityCount, unreadable)}
+        value={countValue(model.collection.available, unreadable)}
       />
       <Metric
         label={applicationCopy.home.price}
@@ -185,7 +185,7 @@ function CensusBoard({
       />
       <Metric
         label={applicationCopy.home.rewardWaiting}
-        value={wethValue(health.market?.rewardPotWeth, unreadable)}
+        value={wethValue(model.funds.rewardPotWeth, unreadable)}
       />
     </MetricGroup>
   );
@@ -194,7 +194,7 @@ function CensusBoard({
 export function ProtocolSummary() {
   const protocol = useProtocolClient();
   const feedback = readState(protocol);
-  const health = protocol.health;
+  const model = protocol.publicStatus;
   const unreadable = feedback?.title ?? applicationCopy.common.notObserved;
 
   return (
@@ -203,7 +203,7 @@ export function ProtocolSummary() {
       headingId="protocol-health-heading"
       meta={
         <>
-          {healthBadge(health)}
+          {healthBadge(model)}
           <Link
             className="flex min-h-11 items-center text-signal underline decoration-1 underline-offset-4 hover:text-ink"
             href="/status"
@@ -234,10 +234,10 @@ export function ProtocolSummary() {
           />
         </div>
       )}
-      {health === undefined ? (
+      {model === undefined ? (
         <DeploymentBoard protocol={protocol} unreadable={unreadable} />
       ) : (
-        <CensusBoard health={health} unreadable={unreadable} />
+        <CensusBoard model={model} unreadable={unreadable} />
       )}
     </Section>
   );

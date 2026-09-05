@@ -59,8 +59,6 @@ runMain(
         >[0],
         manifest,
         selectedIdentityConfiguration,
-        undefined,
-        { scanFailedTransactions: false },
       ),
     });
     const snapshot = yield* rpc("Could not read protocol health", () =>

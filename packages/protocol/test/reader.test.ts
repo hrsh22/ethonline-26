@@ -699,6 +699,147 @@ class BytecodeConcurrencyHealthTransport extends HealthTransport {
 }
 
 describe("deep protocol reader", () => {
+  it("reads public counts, funds and prices without administrative diagnostics", async () => {
+    const transport = new HealthTransport();
+    const requests: ContractReadRequest[] = [];
+    let bytecodeReads = 0;
+    const readMany = transport.readMany.bind(transport);
+    transport.readMany = (next) => {
+      requests.push(...next);
+      return readMany(next);
+    };
+    transport.getBytecode = async () => {
+      bytecodeReads += 1;
+      throw new Error("Public status must not inspect bytecode");
+    };
+    transport.canonicalMarketState = async () => ({
+      sqrtPriceX96: 2n ** 96n,
+      tick: 0,
+      protocolFee: 0,
+      lpFee: 0,
+      activeLiquidity: 1n,
+    });
+    const reader = createProtocolReader({
+      manifest,
+      identity: selectIdentityConfiguration("orbit-4444"),
+      transport,
+      history: transport,
+    });
+    const snapshot = await reader.readPublicStatus(1_010, 30);
+    expect(snapshot).toMatchObject({
+      deployment: {
+        network: manifest.network,
+        observedBlock: 100_500n,
+        observedAt: 1_000,
+      },
+      collection: {
+        permanentCount: 0,
+        transientCount: 0,
+        pendingDiscoveryCount: 0,
+        availableIdentityCount: 4444,
+      },
+      market: {
+        rewardPotWeth: 0n,
+        liquidityPotWeth: 0n,
+        creatorPotWeth: 0n,
+        price: { wethPerLiquidTokenWei: 10n ** 18n },
+      },
+      operations: {
+        rewardEpochCount: 0n,
+        rewardHistoryStatus: "complete",
+        trackQueues: expect.arrayContaining([
+          { track: "METAc", trackId: 3, weth: 5n },
+        ]),
+      },
+      rewards: {
+        tracks: expect.arrayContaining([{ track: "METAc", rawLiability: 90n }]),
+      },
+    });
+    expect(
+      requests.some(
+        (request) =>
+          [
+            "owner",
+            "pendingOwner",
+            "keeper",
+            "executor",
+            "venue",
+            "pendingAll",
+          ].includes(request.functionName) ||
+          request.contract.endsWith("ConversionAdapter"),
+      ),
+    ).toBe(false);
+    expect(transport.recentRange).toBeUndefined();
+    expect(bytecodeReads).toBe(0);
+  });
+
+  it("keeps missing public observations unknown and can skip reward history", async () => {
+    const transport = new HealthTransport();
+    transport.failedReads.add("fuelCore.permanentCount");
+    transport.failedReads.add("canonicalFeeHook.rewardPot");
+    transport.failOneLiability = true;
+    const reader = createProtocolReader({
+      manifest,
+      identity: selectIdentityConfiguration("orbit-4444"),
+      transport,
+      history: transport,
+    });
+    const snapshot = await reader.readPublicStatus(1_100, 30, {
+      includeRewardHistory: false,
+    });
+    expect(snapshot.collection.permanentCount).toBeUndefined();
+    expect(snapshot.market.rewardPotWeth).toBeUndefined();
+    expect(snapshot.rewards.tracks[2]?.rawLiability).toBeUndefined();
+    expect(snapshot.health.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "supply-invariant",
+          status: "unknown",
+          freshness: "stale",
+        }),
+        expect.objectContaining({
+          id: "reward-solvency:METAc",
+          status: "unknown",
+        }),
+      ]),
+    );
+    expect(snapshot.operations.rewardHistoryStatus).toBe("unknown");
+    expect(transport.rewardRange).toBeUndefined();
+  });
+
+  it("rejects public observations whose pinned block was reorged during the read", async () => {
+    const transport = new HealthTransport();
+    transport.revalidatedBlock = {
+      ...transport.block,
+      hash: `0x${"22".repeat(32)}`,
+    };
+    const reader = createProtocolReader({
+      manifest,
+      identity: selectIdentityConfiguration("orbit-4444"),
+      transport,
+      history: transport,
+    });
+    await expect(reader.readPublicStatus(1_010, 30)).rejects.toBeInstanceOf(
+      ProtocolQueryError,
+    );
+  });
+  it("requires explicit history and reports missing history as unknown", async () => {
+    const reader = createProtocolReader({
+      manifest,
+      identity: selectIdentityConfiguration("orbit-4444"),
+      transport: new HealthTransport(),
+    });
+
+    await expect(reader.readRecentOperations()).rejects.toBeInstanceOf(
+      ProtocolQueryError,
+    );
+    await expect(
+      reader.readHealth(undefined, 1_010, 30),
+    ).resolves.toMatchObject({
+      operations: { historyStatus: "unknown", rewardHistoryStatus: "unknown" },
+    });
+  });
+
   it("assembles collection and reward queries while tolerating a secondary RPC failure", async () => {
     const transport = new FakeTransport();
     transport.pendingFails = true;
@@ -706,6 +847,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const wallet = await reader.readWallet(owner);
@@ -758,6 +900,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const wallet = await reader.readWallet(owner);
@@ -779,6 +922,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const result = await reader.readCollectible(4_441);
@@ -803,6 +947,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const result = await reader.readCollectible(4_242);
@@ -824,6 +969,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const result = await reader.readCollectible(4_441);
@@ -843,6 +989,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(reader.readCollectible(4_242)).rejects.toBeInstanceOf(
@@ -863,6 +1010,7 @@ describe("deep protocol reader", () => {
       },
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const wallet = await reader.readWallet(owner);
@@ -878,6 +1026,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const wallet = await reader.readWallet(owner);
@@ -894,6 +1043,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const wallet = await reader.readWallet(owner);
@@ -907,6 +1057,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
       recentEventBlockWindow: 500n,
       recentEventLimit: 25,
     });
@@ -934,6 +1085,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -975,6 +1127,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -995,6 +1148,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -1033,6 +1187,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -1054,6 +1209,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -1080,6 +1236,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -1096,6 +1253,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(reader.readExchangeAllowance(owner, true)).resolves.toEqual({
@@ -1119,6 +1277,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const wallet = await reader.readWallet(owner);
@@ -1142,6 +1301,7 @@ describe("deep protocol reader", () => {
       manifest: neutralManifest,
       identity: selectIdentityConfiguration("neutral-test"),
       transport,
+      history: transport,
     });
 
     await expect(reader.quoteExactInput(true, 100n)).resolves.toMatchObject({
@@ -1188,6 +1348,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await reader.readHealth(undefined, 1_010, 30);
@@ -1203,6 +1364,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1222,6 +1384,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1240,6 +1403,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(reader.readWallet(owner)).rejects.toBeInstanceOf(
@@ -1255,6 +1419,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const publicHealth = await reader.readHealth(undefined, 1_010, 30);
@@ -1376,6 +1541,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1396,6 +1562,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(
@@ -1445,8 +1612,7 @@ describe("deep protocol reader", () => {
 
     expect(snapshot.operations.rewardHistory).toHaveLength(1);
     expect(snapshot.operations.rewardHistoryStatus).toBe("partial");
-    expect(transport.recentRange).toBeDefined();
-    expect(transport.rewardRange).toBeUndefined();
+    expect(snapshot.operations.historyStatus).toBe("unknown");
   });
 
   it("uses indexed public operations while preserving unknown attempt coverage", async () => {
@@ -1615,6 +1781,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30, {
@@ -1636,6 +1803,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const operations = await reader.readOperationalStatus();
@@ -1657,6 +1825,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1681,6 +1850,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1715,6 +1885,7 @@ describe("deep protocol reader", () => {
       manifest: guardedManifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1747,6 +1918,7 @@ describe("deep protocol reader", () => {
       manifest: guardedManifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1777,6 +1949,7 @@ describe("deep protocol reader", () => {
       manifest: guardedManifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1830,6 +2003,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1869,6 +2043,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1892,6 +2067,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1912,6 +2088,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(undefined, 1_010, 30);
@@ -1945,6 +2122,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(
@@ -1986,6 +2164,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     await expect(reader.readOperationalStatus()).resolves.toMatchObject({
@@ -2004,6 +2183,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(
@@ -2033,6 +2213,7 @@ describe("deep protocol reader", () => {
       manifest,
       identity: selectIdentityConfiguration("orbit-4444"),
       transport,
+      history: transport,
     });
 
     const snapshot = await reader.readHealth(

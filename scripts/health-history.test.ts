@@ -154,12 +154,6 @@ const transport: ProtocolReadTransport = {
     lpFee: 0,
     activeLiquidity: 1n,
   }),
-  recentOperationalEvents: async () => {
-    throw new Error("direct RPC operation scanning must not be used");
-  },
-  rewardHistory: async () => {
-    throw new Error("direct RPC reward scanning must not be used");
-  },
 };
 
 describe("Base Sepolia health indexed history", () => {

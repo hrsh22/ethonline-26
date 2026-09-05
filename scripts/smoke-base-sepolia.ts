@@ -34,6 +34,10 @@ import {
   resolveRepositoryPath,
 } from "./base-sepolia-manifest.ts";
 import {
+  readForkSmokeTrackHistory,
+  type ForkSmokeTrackAttempt,
+} from "./smoke-fork-history.ts";
+import {
   decodeEnvironment,
   ensure,
   fileSystem,
@@ -236,6 +240,7 @@ runMain(
           "weth",
         ] as const);
         const recoveryAuthority = getAddress(manifest.roles.recoveryAuthority);
+        const forkTrackAttempts: ForkSmokeTrackAttempt[] = [];
         const receipts: Array<{
           readonly label: string;
           readonly transactionHash: Hex;
@@ -311,13 +316,24 @@ runMain(
               ...(gas === undefined ? {} : { gas }),
             });
           }
-          return retainReceipt(
+          const receipt = retainReceipt(
             label,
             await publicClient.waitForTransactionReceipt({
               hash,
               confirmations: receiptConfirmations,
             }),
           );
+          if (
+            smokeIsFork &&
+            address.toLowerCase() === contracts.epochConverter.toLowerCase() &&
+            functionName === "executeTrack"
+          ) {
+            forkTrackAttempts.push({
+              track: Number(args[0]) as ForkSmokeTrackAttempt["track"],
+              receipt,
+            });
+          }
+          return receipt;
         };
         const currentDeadline = async () =>
           (await publicClient.getBlock()).timestamp + 600n;
@@ -546,6 +562,15 @@ runMain(
         const reader = createProtocolReader({
           manifest,
           identity: selectedIdentityConfiguration,
+          history: {
+            recentOperationalEvents: async (fromBlock, toBlock) =>
+              readForkSmokeTrackHistory(
+                forkTrackAttempts,
+                contracts.epochConverter,
+                fromBlock,
+                toBlock,
+              ),
+          },
           transport: makeViemProtocolTransport(
             publicClient as unknown as Parameters<
               typeof makeViemProtocolTransport
@@ -555,9 +580,16 @@ runMain(
           ),
         });
         const healthSnapshot = async (phase: string) => {
-          const snapshot = await reader.readHealth(account.address);
+          const snapshot = await reader.readHealth(
+            account.address,
+            undefined,
+            undefined,
+            { includeRewardHistory: false },
+          );
           return {
             phase,
+            historyScope: "fork-smoke-track-receipts",
+            historyStatus: snapshot.operations.historyStatus,
             observedBlock: snapshot.deployment.observedBlock,
             observedAt: snapshot.deployment.observedAt,
             status: snapshot.health.status,
@@ -785,7 +817,7 @@ runMain(
             }),
             gas: 2_000_000n,
           });
-          retainReceipt(
+          const failedTrackReceipt = retainReceipt(
             "failed METAc track execution",
             await publicClient.waitForTransactionReceipt({
               hash: failedTrackHash,
@@ -793,6 +825,7 @@ runMain(
             }),
             "reverted",
           );
+          forkTrackAttempts.push({ track: 3, receipt: failedTrackReceipt });
 
           for (const track of [1, 2, 4]) {
             await simulateAndWrite({

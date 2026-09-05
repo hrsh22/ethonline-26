@@ -182,6 +182,7 @@ vi.mock("@/lib/deployment", () => ({
 vi.mock("@/lib/wagmi", () => ({
   protocolChain: { id: 84_532 },
   protocolReadClient: {},
+  createProtocolReadClient: () => ({}),
   protocolTransactionClient: testState.transactionClient,
 }));
 
