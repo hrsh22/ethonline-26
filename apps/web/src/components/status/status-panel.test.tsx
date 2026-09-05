@@ -1,8 +1,12 @@
+/** @vitest-environment jsdom */
+
 import {
   derivePublicStatusModel,
   type PublicStatusSnapshotInput,
 } from "@/lib/protocol-status-model";
 import type { RewardHistoryEvent } from "@orbit/protocol/reader";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -146,6 +150,36 @@ describe("public status panel", () => {
     expect(html).not.toContain("Latest keeper cycle");
     expect(html).not.toContain("Keeper attempt evidence");
     expect(html).not.toContain("admin diagnostics");
+  });
+
+  it("ages loaded and restored public evidence without refreshing its observation", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(loadedHealth.deployment.observedAt * 1_000);
+    (
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    const container = document.createElement("div");
+    document.body.append(container);
+    let root = createRoot(container);
+    try {
+      await act(async () => root.render(<StatusPanel />));
+      expect(container.textContent).toContain("Fresh snapshot");
+      const observed = container.querySelector("time")?.dateTime;
+
+      await act(async () => vi.advanceTimersByTime(30_001));
+      expect(container.textContent).toContain("Stale snapshot");
+      expect(container.querySelector("time")?.dateTime).toBe(observed);
+
+      await act(async () => root.unmount());
+      root = createRoot(container);
+      await act(async () => root.render(<StatusPanel />));
+      expect(container.textContent).toContain("Stale snapshot");
+      expect(container.querySelector("time")?.dateTime).toBe(observed);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+      vi.useRealTimers();
+    }
   });
 
   it("lists the public health checks with exact evidence, without operator-only checks", () => {

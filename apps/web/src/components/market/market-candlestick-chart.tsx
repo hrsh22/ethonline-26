@@ -916,12 +916,10 @@ const availableChartTimeframes = (
 
 const mountTradingChart = ({
   container,
-  data,
   initialTimeframe,
   timeframes,
 }: {
   readonly container: HTMLDivElement;
-  readonly data: DataSeries;
   readonly initialTimeframe: TimeFrame;
   readonly timeframes: TimeFrame[];
 }) =>
@@ -947,7 +945,6 @@ const mountTradingChart = ({
       trading: false,
       watchlist: false,
     });
-    widget.setData(data);
     const chart = widget.getChart();
     chart.setMarket({
       currency: "WETH",
@@ -955,7 +952,6 @@ const mountTradingChart = ({
       priceStep: 0.00000001,
       type: "crypto",
     });
-    chart.fitContent();
     return widget;
   });
 
@@ -972,6 +968,8 @@ function InteractiveTradingChart({
   const widgetRef = useRef<ChartWidgetInstance | undefined>(undefined);
   const [ready, setReady] = useState(false);
   const data = useMemo(() => marketChartSeries(candles), [candles]);
+  const latestData = useRef(data);
+  const firstVisibleTime = useRef<number | undefined>(undefined);
   const initialTimeframe = useMemo(
     () => chartTimeframe(intervalSeconds),
     [intervalSeconds],
@@ -980,6 +978,16 @@ function InteractiveTradingChart({
     () => [...availableChartTimeframes(intervalSeconds)],
     [intervalSeconds],
   );
+
+  useEffect(() => {
+    latestData.current = data;
+    const widget = widgetRef.current;
+    if (widget === undefined) return;
+    const anchor = firstVisibleTime.current;
+    widget.setData(data);
+    // The vendor's setData scrolls to the end even when auto-scroll is off.
+    if (anchor !== undefined) widget.getChart().scrollTo(anchor);
+  }, [data]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -991,14 +999,21 @@ function InteractiveTradingChart({
       return;
     }
     let disposed = false;
+    firstVisibleTime.current = undefined;
     setReady(false);
-    void mountTradingChart({ container, data, initialTimeframe, timeframes })
+    void mountTradingChart({ container, initialTimeframe, timeframes })
       .then((widget) => {
         if (disposed) {
           widget.destroy();
           return;
         }
         widgetRef.current = widget;
+        const chart = widget.getChart();
+        chart.on("visibleRangeChange", ({ payload: range }) => {
+          firstVisibleTime.current = chart.getData()[range.from]?.time;
+        });
+        widget.setData(latestData.current);
+        chart.fitContent();
         setReady(true);
       })
       .catch(() => {
@@ -1009,7 +1024,7 @@ function InteractiveTradingChart({
       widgetRef.current?.destroy();
       widgetRef.current = undefined;
     };
-  }, [data, initialTimeframe, timeframes]);
+  }, [initialTimeframe, timeframes]);
 
   return (
     <div className="relative h-[clamp(34rem,68vh,44rem)] min-h-[34rem]">
