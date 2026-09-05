@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 import axe from "axe-core";
 import { chromium, type Browser, type Page } from "playwright";
 
+import { ADMIN_FIXTURE_COOKIE } from "./admin-fixture.ts";
+
 import {
   collectorHeaderCollisionFailure,
   focusFailure,
@@ -361,6 +363,68 @@ const inspectPage = async (
   return failures;
 };
 
+const inspectAdminInputs = async (
+  page: Page,
+  input: VisitInput,
+): Promise<void> => {
+  await page.context().addCookies([
+    {
+      name: "orbit_admin_session",
+      value: ADMIN_FIXTURE_COOKIE.split("=")[1]!,
+      url: input.options.origin,
+      httpOnly: true,
+      sameSite: "Strict",
+    },
+  ]);
+  const sessionResponse = await page.request.get(
+    `${input.options.origin}/api/admin/auth/session`,
+  );
+  if (sessionResponse.status() !== 200)
+    throw new Error(
+      `Admin session fixture was rejected by the real HTTP boundary: ${sessionResponse.status()} ${await sessionResponse.text()}`,
+    );
+  await page.goto(`${input.options.origin}/admin`);
+  await page
+    .getByRole("button", {
+      name: "Advanced: set a raw minimum output",
+      exact: true,
+    })
+    .first()
+    .click();
+  const minimum = page
+    .getByRole("textbox", {
+      name: "Raw minimum output in stock token units",
+      exact: true,
+    })
+    .first();
+  const amount = page.getByRole("textbox", {
+    name: "WETH amount",
+    exact: true,
+  });
+  await minimum.fill("42");
+  await amount.fill("0.5");
+  if (
+    (await minimum.inputValue()) !== "42" ||
+    (await amount.inputValue()) !== "0.5"
+  )
+    throw new Error("Admin inputs did not handle user input");
+  // Prove the same detector catches a regression on the actual component,
+  // not only on the synthetic harness self-test element.
+  const previousFont = await minimum.evaluate((node) => {
+    const previous = node.style.fontSize;
+    node.style.fontSize = "12px";
+    return previous;
+  });
+  const detected = (await renderedStyleFailures(page, input.label)).some(
+    (failure) => failure.detail.includes("numeric input"),
+  );
+  await minimum.evaluate((node, previous) => {
+    node.style.fontSize = previous;
+  }, previousFont);
+  if (!detected)
+    throw new Error("Small actual admin input escaped the style detector");
+};
+
 const visit = async (
   browser: Browser,
   input: VisitInput,
@@ -388,6 +452,10 @@ const visit = async (
       await awaitHydration(page);
     }
     await connectWallet(page, input.wallet);
+    if (input.data === "admin-inputs") {
+      observer.allowProtectedRequests();
+      await inspectAdminInputs(page, input);
+    }
     if (input.expectedHeading !== undefined) {
       await page
         .getByRole("heading", { name: input.expectedHeading, exact: true })
@@ -404,10 +472,32 @@ const visit = async (
         .getByRole("img", { name: /market history$/u })
         .waitFor({ state: "visible", timeout: 15_000 });
     }
+    if (input.data === "cached-stale") {
+      await page
+        .getByText("Showing last-known public snapshot", { exact: true })
+        .waitFor({ state: "visible" });
+      await page
+        .getByText("Stale snapshot", { exact: true })
+        .waitFor({ state: "visible" });
+      await page
+        .getByText("4,400", { exact: true })
+        .waitFor({ state: "visible" });
+      await page
+        .getByRole("definition")
+        .filter({ hasText: /^2\.0000WETH/u })
+        .waitFor({ state: "visible" });
+      await page
+        .getByRole("definition")
+        .filter({ hasText: /^123,456/u })
+        .waitFor({ state: "visible" });
+      await page
+        .locator('time[datetime="2023-11-14T22:13:20.000Z"]')
+        .waitFor({ state: "visible" });
+    }
     if (input.verifyIdleTraffic === true) {
       await awaitApplicationTrafficQuiet(page, traffic);
       traffic.reset();
-      await page.waitForTimeout(input.idleWindowMilliseconds ?? 31_000);
+      await page.waitForTimeout(input.idleWindowMilliseconds!);
       const idleFailure = idleRequestFailure(input.label, traffic.snapshot());
       if (idleFailure !== undefined) failures.push(idleFailure);
     }
@@ -531,6 +621,19 @@ const adminPlan = (options: MatrixOptions): readonly VisitInput[] =>
     wallet: "ordinary" as const,
   }));
 
+const adminInputPlan = (options: MatrixOptions): readonly VisitInput[] => [
+  {
+    axe: true,
+    data: "admin-inputs",
+    expectFinalPath: "/admin",
+    label: "admin-inputs:keeper-and-creator@375",
+    options,
+    path: "/admin/sign-in",
+    viewport: RELEASE_VIEWPORTS[0] as Viewport,
+    wallet: "ordinary",
+  },
+];
+
 /** Exercises the former 15-second and 30-second read owners without input. */
 const idleTrafficPlan = (options: MatrixOptions): readonly VisitInput[] => [
   {
@@ -565,6 +668,7 @@ export const runBrowserMatrix = async (
     ...shellPlan(options),
     ...statePlan(options),
     ...adminPlan(options),
+    ...adminInputPlan(options),
     ...idleTrafficPlan(options),
   ].filter((entry) => selected(options, entry.label));
   const cases: MatrixCaseResult[] = selected(

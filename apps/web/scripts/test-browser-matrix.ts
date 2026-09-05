@@ -9,6 +9,7 @@ import {
   runInterruptibleMain,
 } from "../../../scripts/effect-runtime.ts";
 import { nextRuntimeArguments } from "../../../scripts/next-runtime-command.ts";
+import { startAdminFixtureServer } from "../browser/admin-fixture.ts";
 import { runBrowserMatrix, writeMatrixReport } from "../browser/run-matrix.ts";
 import { runHarnessSelfTest } from "../browser/self-test.ts";
 
@@ -39,6 +40,21 @@ const awaitReady = async (output: readonly string[]): Promise<void> => {
 runInterruptibleMain(
   Effect.scoped(
     Effect.gen(function* () {
+      const only = argument("only")?.split(",").filter(Boolean);
+      if (
+        !process.argv.includes("--self-test") &&
+        (only === undefined ||
+          only.some((filter) =>
+            "admin-inputs:keeper-and-creator@375".includes(filter),
+          ))
+      ) {
+        yield* Effect.acquireRelease(
+          rpc("Could not start test-only admin API on 127.0.0.1:8800", () =>
+            startAdminFixtureServer(),
+          ),
+          (api) => Effect.promise(() => api[Symbol.asyncDispose]()),
+        );
+      }
       const server = yield* acquireManagedProcess(
         "production Next.js server",
         () =>
@@ -100,7 +116,6 @@ runInterruptibleMain(
           return;
         }
 
-        const only = argument("only")?.split(",").filter(Boolean);
         const result = await runBrowserMatrix({
           origin: ORIGIN,
           ...(only === undefined ? {} : { only }),

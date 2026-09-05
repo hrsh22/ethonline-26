@@ -2,8 +2,11 @@ import type { Page } from "playwright";
 
 import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
 import { decodeTestnetFundingResponse } from "@orbit/config/testnet-funding";
+import type { PublicStatusModel } from "@orbit/protocol/public-status-codec";
 
 import { protocolDeploymentManifests } from "../src/generated/deployment-manifests.ts";
+import { writePublicEvidenceCache } from "../src/lib/public-evidence-cache.ts";
+import { adminRpcResponse } from "./admin-fixture.ts";
 
 /**
  * Deterministic fixtures. The application otherwise reads live Base Sepolia
@@ -25,12 +28,37 @@ export type DataFixture =
   | "empty"
   | "market"
   | "failed"
+  | "cached-stale"
+  | "admin-inputs"
   | "funded"
   | "cooldown";
 
 const manifest = protocolDeploymentManifests.staging;
 const PROTOCOL_CHAIN_ID = manifest.chainId;
 const ORDINARY_WALLET = "0x2000000000000000000000000000000000000002";
+
+export const cachedPublicSnapshot = {
+  health: "healthy",
+  freshness: "fresh",
+  network: "base-sepolia",
+  observedAt: 1_700_000_000,
+  observedBlock: 123_456n,
+  collection: { permanent: 4, transient: 8, pending: 32, available: 4_400 },
+  funds: {
+    creatorWeth: 3n * 10n ** 18n,
+    liquidityLockedWeth: 6n * 10n ** 18n,
+    liquidityWaitingWeth: 5n * 10n ** 18n,
+    rewardWethWaiting: 2n * 10n ** 18n,
+  },
+  rewardActivity: {
+    epochCount: 0n,
+    historyStatus: "complete",
+    history: [],
+    latestOpening: undefined,
+    recentConversions: [],
+    collectorLiability: [],
+  },
+} satisfies PublicStatusModel;
 
 /**
  * Installs an EIP-1193 provider before any application script runs. Reown
@@ -44,7 +72,12 @@ export const installWalletFixture = async (
   await page.addInitScript(
     ({ chainId, wallet, mode }) => {
       if (mode === "disconnected") return;
-      let accounts: string[] = [];
+      // The fixture wallet, like an extension, retains its granted account
+      // across document navigation. This is not application wallet state.
+      let accounts: string[] =
+        sessionStorage.getItem("matrix-wallet-connected") === "yes"
+          ? [wallet]
+          : [];
       let activeChainId = chainId;
       const listeners = new Map<string, Set<(value: unknown) => void>>();
       const emit = (event: string, value: unknown) =>
@@ -64,6 +97,7 @@ export const installWalletFixture = async (
           }
           if (method === "eth_requestAccounts") {
             accounts = [wallet];
+            sessionStorage.setItem("matrix-wallet-connected", "yes");
             emit("accountsChanged", accounts);
           }
           if (method === "eth_accounts" || method === "eth_requestAccounts")
@@ -281,6 +315,27 @@ export const installDataFixture = async (
 ): Promise<void> => {
   if (fixture === "live") return;
 
+  if (fixture === "cached-stale") {
+    const entries = new Map<string, string>();
+    writePublicEvidenceCache(
+      {
+        getItem: () => null,
+        setItem: (key, value) => {
+          entries.set(key, value);
+        },
+      },
+      manifest.launch.transactionHash,
+      cachedPublicSnapshot,
+      1_700_000_005_000,
+    );
+    await page.addInitScript(
+      (saved) => {
+        for (const [key, value] of saved) localStorage.setItem(key, value);
+      },
+      [...entries],
+    );
+  }
+
   // Wallet discovery is local EIP-6963; CI needs no Reown account or directory.
   await page.route("https://api.web3modal.org/**", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
@@ -374,6 +429,15 @@ export const installDataFixture = async (
       if (request.method() !== "POST") return route.continue();
       const calls = request.postDataJSON() as
         { id: number; method: string } | { id: number; method: string }[];
+      if (fixture === "admin-inputs") {
+        await route.fulfill({
+          status: 200,
+          json: Array.isArray(calls)
+            ? calls.map(adminRpcResponse)
+            : adminRpcResponse(calls),
+        });
+        return;
+      }
       const reply = ({ id, method }: { id: number; method: string }) => ({
         id,
         jsonrpc: "2.0",
@@ -408,6 +472,8 @@ export const dataFixtureLabels: Readonly<Record<DataFixture, string>> = {
   empty: "empty inventory",
   market: "canonical swaps with matched fees",
   failed: "failed reads",
+  "cached-stale": "persisted snapshot with failed live refresh",
+  "admin-inputs": "authenticated keeper/creator with a partial health snapshot",
   funded: "already funded",
   cooldown: "recipient cooldown",
 };

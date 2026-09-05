@@ -72,7 +72,11 @@ matrix; the browser is not vendored into the repository.
   checked once on the faucet, where its distinct outcome is observable.
 - **Admin session boundary**: a connected wallet without an admin session is
   redirected from both protected routes and issues no protected request.
-  Role-specific controls are covered by the admin component tests.
+- **Admin controls**: a keeper/creator session reaches the real protected route
+  at 375px. The raw minimum disclosure and exact WETH withdrawal input accept
+  user input and must compute to at least 16px. A temporary 12px style on the
+  actual minimum input must fail the same detector before its style is restored.
+  Role-specific behavior remains covered by the admin component tests.
 
 ## Determinism
 
@@ -94,10 +98,18 @@ directory/configuration/image requests are stubbed; the application and wallet
 connector are real. A normal app build is not changed. Running `test:browser`
 against an arbitrary prior build requires wallet connection to be configured.
 
-Retained stale evidence and chart data transitions are covered at the rendered
-component seam and checked in Chrome with working reads. The old matrix's
-"stale" case merely failed the first read, so it has been removed.
-Authenticated admin input sizing is checked during the manual login pass.
+The `state:cached-stale` case loads a real encoded public snapshot from browser
+storage, fails the live refresh, and requires the same collection count, funds,
+block and observation time alongside the visible stale/last-known markers. It
+does not present a failed first read as prior evidence. Rendered component tests
+separately cover the fresh-to-stale TTL and chart data transitions.
+The admin-input case starts a test-only API on `127.0.0.1:8800` for the runner's
+lifetime; an occupied port fails startup. Only its opaque fixture cookie gets a
+valid deployment-bound session. Verification and action endpoints are denied;
+missing diagnostics return unavailable rather than falsely revoking the session.
+Its partial chain fixture observes only the creator fee balance. Other contract
+reads explicitly fail, so this case does not claim transaction readiness or
+healthy operator state. No production authentication bypass is installed.
 
 ## Screenshot baselines
 

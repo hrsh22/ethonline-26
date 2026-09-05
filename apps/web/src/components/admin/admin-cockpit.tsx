@@ -43,7 +43,10 @@ function StatusCard({ status }: { readonly status: CockpitStatus }) {
   return (
     <Well className="grid gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className={capsLabel} data-severity={status.severity}>
+        <h3
+          className={`${capsLabel} [overflow-wrap:anywhere]`}
+          data-severity={status.severity}
+        >
           {status.title}
         </h3>
         <Badge className="ml-auto" dot tone={severityTone[status.severity]}>

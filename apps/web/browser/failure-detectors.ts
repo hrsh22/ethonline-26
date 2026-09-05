@@ -345,12 +345,12 @@ export const renderedStyleFailures = async (
   const details = await page.evaluate(() => {
     const failures: string[] = [];
     for (const input of document.querySelectorAll<HTMLInputElement>(
-      'input[type="number"], input[inputmode="decimal"]',
+      'input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"]',
     )) {
       if (input.getClientRects().length === 0) continue;
       if (Number.parseFloat(getComputedStyle(input).fontSize) < 16) {
         failures.push(
-          `numeric input ${input.getAttribute("aria-label") ?? input.name ?? input.id} is smaller than 16px`,
+          `numeric input ${input.getAttribute("aria-label") || input.name || input.id} is smaller than 16px`,
         );
       }
     }

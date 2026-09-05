@@ -102,6 +102,12 @@ export interface StateCase {
  */
 export const STATE_CASES: readonly StateCase[] = [
   {
+    data: "cached-stale",
+    label: "cached-stale",
+    path: "/status",
+    wallet: "disconnected",
+  },
+  {
     data: "market",
     label: "market-history",
     path: "/market",
