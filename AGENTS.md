@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues and specs are tracked in GitHub at `hrsh22/base-quotron`. See `docs/agents/issue-tracker.md`.
+Issues and specs are tracked in GitHub at `hrsh22/ethonline-26`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

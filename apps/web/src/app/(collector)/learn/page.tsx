@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
  * sits behind a disclosure so the page reads as a reference, not a brochure.
  */
 
-const repositoryUrl = "https://github.com/hrsh22/base-quotron";
+const repositoryUrl = "https://github.com/hrsh22/ethonline-26";
 const { terms, liquidToken } = identity;
 const liquid = liquidToken.displayName;
 const rewardTrackList = new Intl.ListFormat("en", {

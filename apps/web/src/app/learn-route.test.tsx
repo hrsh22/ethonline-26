@@ -16,7 +16,7 @@ describe("Learn and verify route", () => {
     expect(html).toContain("Protocol history");
     expect(html).toContain("Report a problem");
     expect(html).toContain("sepolia.basescan.org/address/");
-    expect(html).toContain("github.com/hrsh22/base-quotron/issues");
+    expect(html).toContain("github.com/hrsh22/ethonline-26/issues");
     expect(html).toContain("All 27 deployed contracts");
     expect(html).toContain(
       "Private security reporting is not currently published",
