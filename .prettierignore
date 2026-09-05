@@ -1,0 +1,9 @@
+.next/
+broadcast/
+cache/
+coverage/
+dist/
+node_modules/
+out/
+pnpm-lock.yaml
+packages/contracts/lib/

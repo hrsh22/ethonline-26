@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "fork": false,
+  "scope": "bounded-live-discovery",
+  "manifestPath": "deployments/84532.json",
+  "manifestLaunch": {
+    "blockNumber": "46352953",
+    "transactionHash": "0x2cee6f87bf2a7a5b1930a20aa3071ecc8fc935b9b0e03263a89b4b091426134f"
+  },
+  "signer": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+  "discovery": {
+    "acquisitionContainedMirrorMutation": false,
+    "pendingAfterAcquisition": "1",
+    "transientAfterCallback": "1",
+    "mirrorBalanceAfterCallback": "1"
+  },
+  "transactions": [
+    {
+      "label": "bounded native ETH discovery buy",
+      "transactionHash": "0xf8ed229c287db5e6984736777187ed4243365e1c359f64e5d4da4f96c5120003",
+      "transactionLink": "https://sepolia.basescan.org/tx/0xf8ed229c287db5e6984736777187ed4243365e1c359f64e5d4da4f96c5120003",
+      "blockNumber": "46353142",
+      "gasUsed": "774918",
+      "status": "success"
+    },
+    {
+      "label": "finalize ready Discovery Batch 18276356198688166950515904040640843771963557961295059656676043370370887423102",
+      "transactionHash": "0x9437bf45a83cea8c3a39432de184a58f2dc0f26d1ae0650199431cc33ff1a0a8",
+      "transactionLink": "https://sepolia.basescan.org/tx/0x9437bf45a83cea8c3a39432de184a58f2dc0f26d1ae0650199431cc33ff1a0a8",
+      "blockNumber": "46353166",
+      "gasUsed": "332335",
+      "status": "success"
+    }
+  ]
+}

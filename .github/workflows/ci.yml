@@ -1,0 +1,447 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Representative gate profile to benchmark
+        required: true
+        type: choice
+        default: full
+        options:
+          - web
+          - full
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Placeholder browser-public bindings. The production web build fails closed
+# without both, and CI never serves the application from a public origin.
+env:
+  NEXT_PUBLIC_API_URL: http://127.0.0.1:8800
+  NEXT_PUBLIC_APP_URL: https://orbit.test
+
+jobs:
+  classify:
+    name: Classify changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      code_checks: ${{ steps.paths.outputs.code_checks }}
+      web_unit: ${{ steps.paths.outputs.web_unit }}
+      public_api: ${{ steps.paths.outputs.public_api }}
+      protocol_scripts: ${{ steps.paths.outputs.protocol_scripts }}
+      contract_unit: ${{ steps.paths.outputs.contract_unit }}
+      contract_invariants: ${{ steps.paths.outputs.contract_invariants }}
+      deployment: ${{ steps.paths.outputs.deployment }}
+      web_production: ${{ steps.paths.outputs.web_production }}
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Classify gates
+        id: paths
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          CI_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'auto' }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          changed_paths="$(mktemp)"
+          if [[ "$CI_PROFILE" == "auto" ]]; then
+            if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+              git diff-tree --root --no-commit-id --name-only -r "$HEAD_SHA" > "$changed_paths"
+            else
+              git diff --no-renames --name-only "$BASE_SHA" "$HEAD_SHA" > "$changed_paths"
+            fi
+          fi
+          classification="$(node scripts/ci-changes.ts < "$changed_paths")"
+          printf '%s\n' "$classification"
+          {
+            echo "### CI classification"
+            echo
+            echo "Profile: \`$CI_PROFILE\`"
+            echo
+            echo '```text'
+            printf '%s\n' "$classification"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  quality:
+    name: Formatting, lint, types, and configuration
+    needs: classify
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: ${{ needs.classify.outputs.code_checks == 'true' && 'recursive' || 'false' }}
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Restore Foundry compilation cache
+        if: needs.classify.outputs.code_checks == 'true'
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            packages/contracts/cache
+            packages/contracts/out
+          key: foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-${{ hashFiles('packages/contracts/src/**/*.sol', 'packages/contracts/test/**/*.sol', 'packages/contracts/script/**/*.sol') }}
+          restore-keys: |
+            foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-
+
+      - name: Install Foundry
+        if: needs.classify.outputs.code_checks == 'true'
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: 1.7.1
+
+      - name: Check documentation formatting
+        if: needs.classify.outputs.code_checks != 'true'
+        run: pnpm format:prettier:check
+
+      - name: Check code quality and configuration
+        if: needs.classify.outputs.code_checks == 'true'
+        run: pnpm check:ci
+
+  web_unit:
+    name: Web unit tests
+    needs: classify
+    if: needs.classify.outputs.web_unit == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Build shared TypeScript packages once
+        run: pnpm build:packages
+
+      - name: Run web unit tests
+        run: pnpm --dir apps/web test
+
+  public_api:
+    name: Public API unit and integration tests
+    needs: classify
+    if: needs.classify.outputs.public_api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Build public API workspace dependencies
+        run: pnpm build:packages
+
+      - name: Run public API unit and integration tests
+        run: pnpm --filter @orbit/api test
+
+  protocol_scripts:
+    name: Protocol and script unit tests
+    needs: classify
+    if: needs.classify.outputs.protocol_scripts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Restore Foundry compilation cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            packages/contracts/cache
+            packages/contracts/out
+          key: foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-${{ hashFiles('packages/contracts/src/**/*.sol', 'packages/contracts/test/**/*.sol', 'packages/contracts/script/**/*.sol') }}
+          restore-keys: |
+            foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: 1.7.1
+
+      - name: Build shared TypeScript packages once
+        run: pnpm build:packages
+
+      - name: Build contract artifacts consumed by ABI tests
+        run: pnpm --dir packages/contracts build
+
+      - name: Run script unit tests
+        run: pnpm test:scripts:ci
+
+      - name: Run configuration unit tests
+        run: pnpm --filter @orbit/config test
+
+      - name: Run protocol unit tests
+        run: pnpm --filter @orbit/protocol test
+
+  contract_unit:
+    name: Contract unit tests and gas bounds
+    needs: classify
+    if: needs.classify.outputs.contract_unit == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Restore Foundry compilation cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            packages/contracts/cache
+            packages/contracts/out
+          key: foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-${{ hashFiles('packages/contracts/src/**/*.sol', 'packages/contracts/test/**/*.sol', 'packages/contracts/script/**/*.sol') }}
+          restore-keys: |
+            foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: 1.7.1
+
+      - name: Run contract unit tests
+        run: pnpm --dir packages/contracts test:unit
+
+      - name: Verify gas snapshots
+        run: pnpm --dir packages/contracts test:gas
+
+  contract_invariants:
+    name: Contract stateful invariants
+    needs: classify
+    if: needs.classify.outputs.contract_invariants == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Restore Foundry compilation cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            packages/contracts/cache
+            packages/contracts/out
+          key: foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-${{ hashFiles('packages/contracts/src/**/*.sol', 'packages/contracts/test/**/*.sol', 'packages/contracts/script/**/*.sol') }}
+          restore-keys: |
+            foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: 1.7.1
+
+      - name: Run stateful invariant suites
+        working-directory: packages/contracts
+        run: forge test --match-path 'test/*.invariant.t.sol' -vv
+
+  deployment:
+    name: Local deployment integration
+    needs: classify
+    if: needs.classify.outputs.deployment == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Restore Foundry compilation cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            packages/contracts/cache
+            packages/contracts/out
+          key: foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-${{ hashFiles('packages/contracts/src/**/*.sol', 'packages/contracts/test/**/*.sol', 'packages/contracts/script/**/*.sol') }}
+          restore-keys: |
+            foundry-1.7.1-${{ runner.os }}-${{ hashFiles('packages/contracts/foundry.toml', 'packages/contracts/foundry.lock') }}-
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: 1.7.1
+
+      - name: Build deployment configuration once
+        run: pnpm --filter @orbit/config build
+
+      - name: Run local deployment integration
+        run: pnpm test:deployment:ci
+
+  web_production:
+    name: Web production build, accessibility, and browser matrix
+    needs: classify
+    if: needs.classify.outputs.web_production == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm, Node.js, and dependencies
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          version: 11.22.0
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Restore Next.js compilation cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: apps/web/.next/cache
+          key: next-node-24-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/web/next.config.ts') }}-${{ hashFiles('apps/web/src/**', 'packages/config/src/**', 'packages/protocol/src/**') }}
+          restore-keys: |
+            next-node-24-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/web/next.config.ts') }}-
+
+      - name: Build shared TypeScript packages once
+        run: pnpm build:packages
+
+      - name: Verify generated web deployment bindings
+        run: node scripts/generate-web-deployment-manifest.ts --check
+
+      - name: Build the production application once
+        run: node scripts/staging-web.ts build
+
+      - name: Audit the existing production build
+        run: pnpm --dir apps/web test:a11y
+
+      # Playwright pins its own Chromium build; it is not vendored.
+      - name: Install the pinned Chromium build
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+
+      - name: Prove the browser harness fails on injected defects
+        run: pnpm --dir apps/web test:browser:self
+
+      - name: Run the production browser matrix
+        run: pnpm --dir apps/web test:browser
+
+      # Printed rather than uploaded so the job needs no additional action pin.
+      - name: Report the browser matrix result
+        if: failure()
+        run: cat apps/web/browser-matrix-report.json || true
+
+  required:
+    name: Required CI result
+    needs:
+      - classify
+      - quality
+      - web_unit
+      - public_api
+      - protocol_scripts
+      - contract_unit
+      - contract_invariants
+      - deployment
+      - web_production
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLASSIFY_RESULT: ${{ needs.classify.result }}
+      QUALITY_RESULT: ${{ needs.quality.result }}
+      WEB_UNIT_RESULT: ${{ needs.web_unit.result }}
+      WEB_UNIT_SELECTED: ${{ needs.classify.outputs.web_unit }}
+      PUBLIC_API_RESULT: ${{ needs.public_api.result }}
+      PUBLIC_API_SELECTED: ${{ needs.classify.outputs.public_api }}
+      PROTOCOL_SCRIPTS_RESULT: ${{ needs.protocol_scripts.result }}
+      PROTOCOL_SCRIPTS_SELECTED: ${{ needs.classify.outputs.protocol_scripts }}
+      CONTRACT_UNIT_RESULT: ${{ needs.contract_unit.result }}
+      CONTRACT_UNIT_SELECTED: ${{ needs.classify.outputs.contract_unit }}
+      CONTRACT_INVARIANTS_RESULT: ${{ needs.contract_invariants.result }}
+      CONTRACT_INVARIANTS_SELECTED: ${{ needs.classify.outputs.contract_invariants }}
+      DEPLOYMENT_RESULT: ${{ needs.deployment.result }}
+      DEPLOYMENT_SELECTED: ${{ needs.classify.outputs.deployment }}
+      WEB_PRODUCTION_RESULT: ${{ needs.web_production.result }}
+      WEB_PRODUCTION_SELECTED: ${{ needs.classify.outputs.web_production }}
+    steps:
+      - name: Require every selected gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$CLASSIFY_RESULT" == "success" ]]
+          [[ "$QUALITY_RESULT" == "success" ]]
+          require_gate() {
+            local selected="$1"
+            local result="$2"
+            if [[ "$selected" == "true" ]]; then
+              [[ "$result" == "success" ]]
+            else
+              [[ "$result" == "skipped" ]]
+            fi
+          }
+          require_gate "$WEB_UNIT_SELECTED" "$WEB_UNIT_RESULT"
+          require_gate "$PUBLIC_API_SELECTED" "$PUBLIC_API_RESULT"
+          require_gate "$PROTOCOL_SCRIPTS_SELECTED" "$PROTOCOL_SCRIPTS_RESULT"
+          require_gate "$CONTRACT_UNIT_SELECTED" "$CONTRACT_UNIT_RESULT"
+          require_gate "$CONTRACT_INVARIANTS_SELECTED" "$CONTRACT_INVARIANTS_RESULT"
+          require_gate "$DEPLOYMENT_SELECTED" "$DEPLOYMENT_RESULT"
+          require_gate "$WEB_PRODUCTION_SELECTED" "$WEB_PRODUCTION_RESULT"

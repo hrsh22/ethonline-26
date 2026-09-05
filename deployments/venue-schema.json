@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "./venue-schema.json",
+  "title": "ORBIT public test venue configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "environment",
+    "chainId",
+    "network",
+    "assetProfile",
+    "operator",
+    "contracts"
+  ],
+  "properties": {
+    "$schema": { "const": "./venue-schema.json" },
+    "schemaVersion": { "const": 1 },
+    "environment": { "const": "staging" },
+    "chainId": { "const": 84532 },
+    "network": { "const": "base-sepolia" },
+    "assetProfile": {
+      "enum": ["self-funded-test-assets", "official-test-assets"]
+    },
+    "operator": { "$ref": "#/$defs/address" },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "weth",
+        "usdc",
+        "uniswapV4PoolManager",
+        "testConversionVenue",
+        "mockAaplc",
+        "mockGooglc",
+        "mockMetac",
+        "mockNvdac"
+      ],
+      "properties": {
+        "weth": { "$ref": "#/$defs/address" },
+        "usdc": { "$ref": "#/$defs/address" },
+        "uniswapV4PoolManager": { "$ref": "#/$defs/address" },
+        "testConversionVenue": { "$ref": "#/$defs/address" },
+        "mockAaplc": { "$ref": "#/$defs/address" },
+        "mockGooglc": { "$ref": "#/$defs/address" },
+        "mockMetac": { "$ref": "#/$defs/address" },
+        "mockNvdac": { "$ref": "#/$defs/address" }
+      }
+    }
+  },
+  "$defs": {
+    "address": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$"
+    }
+  }
+}

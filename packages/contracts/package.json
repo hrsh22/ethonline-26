@@ -1,0 +1,17 @@
+{
+  "name": "@orbit/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "format": "forge fmt",
+    "format:check": "forge fmt --check",
+    "format:snapshots": "pnpm --workspace-root exec prettier --write 'packages/contracts/snapshots/*.json'",
+    "lint": "forge lint",
+    "test": "pnpm test:unit && pnpm test:invariants && pnpm test:gas",
+    "test:unit": "forge test --no-match-path 'test/*.invariant.t.sol'",
+    "test:gas": "forge snapshot --match-test '(testGasMaximumBounded.*|testHighIndex.*)' --check .gas-snapshot --tolerance 5 --gas-snapshot-check true && pnpm format:snapshots",
+    "test:invariants": "forge test --match-path 'test/*.invariant.t.sol' -vv",
+    "typecheck": "forge build"
+  }
+}

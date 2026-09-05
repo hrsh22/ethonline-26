@@ -1,0 +1,294 @@
+/* Responsive breakpoints shared by the collector and admin console. */
+
+@theme {
+  --breakpoint-compact: 520px;
+  --breakpoint-tablet: 780px;
+  --breakpoint-laptop: 1023px;
+  --breakpoint-nav: 1160px;
+
+  /* The Graphite type scale.
+   *
+   * One monospace family carries every role, so the steps are close together
+   * and differ mostly in weight and tracking. A step is chosen by the role of
+   * the text, not by picking a pixel size:
+   *
+   *   label    caps for panel headers, column headers and units; the 12px floor
+   *   caption  short supporting notes beside a value
+   *   body-sm  dense rows and table cells
+   *   body     default reading size
+   *   lede     the one paragraph under a page title
+   *   title-sm a panel title
+   *   title    a prominent measured value
+   *   heading  a section heading or large measured value
+   *   display  a page title or headline figure
+   *   hero     reserved for the census figure on the home page
+   */
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.3;
+  --text-label--letter-spacing: 0.1em;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.45;
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.5;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.55;
+  --text-lede: 1rem;
+  --text-lede--line-height: 1.5;
+  --text-title-sm: 1rem;
+  --text-title-sm--line-height: 1.3;
+  --text-title-sm--letter-spacing: -0.01em;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.15;
+  --text-title--letter-spacing: -0.02em;
+  --text-heading: clamp(1.5rem, 1.25rem + 1vw, 1.875rem);
+  --text-heading--line-height: 1.1;
+  --text-heading--letter-spacing: -0.025em;
+  --text-display: clamp(1.875rem, 1.4rem + 1.8vw, 2.625rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.035em;
+  --text-hero: clamp(2.75rem, 1.5rem + 5vw, 5.5rem);
+  --text-hero--line-height: 0.95;
+  --text-hero--letter-spacing: -0.045em;
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-display);
+  --font-mono: var(--font-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-canvas: var(--canvas);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--text-primary);
+  --color-ink-soft: var(--text-secondary);
+  --color-ink-faint: var(--text-tertiary);
+  --color-line: var(--border-subtle);
+  --color-line-strong: var(--border-strong);
+  --color-signal: var(--accent-text);
+  --color-signal-fill: var(--accent-fill);
+  --color-signal-fill-text: var(--accent-fill-text);
+  --color-signal-soft: var(--accent-surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--card);
+  --color-popover-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--ring);
+  --color-info: var(--status-info-text);
+  --color-info-surface: var(--status-info-surface);
+  --color-success: var(--status-success-text);
+  --color-success-surface: var(--status-success-surface);
+  --color-warning: var(--status-warning-text);
+  --color-warning-surface: var(--status-warning-surface);
+  --color-danger: var(--status-danger-text);
+  --color-danger-surface: var(--status-danger-surface);
+}
+
+/* Graphite: the collector's single dark instrumentation theme.
+ *
+ * The canvas is near-black graphite, panels are one step lighter and drawn
+ * with a hairline, and exactly one hue — signal orange — marks live values,
+ * the current destination and the primary action. Everything else is a grey.
+ * There is one token map and no `prefers-color-scheme` split; the document
+ * declares `color-scheme: dark` so native controls and scrollbars match.
+ *
+ * The operator console reads this same map: admin and collector are one
+ * visual system, differing only in density and in what they put in the rail. */
+:root {
+  color-scheme: dark;
+
+  --font-sans: var(--font-jetbrains);
+  --font-mono: var(--font-jetbrains);
+  --font-display: var(--font-jetbrains);
+
+  /* Canvas and layered surfaces. Surface 1 is a panel; 2 is a panel header
+   * or the sidebar; 3 is a well or an input. */
+  --canvas: #0e0f12;
+  --surface-1: #15171b;
+  --surface-2: #1b1e23;
+  --surface-3: #23272d;
+
+  /* Text hierarchy: warm off-white, then two greys. */
+  --text-primary: #ecebe6;
+  --text-secondary: #a9a8a1;
+  --text-tertiary: #94938c;
+
+  /* Rules, focus, and interaction */
+  --border-subtle: #262a30;
+  --border-strong: #707680;
+  /* A signal-tinted hairline for regions holding a live or owned state. */
+  --accent-border: #7a4423;
+  --focus-ring: #ff7a2f;
+  --inverse-focus-ring: #ff7a2f;
+  /* Signal orange. The fill is the primary action; the text tone is for live
+   * values, links and the active destination. Dark text sits on the fill. */
+  --accent-fill: #ff6a1f;
+  --accent-fill-text: #14110d;
+  --accent-text: #ff7a2f;
+  --accent-surface: #2a1a10;
+  --inverse-accent-text: #ff7a2f;
+
+  /* Status and severity */
+  --status-info-surface: #14213a;
+  --status-info-text: #7fb4ff;
+  --status-success-surface: #10261c;
+  --status-success-text: #5fd39a;
+  --status-success-fill: #5fd39a;
+  --status-success-fill-text: #0b1a12;
+  --status-warning-surface: #2b2210;
+  --status-warning-text: #f2b84b;
+  --status-danger-surface: #33161a;
+  --status-danger-text: #ff7b6b;
+  /* A partial read is a caution, not a failure. */
+  --state-partial-text: #f2b84b;
+
+  /* Charts sit on a plate one step below the panel. */
+  --chart-surface: #12141a;
+  --chart-primary: #ff7a2f;
+  --chart-secondary: #7fb4ff;
+  --chart-positive: #5fd39a;
+  --chart-negative: #ff7b6b;
+  --chart-grid: #2c3138;
+  --chart-value: var(--text-primary);
+  --chart-label: var(--text-secondary);
+
+  /* The lifted plate: a slightly raised region for a rare emphasis moment.
+   * Kept for the shared primitives that offer an `inverse` surface. */
+  --inverse-surface: #2a2e35;
+  --inverse-surface-raised: #33383f;
+  --inverse-text: #f2f1ec;
+  --inverse-text-muted: #b4b3ac;
+  --inverse-border: #454b53;
+  --inverse-status-info-text: #9cc5ff;
+  --inverse-status-success-text: #7fe0b0;
+  --inverse-status-warning-text: #f6c96a;
+  --inverse-status-danger-text: #ff9a8c;
+
+  /* Density, shape, and motion. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-title: 1.375rem;
+  --text-body: 0.875rem;
+  --type-heading-section: clamp(1.5rem, 1.25rem + 1vw, 1.875rem);
+  --type-heading-task: clamp(1.875rem, 1.4rem + 1.8vw, 2.625rem);
+  --type-display-collector: clamp(2.75rem, 1.5rem + 5vw, 5.5rem);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  /* Boxed shape: corners are nearly square because panels are drawn with
+   * hairlines, and a large radius would read as a card system. */
+  --radius-surface: 4px;
+  --radius-control: 3px;
+  --radius-pill: 999px;
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --motion-slow: 240ms;
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --control-min-size: 44px;
+  --sidebar-width: 15rem;
+  --shadow-raised: 0 1px 0 rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+  --shadow-overlay:
+    0 2px 8px rgb(0 0 0 / 0.5), 0 32px 80px -24px rgb(0 0 0 / 0.8);
+  --scrim: color-mix(in srgb, #06070a, transparent 30%);
+
+  /* Compatibility aliases keep shared primitives on semantic colors. */
+  --background: var(--canvas);
+  --foreground: var(--text-primary);
+  --card: var(--surface-1);
+  --card-foreground: var(--text-primary);
+  --primary: var(--accent-fill);
+  --primary-foreground: var(--accent-fill-text);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-3);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent-fill);
+  --accent-foreground: var(--accent-fill-text);
+  --destructive: var(--status-danger-text);
+  --border: var(--border-subtle);
+  --ring: var(--focus-ring);
+  --console: var(--inverse-surface);
+  --console-foreground: var(--inverse-text);
+  --surface-raised: var(--surface-2);
+  --signal-soft: var(--status-warning-surface);
+  --success: var(--status-success-text);
+  --warning: var(--status-warning-text);
+  --shadow: var(--shadow-raised);
+  --radius-card: var(--radius-surface);
+}
+
+/* Element defaults live in `base` so component utilities can override them.
+ *
+ * Unlayered, these would outrank every `@layer` — including Tailwind's
+ * `utilities` — so `*` forcing `border-color` would defeat every border-color
+ * utility and `a` forcing `color: inherit` would defeat every text-color
+ * utility on a link. Since this application authors styles as utilities over
+ * these tokens, the defaults have to be defaults rather than overrides. */
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  html {
+    background: var(--background);
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans), monospace;
+    font-size: var(--text-body);
+    font-feature-settings: "zero", "ss01";
+    text-rendering: optimizeLegibility;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  ::selection {
+    background: var(--status-warning-surface);
+    color: var(--text-primary);
+  }
+
+  button,
+  input:not([type="checkbox"]):not([type="radio"]),
+  select {
+    font: inherit;
+  }
+}
+
+/* The touch-target floor stays unlayered so no utility can weaken it. */
+button,
+input:not([type="checkbox"]):not([type="radio"]),
+select {
+  min-height: var(--control-min-size);
+}
+
+/* The keyboard focus ring stays unlayered for the same reason: every surface
+ * inherits one contrast-safe ring, and a component cannot quietly reduce it.
+ * Components adjust the ring by setting `--ring`, not by restyling the
+ * outline. */
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}

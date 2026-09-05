@@ -1,0 +1,4 @@
+FuelScalabilityTest:testGasMaximumBoundedDiscoveryBatch() (gas: 18277004)
+FuelScalabilityTest:testHighIndexPendingFulfillmentHasBoundedGas() (gas: 53618129)
+FuelScalabilityTest:testHighIndexTransientTransferHasBoundedGas() (gas: 55957520)
+RewardLedgerTest:testGasMaximumBoundedPermanentIdentityClaim() (gas: 26711108)

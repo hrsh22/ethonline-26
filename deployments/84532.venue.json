@@ -1,0 +1,19 @@
+{
+  "$schema": "./venue-schema.json",
+  "schemaVersion": 1,
+  "environment": "staging",
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "assetProfile": "self-funded-test-assets",
+  "operator": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+  "contracts": {
+    "weth": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+    "usdc": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+    "uniswapV4PoolManager": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+    "testConversionVenue": "0xc973876f02282058658Ed0ED90B34675B958C41e",
+    "mockAaplc": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7",
+    "mockGooglc": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2",
+    "mockMetac": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d",
+    "mockNvdac": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b"
+  }
+}

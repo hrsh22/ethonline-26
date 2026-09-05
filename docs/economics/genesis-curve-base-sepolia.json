@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "name": "Base Sepolia deployed POC",
+  "supplyLiquidToken": "4444",
+  "currencyOrder": "liquid-token0-weth1",
+  "tickSpacing": 60,
+  "openingTick": -51600,
+  "tickLower": -51600,
+  "tickUpper": 887220,
+  "feePolicy": {
+    "denominator": "10000",
+    "totalFee": "300"
+  },
+  "exactOutputLiquidToken": [
+    "1",
+    "5",
+    "10",
+    "25",
+    "100",
+    "500",
+    "1000",
+    "2222",
+    "4000"
+  ],
+  "exactInputWeth": ["0.01", "0.05", "0.1", "0.25", "1", "5", "10"],
+  "sensitivity": [
+    {
+      "name": "Higher opening benchmark",
+      "openingTick": -48060,
+      "tickLower": -48060,
+      "tickUpper": 887220
+    },
+    {
+      "name": "Moderately higher opening benchmark",
+      "openingTick": -49920,
+      "tickLower": -49920,
+      "tickUpper": 887220
+    },
+    {
+      "name": "Moderately lower opening benchmark",
+      "openingTick": -52860,
+      "tickLower": -52860,
+      "tickUpper": 887220
+    },
+    {
+      "name": "Lower opening benchmark",
+      "openingTick": -54960,
+      "tickLower": -54960,
+      "tickUpper": 887220
+    },
+    {
+      "name": "Same opening with a shorter tail range",
+      "openingTick": -51600,
+      "tickLower": -51600,
+      "tickUpper": 599400
+    }
+  ]
+}

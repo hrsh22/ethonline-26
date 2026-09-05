@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "./blocked-venue-schema.json",
+  "title": "ORBIT blocked alternative-venue inventory",
+  "description": "A deployment input. FuelCore.setBlockedVenueCodehash reverts once the token launches, so this file is the complete and final inventory for the deployment it is used with: anything omitted can never be added later. Point BLOCKED_VENUE_INVENTORY_PATH at a copy of this shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "chainId",
+    "network",
+    "observedAtBlock",
+    "entries"
+  ],
+  "properties": {
+    "$schema": { "const": "./blocked-venue-schema.json" },
+    "$comment": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "chainId": { "type": "integer", "minimum": 1 },
+    "network": { "type": "string", "minLength": 1 },
+    "observedAtBlock": {
+      "description": "The block the codehashes below were read at. A codehash is only meaningful against the runtime code of a specific contract at a specific time.",
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "entries": {
+      "description": "May be empty, which narrows the ADR 0002 claim to the single sealed-route test venue that every deployment blocks.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "address",
+          "codehash",
+          "source",
+          "verifiedBy",
+          "rationale"
+        ],
+        "properties": {
+          "label": {
+            "description": "Recorded in the deployment manifest so health can name the venue rather than print a bare hash.",
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "address": {
+            "description": "The instance the codehash was observed at.",
+            "type": "string",
+            "pattern": "^0x[0-9a-fA-F]{40}$"
+          },
+          "codehash": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$"
+          },
+          "source": {
+            "description": "Where the address came from, so a reviewer can re-derive it.",
+            "type": "string",
+            "minLength": 1
+          },
+          "verifiedBy": {
+            "description": "How the contract's identity was confirmed, rather than assumed from a remembered address.",
+            "type": "string",
+            "minLength": 1
+          },
+          "rationale": {
+            "description": "Why this contract is the right unit to block.",
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

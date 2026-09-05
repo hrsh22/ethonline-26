@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "verifier": "Sourcify",
+  "contracts": [
+    {
+      "name": "weth",
+      "address": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "source": "src/test-assets/MintableTestWETH.sol:MintableTestWETH",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1/"
+    },
+    {
+      "name": "usdc",
+      "address": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+      "source": "src/test-assets/MintableTestToken.sol:MintableTestToken",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4/"
+    },
+    {
+      "name": "mockAaplc",
+      "address": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7",
+      "source": "src/test-assets/MockStock.sol:MockStock",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x725C0fA2222d127B2F70B4f554b246a94007BaE7/"
+    },
+    {
+      "name": "mockGooglc",
+      "address": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2",
+      "source": "src/test-assets/MockStock.sol:MockStock",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2/"
+    },
+    {
+      "name": "mockMetac",
+      "address": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d",
+      "source": "src/test-assets/MockStock.sol:MockStock",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d/"
+    },
+    {
+      "name": "mockNvdac",
+      "address": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b",
+      "source": "src/test-assets/MockStock.sol:MockStock",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b/"
+    },
+    {
+      "name": "testConversionVenue",
+      "address": "0xc973876f02282058658Ed0ED90B34675B958C41e",
+      "source": "src/test-assets/TestConversionVenue.sol:TestConversionVenue",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xc973876f02282058658Ed0ED90B34675B958C41e/"
+    },
+    {
+      "name": "attributeRegistry",
+      "address": "0x885c642b8abA571a747003AC2656aC7d16B909B8",
+      "source": "src/AttributeRegistry.sol:AttributeRegistry",
+      "status": "exact_match",
+      "jobId": "edddcc9a-ee67-4ec7-a8ea-84d04cf83c1d",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/edddcc9a-ee67-4ec7-a8ea-84d04cf83c1d",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x885c642b8abA571a747003AC2656aC7d16B909B8/"
+    },
+    {
+      "name": "recoveryAuthority",
+      "address": "0xc24422D233c7FEd0129EB6A385FA81f771FB1eC4",
+      "source": "src/deployment/TestnetThresholdRecoveryAuthority.sol:TestnetThresholdRecoveryAuthority",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xc24422D233c7FEd0129EB6A385FA81f771FB1eC4/"
+    },
+    {
+      "name": "discoveryAdapter",
+      "address": "0xCfd2C65Aa09D5aa11B5FD5a7b8aaB83aCa335368",
+      "source": "src/discovery/QuotronDiscoveryAdapter.sol:QuotronDiscoveryAdapter",
+      "status": "exact_match",
+      "jobId": "90946a32-13ab-4100-a22b-d6df8e0a108a",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/90946a32-13ab-4100-a22b-d6df8e0a108a",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xCfd2C65Aa09D5aa11B5FD5a7b8aaB83aCa335368/"
+    },
+    {
+      "name": "fuelCore",
+      "address": "0x3ded7308789f311d435f013dE681d0f08c961081",
+      "source": "src/FuelCore.sol:FuelCore",
+      "status": "exact_match",
+      "jobId": "450bf0d1-4716-4732-9a78-f0c347920cf8",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/450bf0d1-4716-4732-9a78-f0c347920cf8",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x3ded7308789f311d435f013dE681d0f08c961081/"
+    },
+    {
+      "name": "fuelMirror",
+      "address": "0x441F6f786c8E9d3EEc16748e55Ee32626d1F93DA",
+      "source": "src/FuelMirror.sol:FuelMirror",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x441F6f786c8E9d3EEc16748e55Ee32626d1F93DA/"
+    },
+    {
+      "name": "claimGate",
+      "address": "0xAc0575fcD6663D50f0455C6329925499D2d63EAd",
+      "source": "src/claim/AlwaysAllowClaimGate.sol:AlwaysAllowClaimGate",
+      "status": "exact_match",
+      "jobId": "d91f324b-9025-4a36-b27b-9aa4f130c289",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/d91f324b-9025-4a36-b27b-9aa4f130c289",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xAc0575fcD6663D50f0455C6329925499D2d63EAd/"
+    },
+    {
+      "name": "rewardLedger",
+      "address": "0xE70E620E5A280e87923c6C2466986ae5C4326C13",
+      "source": "src/RewardLedger.sol:RewardLedger",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xE70E620E5A280e87923c6C2466986ae5C4326C13/"
+    },
+    {
+      "name": "epochConverter",
+      "address": "0x029D0c980b8997396DeE69d2a8B9dF046783147E",
+      "source": "src/conversion/EpochConverter.sol:EpochConverter",
+      "status": "exact_match",
+      "jobId": "600d072a-31c0-4f44-9c4d-c474846a6966",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/600d072a-31c0-4f44-9c4d-c474846a6966",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x029D0c980b8997396DeE69d2a8B9dF046783147E/"
+    },
+    {
+      "name": "canonicalMarketRegistry",
+      "address": "0xB901845C33cE3345F49D686fb91bF05B2A2231d9",
+      "source": "src/market/CanonicalMarketRegistry.sol:CanonicalMarketRegistry",
+      "status": "exact_match",
+      "jobId": "698b167b-2d02-4fce-849b-529814196c8e",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/698b167b-2d02-4fce-849b-529814196c8e",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xB901845C33cE3345F49D686fb91bF05B2A2231d9/"
+    },
+    {
+      "name": "protocolLiquidityVault",
+      "address": "0x187eE0795b8dFd8110707A1843AAad62C2722535",
+      "source": "src/liquidity/ProtocolLiquidityVault.sol:ProtocolLiquidityVault",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x187eE0795b8dFd8110707A1843AAad62C2722535/"
+    },
+    {
+      "name": "canonicalHookDeployer",
+      "address": "0xB7F84931A9bEDF90c2a3c4980b9903D45674651e",
+      "source": "src/market/CanonicalHookDeployer.sol:CanonicalHookDeployer",
+      "status": "exact_match",
+      "jobId": "f932c628-40da-46a9-8ad5-ff70f54e820f",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/f932c628-40da-46a9-8ad5-ff70f54e820f",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xB7F84931A9bEDF90c2a3c4980b9903D45674651e/"
+    },
+    {
+      "name": "canonicalFeeHook",
+      "address": "0x9323c22e7BFC65B3f4693f778A4e68A0752980cC",
+      "source": "src/market/CanonicalFeeHook.sol:CanonicalFeeHook",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x9323c22e7BFC65B3f4693f778A4e68A0752980cC/"
+    },
+    {
+      "name": "canonicalRouter",
+      "address": "0x8ae640725f1e6d5932B034a0C5F28e281D76C54D",
+      "source": "src/market/CanonicalRouter.sol:CanonicalRouter",
+      "status": "exact_match",
+      "jobId": "5fe8b51c-4731-4106-9b2c-75be89ff1bd6",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/5fe8b51c-4731-4106-9b2c-75be89ff1bd6",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x8ae640725f1e6d5932B034a0C5F28e281D76C54D/"
+    },
+    {
+      "name": "genesisLiquidityVault",
+      "address": "0x766A8a55F2943ADa722D0e9E5f848c471C7b04A6",
+      "source": "src/liquidity/GenesisLiquidityVault.sol:GenesisLiquidityVault",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x766A8a55F2943ADa722D0e9E5f848c471C7b04A6/"
+    },
+    {
+      "name": "metadataRenderer",
+      "address": "0xb466c469b161149E7AFA4A357d7fC47867bB3429",
+      "source": "src/metadata/PlaceholderMetadataRenderer.sol:PlaceholderMetadataRenderer",
+      "status": "exact_match",
+      "jobId": "7e08ce55-7d79-419f-b189-233edac59929",
+      "jobUrl": "https://sourcify.dev/server/v2/verify/7e08ce55-7d79-419f-b189-233edac59929",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xb466c469b161149E7AFA4A357d7fC47867bB3429/"
+    },
+    {
+      "name": "aaplcConversionAdapter",
+      "address": "0xc32f7Ca796Ae66373B3dd0690a44A43b7C5b7466",
+      "source": "src/conversion/SepoliaV4ConversionAdapter.sol:SepoliaV4ConversionAdapter",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xc32f7Ca796Ae66373B3dd0690a44A43b7C5b7466/"
+    },
+    {
+      "name": "googlcConversionAdapter",
+      "address": "0xa72F3B759E9812f433F0b6e2A66D4BEcC99862aD",
+      "source": "src/conversion/SepoliaV4ConversionAdapter.sol:SepoliaV4ConversionAdapter",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xa72F3B759E9812f433F0b6e2A66D4BEcC99862aD/"
+    },
+    {
+      "name": "metacConversionAdapter",
+      "address": "0x1a775cd2529B3e630CaEc9aCFD0b7D3d6B3d4727",
+      "source": "src/conversion/SepoliaV4ConversionAdapter.sol:SepoliaV4ConversionAdapter",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0x1a775cd2529B3e630CaEc9aCFD0b7D3d6B3d4727/"
+    },
+    {
+      "name": "nvdacConversionAdapter",
+      "address": "0xc11D2344F451d72155813f7cfb26Ac1f89e640f7",
+      "source": "src/conversion/SepoliaV4ConversionAdapter.sol:SepoliaV4ConversionAdapter",
+      "status": "exact_match",
+      "repositoryUrl": "https://repo.sourcify.dev/contracts/full_match/84532/0xc11D2344F451d72155813f7cfb26Ac1f89e640f7/"
+    }
+  ]
+}

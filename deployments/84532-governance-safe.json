@@ -1,0 +1,13 @@
+{
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "safe": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+  "singleton": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+  "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+  "proxyFactory": "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67",
+  "version": "1.4.1",
+  "owners": ["0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"],
+  "threshold": "1",
+  "deploymentTransactionHash": "0x6891662d50bbf3c63e4b8cb5cc45ad9301ff6caf3503309da72aed9e826df0b4",
+  "deploymentBlockNumber": "46216768"
+}

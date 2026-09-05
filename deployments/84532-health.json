@@ -1,0 +1,1951 @@
+{
+  "schemaVersion": 1,
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "manifestLaunch": {
+    "blockNumber": "46254119",
+    "transactionHash": "0x7acd27ddc7aeb87509c19ede5e52b4db913533202acea22a25f773634cf489b4"
+  },
+  "connectedWallet": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+  "observedBlock": "46254629",
+  "observedAt": 1788277546,
+  "status": "healthy",
+  "freshness": "fresh",
+  "counts": {
+    "pass": 167,
+    "fail": 0,
+    "unknown": 0
+  },
+  "funding": {
+    "alert": "normal",
+    "state": "ready",
+    "ok": true
+  },
+  "checks": [
+    {
+      "id": "read-freshness",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "at most 30s old",
+      "explanation": "Health decisions must use a recent observed block.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "2s old"
+    },
+    {
+      "id": "supply-invariant",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "4444000000000000000000",
+      "explanation": "The $FUEL supply plus one whole unit for every permanent ORBIT 4444 Collectibles identity must remain 4,444 units.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "4444000000000000000000"
+    },
+    {
+      "id": "collection-partition",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "4444",
+      "explanation": "Every identity must be available, Grounded Craft, or Orbiter exactly once; Pending Discovery requests do not reserve an identity before fulfillment.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "4444"
+    },
+    {
+      "id": "identity-manifest",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x33a4bd1e123ca8ffd826c3faff9f668a60f0a38d7e681a4a75c130befcdd58d3",
+      "explanation": "The sealed collection assignment must match the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x33a4bd1e123ca8ffd826c3faff9f668a60f0a38d7e681a4a75c130befcdd58d3"
+    },
+    {
+      "id": "binding:role.owner",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+      "explanation": "The configured $FUEL Owner matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"
+    },
+    {
+      "id": "binding:role.ledgerOwner",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+      "explanation": "The configured Reward Ledger Owner matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
+    },
+    {
+      "id": "binding:role.converterOwner",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+      "explanation": "The configured Reward Epoch Owner matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
+    },
+    {
+      "id": "binding:role.marketOwner",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+      "explanation": "The configured Canonical Market Owner matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
+    },
+    {
+      "id": "binding:role.liquidityOwner",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+      "explanation": "The configured Protocol-Owned Liquidity Owner matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
+    },
+    {
+      "id": "binding:role.guardian",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+      "explanation": "The configured Guardian matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"
+    },
+    {
+      "id": "binding:role.recovery",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc24422D233c7FEd0129EB6A385FA81f771FB1eC4",
+      "explanation": "The configured Recovery Authority matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc24422D233c7FEd0129EB6A385FA81f771FB1eC4"
+    },
+    {
+      "id": "binding:role.keeper",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+      "explanation": "The configured Keeper matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"
+    },
+    {
+      "id": "binding:role.executor",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+      "explanation": "The configured Protocol-Owned Liquidity executor matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"
+    },
+    {
+      "id": "binding:role.creator",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+      "explanation": "The configured Creator matches the deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"
+    },
+    {
+      "id": "binding:pendingOwner.liquidToken",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0000000000000000000000000000000000000000",
+      "explanation": "Any $FUEL Owner ownership nomination matches the deployment manifest -- including none at all -- so no unreviewed address can take the module by accepting.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "binding:pendingOwner.rewardLedger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0000000000000000000000000000000000000000",
+      "explanation": "Any Reward Ledger Owner ownership nomination matches the deployment manifest -- including none at all -- so no unreviewed address can take the module by accepting.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "binding:pendingOwner.epochConverter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0000000000000000000000000000000000000000",
+      "explanation": "Any Reward Epoch Owner ownership nomination matches the deployment manifest -- including none at all -- so no unreviewed address can take the module by accepting.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "binding:pendingOwner.marketRegistry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0000000000000000000000000000000000000000",
+      "explanation": "Any Canonical Market Owner ownership nomination matches the deployment manifest -- including none at all -- so no unreviewed address can take the module by accepting.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "binding:pendingOwner.protocolLiquidityVault",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0000000000000000000000000000000000000000",
+      "explanation": "Any Protocol-Owned Liquidity Owner ownership nomination matches the deployment manifest -- including none at all -- so no unreviewed address can take the module by accepting.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "id": "binding:mirror.core",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B",
+      "explanation": "The ORBIT 4444 Collectibles mirror binding to $FUEL matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B"
+    },
+    {
+      "id": "binding:mirror.metadataRenderer",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xdb1Eb7f0a881faBF76f2969D67dFb6fF66D9Fb88",
+      "explanation": "The ORBIT 4444 Collectibles mirror binding to ORBIT 4444 Collectibles metadata renderer matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xdb1Eb7f0a881faBF76f2969D67dFb6fF66D9Fb88"
+    },
+    {
+      "id": "binding:metadata.attributeRegistry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x6fE9d2B05cde5224A70AB6a5B1FFC431ca43A34C",
+      "explanation": "The ORBIT 4444 Collectibles metadata binding to ORBIT 4444 Collectibles attribute registry matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x6fE9d2B05cde5224A70AB6a5B1FFC431ca43A34C"
+    },
+    {
+      "id": "binding:ledger.fuelCore",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B",
+      "explanation": "The Reward Ledger binding to $FUEL matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B"
+    },
+    {
+      "id": "binding:ledger.attributeRegistry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x6fE9d2B05cde5224A70AB6a5B1FFC431ca43A34C",
+      "explanation": "The Reward Ledger binding to ORBIT 4444 Collectibles attribute registry matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x6fE9d2B05cde5224A70AB6a5B1FFC431ca43A34C"
+    },
+    {
+      "id": "binding:ledger.claimGate",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0118D8CE10962F7906d9F6Af73Aa8461AE650b14",
+      "explanation": "The Reward Ledger binding to Claim Gate matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0118D8CE10962F7906d9F6Af73Aa8461AE650b14"
+    },
+    {
+      "id": "binding:ledger.epochConverter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "The Reward Ledger binding to Reward Epoch matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F"
+    },
+    {
+      "id": "binding:converter.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Reward Epoch binding to Settlement Asset matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:converter.rewardLedger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "The Reward Epoch binding to Reward Ledger matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4Df8363FC5119aeB509b69b15E49114470a96F00"
+    },
+    {
+      "id": "binding:converter.feeHook",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC",
+      "explanation": "The Reward Epoch binding to Canonical Market fee routing matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC"
+    },
+    {
+      "id": "binding:market.manager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "The Canonical Market binding to Canonical Market pool manager matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+    },
+    {
+      "id": "binding:market.fuel",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B",
+      "explanation": "The Canonical Market binding to $FUEL matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B"
+    },
+    {
+      "id": "binding:market.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Canonical Market binding to Settlement Asset matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:market.owner",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+      "explanation": "The Canonical Market binding to Owner matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
+    },
+    {
+      "id": "binding:market.hook",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC",
+      "explanation": "The Canonical Market binding to Canonical Market fee routing matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC"
+    },
+    {
+      "id": "binding:market.router",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5DE07f3Cf73B41Ac60f89DC5810959DC93e3c069",
+      "explanation": "The Canonical Market binding to Canonical Market router matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5DE07f3Cf73B41Ac60f89DC5810959DC93e3c069"
+    },
+    {
+      "id": "binding:hook.manager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "The Canonical Market fee routing binding to Canonical Market pool manager matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+    },
+    {
+      "id": "binding:hook.registry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xEC83604EEaFc57024B96F38942343a2c92257D0F",
+      "explanation": "The Canonical Market fee routing binding to Canonical Market registry matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xEC83604EEaFc57024B96F38942343a2c92257D0F"
+    },
+    {
+      "id": "binding:hook.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Canonical Market fee routing binding to Settlement Asset matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:hook.rewardDestination",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "The Canonical Market fee routing binding to Reward Epoch destination matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F"
+    },
+    {
+      "id": "binding:hook.liquidityDestination",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xF7B26B4328739Ee843A08f3EE1f0082067016ede",
+      "explanation": "The Canonical Market fee routing binding to Protocol-Owned Liquidity destination matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xF7B26B4328739Ee843A08f3EE1f0082067016ede"
+    },
+    {
+      "id": "binding:hook.creatorDestination",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+      "explanation": "The Canonical Market fee routing binding to Creator destination matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214"
+    },
+    {
+      "id": "binding:router.manager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "The Canonical Market router binding to Canonical Market pool manager matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+    },
+    {
+      "id": "binding:router.registry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xEC83604EEaFc57024B96F38942343a2c92257D0F",
+      "explanation": "The Canonical Market router binding to Canonical Market registry matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xEC83604EEaFc57024B96F38942343a2c92257D0F"
+    },
+    {
+      "id": "binding:router.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Canonical Market router binding to Settlement Asset matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:liquidity.registry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xEC83604EEaFc57024B96F38942343a2c92257D0F",
+      "explanation": "The Protocol-Owned Liquidity binding to Canonical Market registry matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xEC83604EEaFc57024B96F38942343a2c92257D0F"
+    },
+    {
+      "id": "binding:liquidity.manager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "The Protocol-Owned Liquidity binding to Canonical Market pool manager matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+    },
+    {
+      "id": "binding:liquidity.fuel",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B",
+      "explanation": "The Protocol-Owned Liquidity binding to $FUEL matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B"
+    },
+    {
+      "id": "binding:liquidity.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Protocol-Owned Liquidity binding to Settlement Asset matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:liquidity.feeHook",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC",
+      "explanation": "The Protocol-Owned Liquidity binding to Canonical Market fee routing matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC"
+    },
+    {
+      "id": "binding:genesis.registry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xEC83604EEaFc57024B96F38942343a2c92257D0F",
+      "explanation": "The Genesis Liquidity binding to Canonical Market registry matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xEC83604EEaFc57024B96F38942343a2c92257D0F"
+    },
+    {
+      "id": "binding:genesis.manager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "The Genesis Liquidity binding to Canonical Market pool manager matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+    },
+    {
+      "id": "binding:genesis.fuel",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B",
+      "explanation": "The Genesis Liquidity binding to $FUEL matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B"
+    },
+    {
+      "id": "binding:genesis.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Genesis Liquidity binding to Settlement Asset matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:venue.manager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "The Sealed Route venue binding to Canonical Market pool manager matches the pinned deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+    },
+    {
+      "id": "binding:ledger.track1.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7",
+      "explanation": "The Reward Ledger liability is denominated in the pinned Stock Reward token.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7"
+    },
+    {
+      "id": "binding:converter.track1.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7",
+      "explanation": "The Sealed Route output token matches the Reward Ledger track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7"
+    },
+    {
+      "id": "binding:converter.track1.adapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xa9a5203E18072e61ccd36f954Ae5F215079Eb106",
+      "explanation": "The Sealed Route uses the manifest-selected conversion adapter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xa9a5203E18072e61ccd36f954Ae5F215079Eb106"
+    },
+    {
+      "id": "binding:ledger.track2.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2",
+      "explanation": "The Reward Ledger liability is denominated in the pinned Stock Reward token.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2"
+    },
+    {
+      "id": "binding:converter.track2.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2",
+      "explanation": "The Sealed Route output token matches the Reward Ledger track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2"
+    },
+    {
+      "id": "binding:converter.track2.adapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xdE7d5F48eC1A8daF0FE987C55642d7891F75dce0",
+      "explanation": "The Sealed Route uses the manifest-selected conversion adapter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xdE7d5F48eC1A8daF0FE987C55642d7891F75dce0"
+    },
+    {
+      "id": "binding:ledger.track3.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d",
+      "explanation": "The Reward Ledger liability is denominated in the pinned Stock Reward token.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d"
+    },
+    {
+      "id": "binding:converter.track3.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d",
+      "explanation": "The Sealed Route output token matches the Reward Ledger track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d"
+    },
+    {
+      "id": "binding:converter.track3.adapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc5B39f6A042fe62D9A081ae12D4aCBcc9dD47CF0",
+      "explanation": "The Sealed Route uses the manifest-selected conversion adapter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc5B39f6A042fe62D9A081ae12D4aCBcc9dD47CF0"
+    },
+    {
+      "id": "binding:ledger.track4.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b",
+      "explanation": "The Reward Ledger liability is denominated in the pinned Stock Reward token.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b"
+    },
+    {
+      "id": "binding:converter.track4.token",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b",
+      "explanation": "The Sealed Route output token matches the Reward Ledger track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b"
+    },
+    {
+      "id": "binding:converter.track4.adapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x48ca56e3bF397b281cEB6291b5550126106AfB5E",
+      "explanation": "The Sealed Route uses the manifest-selected conversion adapter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x48ca56e3bF397b281cEB6291b5550126106AfB5E"
+    },
+    {
+      "id": "binding:fuel.rewardLedger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "$FUEL rewards reach the sealed Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4Df8363FC5119aeB509b69b15E49114470a96F00"
+    },
+    {
+      "id": "binding:fuel.marketRegistry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xEC83604EEaFc57024B96F38942343a2c92257D0F",
+      "explanation": "$FUEL settlement uses the Canonical Market registry.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xEC83604EEaFc57024B96F38942343a2c92257D0F"
+    },
+    {
+      "id": "binding:adapter1.converter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "The Sealed Route accepts only its Reward Epoch converter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F"
+    },
+    {
+      "id": "binding:adapter1.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Sealed Route starts with the Settlement Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:adapter1.usdc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+      "explanation": "The Sealed Route uses the configured Conversion Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4"
+    },
+    {
+      "id": "binding:adapter1.stock",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7",
+      "explanation": "The Sealed Route ends at its configured Stock Reward.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x725C0fA2222d127B2F70B4f554b246a94007BaE7"
+    },
+    {
+      "id": "binding:adapter1.ledger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "Converted Stock Reward units arrive only at the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4Df8363FC5119aeB509b69b15E49114470a96F00"
+    },
+    {
+      "id": "binding:adapter1.venue",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc973876f02282058658Ed0ED90B34675B958C41e",
+      "explanation": "The POC route uses its recorded conversion venue.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc973876f02282058658Ed0ED90B34675B958C41e"
+    },
+    {
+      "id": "binding:adapter2.converter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "The Sealed Route accepts only its Reward Epoch converter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F"
+    },
+    {
+      "id": "binding:adapter2.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Sealed Route starts with the Settlement Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:adapter2.usdc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+      "explanation": "The Sealed Route uses the configured Conversion Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4"
+    },
+    {
+      "id": "binding:adapter2.stock",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2",
+      "explanation": "The Sealed Route ends at its configured Stock Reward.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2"
+    },
+    {
+      "id": "binding:adapter2.ledger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "Converted Stock Reward units arrive only at the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4Df8363FC5119aeB509b69b15E49114470a96F00"
+    },
+    {
+      "id": "binding:adapter2.venue",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc973876f02282058658Ed0ED90B34675B958C41e",
+      "explanation": "The POC route uses its recorded conversion venue.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc973876f02282058658Ed0ED90B34675B958C41e"
+    },
+    {
+      "id": "binding:adapter3.converter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "The Sealed Route accepts only its Reward Epoch converter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F"
+    },
+    {
+      "id": "binding:adapter3.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Sealed Route starts with the Settlement Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:adapter3.usdc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+      "explanation": "The Sealed Route uses the configured Conversion Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4"
+    },
+    {
+      "id": "binding:adapter3.stock",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d",
+      "explanation": "The Sealed Route ends at its configured Stock Reward.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d"
+    },
+    {
+      "id": "binding:adapter3.ledger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "Converted Stock Reward units arrive only at the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4Df8363FC5119aeB509b69b15E49114470a96F00"
+    },
+    {
+      "id": "binding:adapter3.venue",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc973876f02282058658Ed0ED90B34675B958C41e",
+      "explanation": "The POC route uses its recorded conversion venue.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc973876f02282058658Ed0ED90B34675B958C41e"
+    },
+    {
+      "id": "binding:adapter4.converter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "The Sealed Route accepts only its Reward Epoch converter.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F"
+    },
+    {
+      "id": "binding:adapter4.weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "The Sealed Route starts with the Settlement Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1"
+    },
+    {
+      "id": "binding:adapter4.usdc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+      "explanation": "The Sealed Route uses the configured Conversion Asset.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4"
+    },
+    {
+      "id": "binding:adapter4.stock",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b",
+      "explanation": "The Sealed Route ends at its configured Stock Reward.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b"
+    },
+    {
+      "id": "binding:adapter4.ledger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "Converted Stock Reward units arrive only at the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4Df8363FC5119aeB509b69b15E49114470a96F00"
+    },
+    {
+      "id": "binding:adapter4.venue",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xc973876f02282058658Ed0ED90B34675B958C41e",
+      "explanation": "The POC route uses its recorded conversion venue.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xc973876f02282058658Ed0ED90B34675B958C41e"
+    },
+    {
+      "id": "value:chainId",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "84532",
+      "explanation": "The observed chain must match the selected deployment manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "84532"
+    },
+    {
+      "id": "value:canonicalMarketRegistered",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "true",
+      "explanation": "The Canonical Market pool is registered before public launch.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "true"
+    },
+    {
+      "id": "value:canonicalPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x0a1862edc26e1548e2c435e00355a6f93b25ef401e01bf2be0c310a9530ef8cb",
+      "explanation": "The registered Canonical Market pool matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x0a1862edc26e1548e2c435e00355a6f93b25ef401e01bf2be0c310a9530ef8cb"
+    },
+    {
+      "id": "value:canonicalPoolHook",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC",
+      "explanation": "The manifest pool identity includes the deployed Canonical Market fee hook.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC"
+    },
+    {
+      "id": "value:adapter1.track",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "1",
+      "explanation": "The adapter serves exactly one Reward Track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "1"
+    },
+    {
+      "id": "value:adapter1.wethPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73",
+      "explanation": "The first conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73"
+    },
+    {
+      "id": "value:adapter1.stockPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x730e5278cec48c7c73586d7aade904c383939cdffc64da4ff43305efa842a8b2",
+      "explanation": "The second conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x730e5278cec48c7c73586d7aade904c383939cdffc64da4ff43305efa842a8b2"
+    },
+    {
+      "id": "value:adapter2.track",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "2",
+      "explanation": "The adapter serves exactly one Reward Track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "2"
+    },
+    {
+      "id": "value:adapter2.wethPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73",
+      "explanation": "The first conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73"
+    },
+    {
+      "id": "value:adapter2.stockPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0xbaea048e3a18878ca6bbda4727a3d1ec163273911c2a4d2670bca8a863b8ea71",
+      "explanation": "The second conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0xbaea048e3a18878ca6bbda4727a3d1ec163273911c2a4d2670bca8a863b8ea71"
+    },
+    {
+      "id": "value:adapter3.track",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "3",
+      "explanation": "The adapter serves exactly one Reward Track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "3"
+    },
+    {
+      "id": "value:adapter3.wethPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73",
+      "explanation": "The first conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73"
+    },
+    {
+      "id": "value:adapter3.stockPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x786261a7e3a91300487970d035576ff96ba3787da824e8bfc40c40daf52c3e18",
+      "explanation": "The second conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x786261a7e3a91300487970d035576ff96ba3787da824e8bfc40c40daf52c3e18"
+    },
+    {
+      "id": "value:adapter4.track",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "4",
+      "explanation": "The adapter serves exactly one Reward Track.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "4"
+    },
+    {
+      "id": "value:adapter4.wethPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73",
+      "explanation": "The first conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x4ef5183ec59587a181dc7018e72c10c8bf935d14fa71425e5849783cb9147c73"
+    },
+    {
+      "id": "value:adapter4.stockPool",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "0x2accdd15b7649bffdf99691b25309c40b120002c421629094d55012b3fa34c4c",
+      "explanation": "The second conversion hop matches the manifest.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x2accdd15b7649bffdf99691b25309c40b120002c421629094d55012b3fa34c4c"
+    },
+    {
+      "id": "value:launched",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "true",
+      "explanation": "Public trading starts only after the one-way launch.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "true"
+    },
+    {
+      "id": "value:feeBps",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "300",
+      "explanation": "The Canonical Market trading fee remains 3%.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "300"
+    },
+    {
+      "id": "bytecode:fuelCore",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x0507B5EA61E5d1B49Cf062226EDC6433C62DD44B",
+      "explanation": "$FUEL must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:fuelMirror",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x6fe67af9B84Ee9d86755372EdB110A539efee009",
+      "explanation": "ORBIT 4444 Collectibles must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:attributeRegistry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x6fE9d2B05cde5224A70AB6a5B1FFC431ca43A34C",
+      "explanation": "ORBIT 4444 Collectibles attribute registry must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:rewardLedger",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x4Df8363FC5119aeB509b69b15E49114470a96F00",
+      "explanation": "Reward Ledger must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:claimGate",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x0118D8CE10962F7906d9F6Af73Aa8461AE650b14",
+      "explanation": "Claim Gate must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:discoveryAdapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x7fc0783c4E3F0c8754aa7b0fE67B01CE4c875683",
+      "explanation": "Pending Discovery adapter must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:epochConverter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xD76ebF45c8efdAe2552043b9811aa7FBAc49588F",
+      "explanation": "Reward Epoch must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:canonicalMarketRegistry",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xEC83604EEaFc57024B96F38942343a2c92257D0F",
+      "explanation": "Canonical Market registry must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:canonicalFeeHook",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x3b88dfD2FC4B3Eb09A823B328DCf14603Af040cC",
+      "explanation": "Canonical Market fee routing must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:canonicalRouter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x5DE07f3Cf73B41Ac60f89DC5810959DC93e3c069",
+      "explanation": "Canonical Market router must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:canonicalHookDeployer",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x70A5252Ae74FC699E0F22f4D408E8b67cE4BD649",
+      "explanation": "Canonical Market deployment helper must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:protocolLiquidityVault",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xF7B26B4328739Ee843A08f3EE1f0082067016ede",
+      "explanation": "Protocol-Owned Liquidity must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:genesisLiquidityVault",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x916bB93E4f6031fEE38eca99cAeA004b71AD53C3",
+      "explanation": "Genesis Liquidity must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:uniswapV4PoolManager",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+      "explanation": "Canonical Market pool manager must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:metadataRenderer",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xdb1Eb7f0a881faBF76f2969D67dFb6fF66D9Fb88",
+      "explanation": "ORBIT 4444 Collectibles metadata renderer must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:testConversionVenue",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xc973876f02282058658Ed0ED90B34675B958C41e",
+      "explanation": "Sealed Route venue must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:usdc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x5F05A80b1734082c712388F2DB3B2B9f4BE57ca4",
+      "explanation": "Conversion Asset must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:weth",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xc827B184AC7DB9D74F40c3833CD88c1Ece7ecBf1",
+      "explanation": "Settlement Asset must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:mockAaplc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x725C0fA2222d127B2F70B4f554b246a94007BaE7",
+      "explanation": "AAPLc must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:mockGooglc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x7F597B9ad37FD1F6c26171c78f63a39ac96384D2",
+      "explanation": "GOOGLc must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:mockMetac",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x3Fc16f027a572f1C8b09DE33D5A740891594FF5d",
+      "explanation": "METAc must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:mockNvdac",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x94341d5e5Bd07254235F0C5F4199d96aFAE5210b",
+      "explanation": "NVDAc must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:aaplcConversionAdapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xa9a5203E18072e61ccd36f954Ae5F215079Eb106",
+      "explanation": "AAPLc Sealed Route must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:googlcConversionAdapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xdE7d5F48eC1A8daF0FE987C55642d7891F75dce0",
+      "explanation": "GOOGLc Sealed Route must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:metacConversionAdapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0xc5B39f6A042fe62D9A081ae12D4aCBcc9dD47CF0",
+      "explanation": "METAc Sealed Route must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "bytecode:nvdacConversionAdapter",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "deployed at 0x48ca56e3bF397b281cEB6291b5550126106AfB5E",
+      "explanation": "NVDAc Sealed Route must contain deployed contract bytecode.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "bytecode present"
+    },
+    {
+      "id": "seal:attributes",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "Collection attributes are immutable.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "seal:canonicalMarket",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "The Canonical Market is immutable.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "seal:conversionRoutes",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "Sealed Route configuration cannot be redirected.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "seal:feeDestinations",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "Protocol-Owned Liquidity uses the sealed fee destination.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "seal:genesisLiquidity",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "Genesis Liquidity was seeded and permanently locked.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "seal:discoveryExemptions",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "Protocol-account discovery exemptions froze at launch.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "seal:metadata",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "sealed",
+      "explanation": "The selected product identity metadata froze at launch.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "sealed"
+    },
+    {
+      "id": "reward-solvency:AAPLc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 172872654560536252",
+      "explanation": "AAPLc held by the Reward Ledger must cover its attached Pending Rewards.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "172872654560536252"
+    },
+    {
+      "id": "reward-solvency:GOOGLc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 986862588894196760",
+      "explanation": "GOOGLc held by the Reward Ledger must cover its attached Pending Rewards.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "986862588894196760"
+    },
+    {
+      "id": "reward-solvency:METAc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 984900284544664637",
+      "explanation": "METAc held by the Reward Ledger must cover its attached Pending Rewards.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "984900284544664637"
+    },
+    {
+      "id": "reward-solvency:NVDAc",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 985880439854575698",
+      "explanation": "NVDAc held by the Reward Ledger must cover its attached Pending Rewards.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "985880439854575698"
+    },
+    {
+      "id": "market:active-liquidity",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "positive active liquidity",
+      "explanation": "The Canonical Market must retain positive active liquidity.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "336783113201300883150"
+    },
+    {
+      "id": "accounting:fee-pot-backing",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 3002493392995958",
+      "explanation": "The Canonical Market hook WETH balance must cover its three destination-locked fee pots. Unsolicited excess WETH is reported without making the accounting insolvent.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "balance 3002493392995958; excess 0"
+    },
+    {
+      "id": "accounting:reward-queue-backing",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 0",
+      "explanation": "The Reward Epoch converter WETH balance must cover all four track queues. Unsolicited excess WETH is reported without making the accounting insolvent.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "balance 0; excess 0"
+    },
+    {
+      "id": "accounting:liquidity-queue-backing",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "balance >= 0",
+      "explanation": "The Protocol-Owned Liquidity vault WETH balance must cover its recorded queue. Unsolicited excess WETH is reported without making the accounting insolvent.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "balance 0; excess 0"
+    },
+    {
+      "id": "reward-accounting:1",
+      "status": "pass",
+      "severity": "info",
+      "expected": "complete accounting observation",
+      "explanation": "AAPLc active weight and ordinary, Basket Relic, and Indicator Relic pots are observed from the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active weight 100; unclaimed 0; basket 123480467543240179; indicator 49392187017296073"
+    },
+    {
+      "id": "reward-accounting:2",
+      "status": "pass",
+      "severity": "info",
+      "expected": "complete accounting observation",
+      "explanation": "GOOGLc active weight and ordinary, Basket Relic, and Indicator Relic pots are observed from the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active weight 0; unclaimed 814161635837712327; basket 123357823611774595; indicator 49343129444709838"
+    },
+    {
+      "id": "reward-accounting:3",
+      "status": "pass",
+      "severity": "info",
+      "expected": "complete accounting observation",
+      "explanation": "METAc active weight and ordinary, Basket Relic, and Indicator Relic pots are observed from the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active weight 0; unclaimed 812542734749348325; basket 123112535568083079; indicator 49245014227233233"
+    },
+    {
+      "id": "reward-accounting:4",
+      "status": "pass",
+      "severity": "info",
+      "expected": "complete accounting observation",
+      "explanation": "NVDAc active weight and ordinary, Basket Relic, and Indicator Relic pots are observed from the Reward Ledger.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active weight 0; unclaimed 813351362880024950; basket 123235054981821962; indicator 49294021992728786"
+    },
+    {
+      "id": "liquidity:locked-position",
+      "status": "pass",
+      "severity": "critical",
+      "expected": "zero locked WETH before the first cycle; positive locked WETH after a completed cycle",
+      "explanation": "Completed Protocol-Owned Liquidity cycles must leave WETH permanently accounted as locked.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "2 cycles; 17014129226977089 WETH locked"
+    },
+    {
+      "id": "pause:liquidToken",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "active",
+      "explanation": "$FUEL reports its explicit operational pause state.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active"
+    },
+    {
+      "id": "pause:rewards",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "active",
+      "explanation": "Reward Ledger reports its explicit operational pause state.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active"
+    },
+    {
+      "id": "pause:converter",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "active",
+      "explanation": "Reward Epoch reports its explicit operational pause state.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active"
+    },
+    {
+      "id": "pause:liquidity",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "active",
+      "explanation": "Protocol-Owned Liquidity reports its explicit operational pause state.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "active"
+    },
+    {
+      "id": "track:1",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "clear or executable",
+      "explanation": "AAPLc is clear, executable, or isolated as a retryable Deferred Track Budget.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "queue clear"
+    },
+    {
+      "id": "track:2",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "clear or executable",
+      "explanation": "GOOGLc is clear, executable, or isolated as a retryable Deferred Track Budget.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "queue clear"
+    },
+    {
+      "id": "track:3",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "clear or executable",
+      "explanation": "METAc is clear, executable, or isolated as a retryable Deferred Track Budget.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "queue clear"
+    },
+    {
+      "id": "track:4",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "clear or executable",
+      "explanation": "NVDAc is clear, executable, or isolated as a retryable Deferred Track Budget.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "queue clear"
+    },
+    {
+      "id": "freeze:connected-wallet",
+      "status": "pass",
+      "severity": "warning",
+      "expected": "not frozen",
+      "explanation": "The connected wallet freeze state is enforced before operator actions.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "not frozen"
+    },
+    {
+      "id": "claimPolicyImplementation",
+      "severity": "critical",
+      "status": "pass",
+      "expected": "always-allow (0x9344e083e78c19d534910151041afeadefce162ddc71bca9b1b3ceffd4718557)",
+      "explanation": "The bound Claim Gate must be the implementation the deployment manifest declared. A different implementation would change who can claim without any manifest change.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "0x9344e083e78c19d534910151041afeadefce162ddc71bca9b1b3ceffd4718557"
+    },
+    {
+      "id": "blockedVenue:orbit-sealed-route-test-venue",
+      "severity": "critical",
+      "status": "pass",
+      "expected": "blocked",
+      "explanation": "The alternative venue orbit-sealed-route-test-venue (0x575f01513a3076c607b35b165483e42b856868179b26f1e5333bf81c6e3e8973) is still blocked on chain. The blocklist is frozen at launch, so the recorded inventory is final and cannot be repaired in place.",
+      "freshness": "fresh",
+      "observedBlock": "46254629",
+      "observed": "blocked"
+    }
+  ],
+  "rpcFailures": [],
+  "trackQueues": [
+    {
+      "track": "AAPLc",
+      "trackId": 1,
+      "weth": "0",
+      "wethFormatted": "0",
+      "queueAvailable": true,
+      "attemptHistoryAvailable": true,
+      "deferred": false,
+      "status": "clear",
+      "canConnectedWalletExecute": false
+    },
+    {
+      "track": "GOOGLc",
+      "trackId": 2,
+      "weth": "0",
+      "wethFormatted": "0",
+      "queueAvailable": true,
+      "attemptHistoryAvailable": true,
+      "deferred": false,
+      "status": "clear",
+      "canConnectedWalletExecute": false
+    },
+    {
+      "track": "METAc",
+      "trackId": 3,
+      "weth": "0",
+      "wethFormatted": "0",
+      "queueAvailable": true,
+      "attemptHistoryAvailable": true,
+      "deferred": false,
+      "status": "clear",
+      "canConnectedWalletExecute": false
+    },
+    {
+      "track": "NVDAc",
+      "trackId": 4,
+      "weth": "0",
+      "wethFormatted": "0",
+      "queueAvailable": true,
+      "attemptHistoryAvailable": true,
+      "deferred": false,
+      "status": "clear",
+      "canConnectedWalletExecute": false
+    }
+  ],
+  "recentEvents": [
+    {
+      "blockNumber": "46254496",
+      "transactionHash": "0xbd9b725994065c97c637cd58e404d15a6405b56afb6c443d0b89206af0b9e2ef",
+      "transactionIndex": 19,
+      "successful": true,
+      "type": "pol-execution",
+      "liquidityGrowth": {
+        "cycleNumber": "2",
+        "pulledWeth": "0",
+        "consumedWeth": "17011722395792121",
+        "queuedWeth": "0",
+        "permanentlyLockedWeth": "17014129226977089"
+      },
+      "explanation": "Queued WETH entered a permanently locked Protocol-Owned Liquidity position."
+    },
+    {
+      "blockNumber": "46254279",
+      "transactionHash": "0xf99450868c27fd5011a36f52ca7a2a91c9debb8d436613b568586ffb59685ea5",
+      "transactionIndex": 40,
+      "successful": true,
+      "type": "pol-execution",
+      "liquidityGrowth": {
+        "cycleNumber": "1",
+        "pulledWeth": "17014129226977089",
+        "consumedWeth": "2406831184968",
+        "queuedWeth": "17011722395792121",
+        "permanentlyLockedWeth": "2406831184968"
+      },
+      "explanation": "Queued WETH entered a permanently locked Protocol-Owned Liquidity position."
+    },
+    {
+      "blockNumber": "46254276",
+      "transactionHash": "0xc2b73dfe8bbc6d968e3e130197d240873f81bc2660b51871a3a3d1a9a1d163a0",
+      "transactionIndex": 21,
+      "successful": true,
+      "type": "claim",
+      "track": 1,
+      "explanation": "A current identity owner claimed attached Stock Reward units."
+    },
+    {
+      "blockNumber": "46254269",
+      "transactionHash": "0xadd2bc90f1ffa24dea03fb5ed8e30be801ea172750b26eaa34ac9f770b11ae7b",
+      "transactionIndex": 8,
+      "successful": true,
+      "type": "track-execution-unknown",
+      "track": 3,
+      "trackConversion": {
+        "spentWeth": "10008311309986523",
+        "stockReceived": "984900284544664637",
+        "remainingQueue": "0"
+      },
+      "explanation": "A Sealed Route attempt was observed without enough preceding failed-call history to classify it as an initial conversion or retry."
+    },
+    {
+      "blockNumber": "46254259",
+      "transactionHash": "0x96b9f3c2a42d52713eb062eb3dc43aa9db9aaea344a7585b22b281dea279ad87",
+      "transactionIndex": 11,
+      "successful": true,
+      "type": "track-execution-unknown",
+      "track": 4,
+      "trackConversion": {
+        "spentWeth": "10008311309986524",
+        "stockReceived": "985880439854575698",
+        "remainingQueue": "0"
+      },
+      "explanation": "A Sealed Route attempt was observed without enough preceding failed-call history to classify it as an initial conversion or retry."
+    },
+    {
+      "blockNumber": "46254256",
+      "transactionHash": "0xa8165a5dfdb38c6e08793a29905b7a6f40ea668c7ec0031b06f9bd531722f9d0",
+      "transactionIndex": 22,
+      "successful": true,
+      "type": "track-execution-unknown",
+      "track": 2,
+      "trackConversion": {
+        "spentWeth": "10008311309986523",
+        "stockReceived": "986862588894196760",
+        "remainingQueue": "0"
+      },
+      "explanation": "A Sealed Route attempt was observed without enough preceding failed-call history to classify it as an initial conversion or retry."
+    },
+    {
+      "blockNumber": "46254254",
+      "transactionHash": "0x380698891188f82d7726b1d5f07ce46de86fa66fa46e1f76f43095660bf3d111",
+      "transactionIndex": 28,
+      "successful": true,
+      "type": "track-execution-unknown",
+      "track": 1,
+      "trackConversion": {
+        "spentWeth": "10008311309986523",
+        "stockReceived": "987843740345921437",
+        "remainingQueue": "0"
+      },
+      "explanation": "A Sealed Route attempt was observed without enough preceding failed-call history to classify it as an initial conversion or retry."
+    },
+    {
+      "blockNumber": "46254240",
+      "transactionHash": "0x482557274e7752e5f395c46794d1dc94c75af696b7e2c95a2da738b7a5e933db",
+      "transactionIndex": 36,
+      "successful": true,
+      "type": "reward-epoch",
+      "rewardEpoch": {
+        "epochNumber": "1",
+        "openedWeth": "40033245239946093",
+        "equalTrackShare": "10008311309986523",
+        "finalTrackRemainder": "1"
+      },
+      "explanation": "A Reward Epoch opened successfully."
+    }
+  ],
+  "rewardEpochCount": "1",
+  "rewardHistoryStatus": "complete",
+  "rewardHistory": [
+    {
+      "blockNumber": "46254240",
+      "logIndex": 220,
+      "transactionHash": "0x482557274e7752e5f395c46794d1dc94c75af696b7e2c95a2da738b7a5e933db",
+      "transactionIndex": 36,
+      "type": "reward-epoch",
+      "epoch": {
+        "epochNumber": "1",
+        "openedWeth": "40033245239946093",
+        "equalTrackShare": "10008311309986523",
+        "finalTrackRemainder": "1"
+      }
+    },
+    {
+      "blockNumber": "46254254",
+      "logIndex": 328,
+      "transactionHash": "0x380698891188f82d7726b1d5f07ce46de86fa66fa46e1f76f43095660bf3d111",
+      "transactionIndex": 28,
+      "type": "track-conversion",
+      "track": 1,
+      "conversion": {
+        "spentWeth": "10008311309986523",
+        "stockReceived": "987843740345921437",
+        "remainingQueue": "0"
+      }
+    },
+    {
+      "blockNumber": "46254256",
+      "logIndex": 173,
+      "transactionHash": "0xa8165a5dfdb38c6e08793a29905b7a6f40ea668c7ec0031b06f9bd531722f9d0",
+      "transactionIndex": 22,
+      "type": "track-conversion",
+      "track": 2,
+      "conversion": {
+        "spentWeth": "10008311309986523",
+        "stockReceived": "986862588894196760",
+        "remainingQueue": "0"
+      }
+    },
+    {
+      "blockNumber": "46254259",
+      "logIndex": 46,
+      "transactionHash": "0x96b9f3c2a42d52713eb062eb3dc43aa9db9aaea344a7585b22b281dea279ad87",
+      "transactionIndex": 11,
+      "type": "track-conversion",
+      "track": 4,
+      "conversion": {
+        "spentWeth": "10008311309986524",
+        "stockReceived": "985880439854575698",
+        "remainingQueue": "0"
+      }
+    },
+    {
+      "blockNumber": "46254269",
+      "logIndex": 82,
+      "transactionHash": "0xadd2bc90f1ffa24dea03fb5ed8e30be801ea172750b26eaa34ac9f770b11ae7b",
+      "transactionIndex": 8,
+      "type": "track-conversion",
+      "track": 3,
+      "conversion": {
+        "spentWeth": "10008311309986523",
+        "stockReceived": "984900284544664637",
+        "remainingQueue": "0"
+      }
+    },
+    {
+      "blockNumber": "46254276",
+      "logIndex": 161,
+      "transactionHash": "0xc2b73dfe8bbc6d968e3e130197d240873f81bc2660b51871a3a3d1a9a1d163a0",
+      "transactionIndex": 21,
+      "type": "reward-claim",
+      "track": 1,
+      "claim": {
+        "amount": "814971085785385185",
+        "currentOwner": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+        "identityId": 1109
+      }
+    }
+  ],
+  "capabilities": {
+    "connected": true,
+    "owner": true,
+    "ownerModules": {
+      "liquidToken": true,
+      "rewards": false,
+      "converter": false,
+      "liquidity": false
+    },
+    "guardian": true,
+    "recovery": false,
+    "keeper": true,
+    "liquidityExecutor": true,
+    "creator": true
+  }
+}

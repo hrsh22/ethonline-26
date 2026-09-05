@@ -1,0 +1,80 @@
+{
+  "name": "@orbit/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./admin-auth": {
+      "types": "./dist/admin-auth.d.ts",
+      "import": "./dist/admin-auth.js"
+    },
+    "./admin-history": {
+      "types": "./dist/admin-history.d.ts",
+      "import": "./dist/admin-history.js"
+    },
+    "./blocked-venue-inventory": {
+      "types": "./dist/blocked-venue-inventory.d.ts",
+      "import": "./dist/blocked-venue-inventory.js"
+    },
+    "./collection-manifest": {
+      "types": "./dist/collection-manifest.d.ts",
+      "import": "./dist/collection-manifest.js"
+    },
+    "./deployment-environments": {
+      "types": "./dist/deployment-environments.d.ts",
+      "import": "./dist/deployment-environments.js"
+    },
+    "./deployment-manifest": {
+      "types": "./dist/deployment-manifest.d.ts",
+      "import": "./dist/deployment-manifest.js"
+    },
+    "./funding-proof": {
+      "types": "./dist/funding-proof.d.ts",
+      "import": "./dist/funding-proof.js"
+    },
+    "./history-runtime": {
+      "types": "./dist/history-runtime.d.ts",
+      "import": "./dist/history-runtime.js"
+    },
+    "./identity": {
+      "types": "./dist/identity.d.ts",
+      "import": "./dist/identity.js"
+    },
+    "./operator-control": {
+      "types": "./dist/operator-control.d.ts",
+      "import": "./dist/operator-control.js"
+    },
+    "./public-api": {
+      "types": "./dist/public-api.d.ts",
+      "import": "./dist/public-api.js",
+      "default": "./dist/public-api.js"
+    },
+    "./test-venue-configuration": {
+      "types": "./dist/test-venue-configuration.d.ts",
+      "import": "./dist/test-venue-configuration.js"
+    },
+    "./testnet-funding": {
+      "types": "./dist/testnet-funding.d.ts",
+      "import": "./dist/testnet-funding.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check:deployment-schema": "node scripts/generate-deployment-schema.ts --check",
+    "generate:deployment-schema": "node scripts/generate-deployment-schema.ts",
+    "generate:manifest": "pnpm build && node scripts/generate-collection-manifest.ts",
+    "lint": "eslint src test --max-warnings=0",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit"
+  },
+  "dependencies": {
+    "effect": "3.22.1",
+    "viem": "2.55.19"
+  },
+  "devDependencies": {
+    "@types/node": "26.3.0",
+    "ajv": "8.20.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

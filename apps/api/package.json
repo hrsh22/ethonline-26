@@ -1,0 +1,25 @@
+{
+  "name": "@orbit/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "pnpm build && pnpm start",
+    "lint": "eslint src test --max-warnings=0",
+    "start": "node ../../scripts/runtime-service-launcher.ts api",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit"
+  },
+  "dependencies": {
+    "@orbit/config": "workspace:*",
+    "@orbit/protocol": "workspace:*",
+    "effect": "3.22.1",
+    "viem": "2.55.19"
+  },
+  "devDependencies": {
+    "@types/node": "26.3.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

@@ -1,0 +1,2900 @@
+{
+  "/desk": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H2",
+        "text": "My Desk"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nMY DESK\n\nConnect a wallet to see your terminals, hardwire dark ones, and claim reflections on lit ones.\n\nCONNECT WALLET\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/desk"
+  },
+  "/exchange": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": "Token id 1-4444"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "Check"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "NVDANVIDIA$229.22"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "AAPLApple$327.73"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "TSLATesla$376.33"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "GMEGameStop$19.35"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "SPCXSpaceX$150.02"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "SPYS&P 500 ETF$773.53"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "PLTRPalantir$182.65"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "NFLXNetflix$82.79"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "RDDTReddit$158.06"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "MSTRStrategy$149.16"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "canonical router"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "fee hook"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "BUY"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "SELL"
+      },
+      {
+        "disabled": true,
+        "kind": "input",
+        "label": "USD to spend"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "25"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "50"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "75"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "MAX"
+      },
+      {
+        "disabled": false,
+        "kind": "select",
+        "label": "5%10%20%50%"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "BUY QUOTRON"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "router"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "fee hook"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H1",
+        "text": "EXCHANGE"
+      },
+      {
+        "level": "H2",
+        "text": "Check A Terminal Before You Buy"
+      },
+      {
+        "level": "H2",
+        "text": "How V2 Trading Works"
+      },
+      {
+        "level": "H2",
+        "text": "One Market, Ten Reward Stocks"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nEXCHANGE\nV2 has one canonical QUOTRON/WETH market.\n▾\nCHECK A TERMINAL BEFORE YOU BUY\n\nBuying a terminal on a secondary market?\n▾\n\nCHECK\nHOW V2 TRADING WORKS\n\nAll swaps use the immutable canonical router and the single QUOTRON/WETH Uniswap v4 pool.\n▾\n\nONE MARKET, TEN REWARD STOCKS\n\nThe ten tickers are reward tracks, not QUOTRON trading pools.\n▾\n\nNVDA\nNVIDIA\n$229.22\nAAPL\nApple\n$327.73\nTSLA\nTesla\n$376.33\nGME\nGameStop\n$19.35\nSPCX\nSpaceX\n$150.02\nSPY\nS&P 500 ETF\n$773.53\nPLTR\nPalantir\n$182.65\nNFLX\nNetflix\n$82.79\nRDDT\nReddit\n$158.06\nMSTR\nStrategy\n$149.16\n\nVerify the canonical router and fee hook before signing.\n\nWALLET\nNO WALLET LINKED\n\nConnect to see balances, live USD values, and trade the canonical QUOTRON/WETH market without leaving your desk.\n\nCONNECT WALLET\nSWAP\nFEE —\n—\nPERMANENT FEE\n1.00x\nREWARD WEIGHT\nOPEN\nMARKET\nBUY\nSELL\nUSD\nBAL —\n25\n50\n75\nMAX\nRECEIVE\n—\nRATE\n—\nMIN RECEIVED\n—\nSLIPPAGE\n5%\n10%\n20%\n50%\n\nConnect your wallet to quote and trade.\n\nBUY QUOTRON\n\nAt 3%: 2% stock rewards · 0.6375% LP · 0.2125% buy-burn · 0.15% creator. Verify the router and fee hook before signing.\n\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/exchange"
+  },
+  "/xstocks": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Save a snapshot of this section"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QWIRE"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy QWIRE"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "ROTH"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy ROTH"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "GLUMBO"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy GLUMBO"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "7 more from Sentry Launchpad▾"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wNVDAxNVIDIA / USDG0.30% FEEPrice per Share (V4)$228.10Price per Share (V3)$227.47Variance+$0.63 (+0.28%)Volume (lifetime)$31,585.54Trades (lifetime)640Fees Col"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wAAPLxApple / USDG0.30% FEEPrice per Share (V4)$328.17Price per Share (V3)$328.79Variance-$0.62 (-0.19%)Volume (lifetime)$5,263.08Trades (lifetime)343Fees Colle"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wTSLAxTesla / USDG0.30% FEEPrice per Share (V4)$379.36Price per Share (V3)$377.85Variance+$1.51 (+0.40%)Volume (lifetime)$5,367.87Trades (lifetime)51Fees Collec"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wGOOGLxAlphabet / USDG0.30% FEEPrice per Share (V4)$357.98Price per Share (V3)—Varianceno V3 poolVolume (lifetime)$996.18Trades (lifetime)2Fees Collected$3"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wSPYxS&P 500 ETF / USDG0.30% FEEPrice per Share (V4)$774.04Price per Share (V3)$775.18Variance-$1.14 (-0.15%)Volume (lifetime)$80,113.61Trades (lifetime)3,107Fe"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wNFLXxNetflix / USDG0.30% FEEPrice per Share (V4)$808.31Price per Share (V3)$805.45Variance+$2.86 (+0.35%)Volume (lifetime)$1,297.5Trades (lifetime)67Fees Colle"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wAMZNxAmazon / USDG0.30% FEEPrice per Share (V4)$268.41Price per Share (V3)—Varianceno V3 poolVolume (lifetime)$997.21Trades (lifetime)3Fees Collected$3"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wMSTRxStrategy / USDG0.30% FEEPrice per Share (V4)$141.18Price per Share (V3)$141.69Variance-$0.50 (-0.35%)Volume (lifetime)$19,853.45Trades (lifetime)460Fees C"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "wMCDxMcDonald's / USDG0.30% FEEPrice per Share (V4)—Price per Share (V3)—Varianceno V3 poolVolume (lifetime)—Trades (lifetime)0Fees Collected—"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xca…f62d"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xa8…50D5"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x2e…c6ae"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x94…De8f"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x75…9a8a"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xc3…1171"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xe9…bde9"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xf8…aa6f"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x2a…b889"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xE7…B540"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x2e…ee05"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x7d…0856"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xa7…10dd"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x91…0F90"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xa2…5833"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x30…7EaB"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy pool id"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x2e…3cdb"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xc6…9d37"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x36…FB32"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x8b…30cc"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xbF…d3A2"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xFd…B33F"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x2E…6C2C"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x0A…7A07"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x73…5E03"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x65…7D78"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x76…5B21"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xe3…491D"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x15…bA89"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x2E…6C2C"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x07…6c76"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xFd…B33F"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xf9…9888"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x0A…7A07"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H2",
+        "text": "Builder Contributions"
+      },
+      {
+        "level": "H2",
+        "text": "Quotrons V4 Markets"
+      },
+      {
+        "level": "H2",
+        "text": "xStocks Pools on Ink"
+      },
+      {
+        "level": "H2",
+        "text": "Upgradeability & Trust"
+      },
+      {
+        "level": "H2",
+        "text": "Ink Foundation V3 Pools"
+      },
+      {
+        "level": "H2",
+        "text": "Contribute In WETH"
+      },
+      {
+        "level": "H2",
+        "text": "Build On This"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nBUILDER CONTRIBUTIONS\nALL-TIME CONTRIBUTED\n$9,151.91\n3.6445 WETH ROUTED TO HARDWIRED TERMINALS AND PROTOCOL-OWNED POOL LIQUIDITY\nConverted + allocated\n0 WETH\nAwaiting next epoch\n3.6445 WETH\nEpochs run\n0\n$4,575.96\nTERMINAL POT\n1.8223 WETH\n$4,575.96\nGROWTH SINK\n1.8223 WETH\nPROJECT\tPAIR\tORIGIN\tCONTRIBUTED\tSHARE\n\nQWIRE\n⧉\n\t\tWirehouse\t$5,612.31 · 2.2349 WETH\t61.3%\n\nROTH\n⧉\n\t\tSentry Launchpad\t$3,019.81 · 1.2026 WETH\t33.0%\n\nGLUMBO\n⧉\n\t\tSentry Launchpad\t$275.54 · 0.1097 WETH\t3.0%\n7 MORE FROM SENTRY LAUNCHPAD▾\n\nEvery contribution splits 50/50 and only ever grows.\n▾\n\nQUOTRONS V4 MARKETS\n\nEvery trade pays 0.30% in USDG: half accrues to hardwired Quotron terminals, half pays the pool's liquidity vault.\n▾\n\nVariance compares each V4 price to the Ink Foundation's canonical V3 pool for the same share, read live from chain.\n▾\n\nwNVDAx\nNVIDIA / USDG\n0.30% FEE\nPrice per Share (V4)\n$228.10\nPrice per Share (V3)\n$227.47\nVariance\n+$0.63 (+0.28%)\nVolume (lifetime)\n$31,585.54\nTrades (lifetime)\n640\nFees Collected\n$89.65\nwAAPLx\nApple / USDG\n0.30% FEE\nPrice per Share (V4)\n$328.17\nPrice per Share (V3)\n$328.79\nVariance\n-$0.62 (-0.19%)\nVolume (lifetime)\n$5,263.08\nTrades (lifetime)\n343\nFees Collected\n$15.82\nwTSLAx\nTesla / USDG\n0.30% FEE\nPrice per Share (V4)\n$379.36\nPrice per Share (V3)\n$377.85\nVariance\n+$1.51 (+0.40%)\nVolume (lifetime)\n$5,367.87\nTrades (lifetime)\n51\nFees Collected\n$10.87\nwGOOGLx\nAlphabet / USDG\n0.30% FEE\nPrice per Share (V4)\n$357.98\nPrice per Share (V3)\n—\nVariance\nno V3 pool\nVolume (lifetime)\n$996.18\nTrades (lifetime)\n2\nFees Collected\n$3\nwSPYx\nS&P 500 ETF / USDG\n0.30% FEE\nPrice per Share (V4)\n$774.04\nPrice per Share (V3)\n$775.18\nVariance\n-$1.14 (-0.15%)\nVolume (lifetime)\n$80,113.61\nTrades (lifetime)\n3,107\nFees Collected\n$239.76\nwNFLXx\nNetflix / USDG\n0.30% FEE\nPrice per Share (V4)\n$808.31\nPrice per Share (V3)\n$805.45\nVariance\n+$2.86 (+0.35%)\nVolume (lifetime)\n$1,297.5\nTrades (lifetime)\n67\nFees Collected\n$3.9\nwAMZNx\nAmazon / USDG\n0.30% FEE\nPrice per Share (V4)\n$268.41\nPrice per Share (V3)\n—\nVariance\nno V3 pool\nVolume (lifetime)\n$997.21\nTrades (lifetime)\n3\nFees Collected\n$3\nwMSTRx\nStrategy / USDG\n0.30% FEE\nPrice per Share (V4)\n$141.18\nPrice per Share (V3)\n$141.69\nVariance\n-$0.50 (-0.35%)\nVolume (lifetime)\n$19,853.45\nTrades (lifetime)\n460\nFees Collected\n$57.81\nwMCDx\nMcDonald's / USDG\n0.30% FEE\nPrice per Share (V4)\n—\nPrice per Share (V3)\n—\nVariance\nno V3 pool\nVolume (lifetime)\n—\nTrades (lifetime)\n0\nFees Collected\n—\nMARKET\tPOOL ID (V4)\tLP VAULT\tWRAPPED TOKEN\nWNVDAX\t\n0xeb…cd11\n⧉\n\t\n0xca…f62d\n⧉\n\t\n0xa8…50D5\n⧉\n\nWAAPLX\t\n0x0e…3092\n⧉\n\t\n0x2e…c6ae\n⧉\n\t\n0x94…De8f\n⧉\n\nWTSLAX\t\n0x13…af19\n⧉\n\t\n0x75…9a8a\n⧉\n\t\n0xc3…1171\n⧉\n\nWGOOGLX\t\n0x5e…c3b2\n⧉\n\t\n0xe9…bde9\n⧉\n\t\n0xf8…aa6f\n⧉\n\nWSPYX\t\n0x84…94a7\n⧉\n\t\n0x2a…b889\n⧉\n\t\n0xE7…B540\n⧉\n\nWNFLXX\t\n0x9f…38b6\n⧉\n\t\n0x2e…ee05\n⧉\n\t\n0x7d…0856\n⧉\n\nWAMZNX\t\n0xc1…3a38\n⧉\n\t\n0xa7…10dd\n⧉\n\t\n0x91…0F90\n⧉\n\nWMSTRX\t\n0xb7…9a7d\n⧉\n\t\n0xa2…5833\n⧉\n\t\n0x30…7EaB\n⧉\n\nWMCDX\t\n0x02…0254\n⧉\n\t\n0x2e…3cdb\n⧉\n\t\n0xc6…9d37\n⧉\nXSTOCKS POOLS ON INK\n\nTokenized equities (xStocks by Backed, via the Kraken product suite) trading onchain at Ink.\n▾\n\nCONTRACT\tADDRESS\tUPGRADEABLE\nPOOL MANAGER (UNISWAP V4)\t\n0x36…FB32\n⧉\n\t—\nQUOTRONS HOOK\t\n0x8b…30cc\n⧉\n\tNo — immutable\nPOOL FACTORY\t\n0xbF…d3A2\n⧉\n\tNo — immutable\nEPOCH CONVERTER\t\n0xFd…B33F\n⧉\n\tUUPS proxy\nTERMINAL DIVIDENDS\t\n0x2E…6C2C\n⧉\n\tUUPS proxy\nWETH TERMINAL POT\t\n0x0A…7A07\n⧉\n\tUUPS proxy\nLIQUIDITY GROWTH SINK\t\n0x73…5E03\n⧉\n\tUUPS proxy\nLP VAULT BEACON\t\n0x65…7D78\n⧉\n\tBeacon\nLP VAULT IMPLEMENTATION\t\n0x76…5B21\n⧉\n\t—\nUSDG (QUOTE ASSET)\t\n0xe3…491D\n⧉\n\t—\nUPGRADEABILITY & TRUST\n\nThe contract that touches every swap — the fee hook — is immutable and cannot be changed by anyone, including us.\n▾\n\nUpgrade authority on every proxy and on the vault beacon is held at \n0x15…bA89\n⧉\n, separately from the operational owner.\n▾\n\nProxies delegate to these implementations — read the code that actually executes, not the shell:\n\nCOMPONENT\tPROXY\tIMPLEMENTATION\nTERMINAL DIVIDENDS\t\n0x2E…6C2C\n⧉\n\t\n0x07…6c76\n⧉\n\nEPOCH CONVERTER\t\n0xFd…B33F\n⧉\n\t\n0xf9…9888\n⧉\n\nWETH TERMINAL POT\t\n0x0A…7A07\n⧉\n\t\n0x79…c6B5\n⧉\n\nLIQUIDITY GROWTH SINK\t\n0x73…5E03\n⧉\n\t\n0x14…4b51\n⧉\n\nAll source is verified on Blockscout. Every address on this page links straight to it.\n\nINK FOUNDATION V3 POOLS\n\nThe canonical Uniswap V3 pools seeded by Ink strategy — USDG-quoted, 0.05% fee. Together with the Quotrons V4 markets they make ten tokenized equities tradable onchain at Ink.\n\nMARKET\tV3 POOL\tFEE\tWRAPPED TOKEN\nWNVDAX\t\n0x01…4727\n⧉\n\t0.05%\t\n0xa8…50D5\n⧉\n\nWAAPLX\t\n0x89…89D6\n⧉\n\t0.05%\t\n0x94…De8f\n⧉\n\nWTSLAX\t\n0x09…ED5E\n⧉\n\t0.05%\t\n0xc3…1171\n⧉\n\nWSPCXX\t\n0xDf…1406\n⧉\n\t0.05%\t\n0x8e…9072\n⧉\n\nWSPYX\t\n0x06…0F47\n⧉\n\t0.05%\t\n0xE7…B540\n⧉\n\nWPLTRX\t\n0xe5…6506\n⧉\n\t0.05%\t\n0x4A…1342\n⧉\n\nWNFLXX\t\n0x11…99ff\n⧉\n\t0.05%\t\n0x7d…0856\n⧉\n\nWMSTRX\t\n0x16…069D\n⧉\n\t0.05%\t\n0x30…7EaB\n⧉\nCONTRIBUTE IN WETH\n\nTwo contracts let anyone fund the venue without asking permission.\n▾\n\nRAIL\tADDRESS\tWHAT IT DOES\nTERMINAL POT\t\n0x0A…7A07\n⧉\n\tRoutes WETH → USDT0 → USDG, buys tokenized equities across the ten floors, pays hardwired terminals.\nLIQUIDITY GROWTH SINK\t\n0x73…5E03\n⧉\n\tSplits WETH 50/50 — half buys the stock, half stays USDG — and adds both sides as protocol-owned liquidity. Shares are non-transferable.\n\nEach rail fires between 0.01 and 10 WETH per epoch, at most once every 5 minutes.\n▾\n\nBUILD ON THIS\n\nThe V4 pools are permissionless to route through — any V4-compatible router or integration can trade them today. Live data (pools, swaps, candles, fees, vault activity) is public via our Goldsky subgraph:\n\nhttps://api.goldsky.com/api/public/project_cmssuu23e13si01xt3o30067i/subgraphs/quotrons-ink-stocks/prod/gn\n\nFull integration guide — PoolKey construction, quoting, swapping, fee behaviour and the subgraph schema — is in the Docs.\n\nBuilding a launchpad, structured product, collateral market, or portfolio app on tokenized equities? Reach out — @quotrons404.\n\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/xstocks"
+  },
+  "/market": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Sign in with X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H1",
+        "text": "Give X a trading wallet—not your main wallet."
+      },
+      {
+        "level": "H2",
+        "text": "Verify your X account"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\n\nCONTRACT COMMAND RELAY / ROBINHOOD CHAIN\n\nGive X a trading wallet—not your main wallet.\n\nA dedicated Privy wallet holds only the assets you choose. The X bot can act immediately, but only through a restricted signer and the lower limits you set here.\n\nIDENTITY 01\nVerify your X account\n\nThis creates the immutable social identity used to authorize deterministic bot commands.\n\nSIGN IN WITH X\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/market"
+  },
+  "/rewards": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "NVDANVIDIA$229.22444 machines · depth 0.53%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "AAPLApple$327.73444 machines · depth 0.17%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "TSLATesla$376.33444 machines · depth 0.22%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "GMEGameStop$19.35444 machines · depth 7.3%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "SPCXSpaceX$150.02444 machines · depth 5.17%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "SPYS&P 500 ETF$773.53444 machines · depth 0.09%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "PLTRPalantir$182.65444 machines · depth 0.52%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "NFLXNetflix$82.79444 machines · depth 0.47%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "RDDTReddit$158.06444 machines · depth 6.54%"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "MSTRStrategy$149.16444 machines · depth thin"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H1",
+        "text": "REWARD STOCKS"
+      },
+      {
+        "level": "H2",
+        "text": "Live Marks"
+      },
+      {
+        "level": "H2",
+        "text": "Identical Mix, Every Track"
+      },
+      {
+        "level": "H2",
+        "text": "The Ten Reward Stocks"
+      },
+      {
+        "level": "H2",
+        "text": "How A Reward Epoch Lands"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $150.02 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nREWARD STOCKS\nV2 trades in one canonical WETH pool.\n▾\nLIVE MARKS\nNVDA\nNVIDIA\n$229.22\n444 machines · depth 0.53%\nAAPL\nApple\n$327.73\n444 machines · depth 0.17%\nTSLA\nTesla\n$376.33\n444 machines · depth 0.22%\nGME\nGameStop\n$19.35\n444 machines · depth 7.3%\nSPCX\nSpaceX\n$150.02\n444 machines · depth 5.17%\nSPY\nS&P 500 ETF\n$773.53\n444 machines · depth 0.09%\nPLTR\nPalantir\n$182.65\n444 machines · depth 0.52%\nNFLX\nNetflix\n$82.79\n444 machines · depth 0.47%\nRDDT\nReddit\n$158.06\n444 machines · depth 6.54%\nMSTR\nStrategy\n$149.16\n444 machines · depth thin\nIDENTICAL MIX, EVERY TRACK\n245\nQUOTRON I KEYPADS\n133\nQUOTRON II DESK UNITS\n53\nQUOTRON 800S\n13\nNASDANK TERMINALS\n444\nTOTAL PER TRACK\nTHE TEN REWARD STOCKS\nTICKER\tASSET\tAUDITED DEPTH\tACTIVE WEIGHT\tUNASSIGNED POT\tWHY IT IS HERE\nNVDA\tNVIDIA\t0.53%\t46663\t0.000\tthe AI track, deepest tech book on the chain\nAAPL\tApple\t0.17%\t46211\t0.000\tblue-chip anchor\nTSLA\tTesla\t0.22%\t46935\t0.000\tretail gravity\nGME\tGameStop\t7.3%\t46939\t0.000\tthe cult track\nSPCX\tSpaceX\t5.17%\t48724\t0.000\townable almost nowhere else\nSPY\tS&P 500 ETF\t0.09%\t46663\t0.000\tthe market itself, deepest book audited\nPLTR\tPalantir\t0.52%\t47521\t0.000\tretail cult, surprisingly deep\nNFLX\tNetflix\t0.47%\t44335\t0.000\tmedia track\nRDDT\tReddit\t6.54%\t46763\t0.000\tthe internet's front page\nMSTR\tStrategy\tshallow\t44039\t0.000\tbitcoin proxy, thin past small size\n\nDepth is the measured price impact of a $1,000 buy of that stock on Robinhood Chain at the time of our liquidity audit.\n▾\n\nHOW A REWARD EPOCH LANDS\n\nOnce the hook's reward queue reaches the epoch threshold, the executor splits its WETH budget equally across all ten reward tracks, converts each share through fixed routes, and deposits the resulting stocks into the reflections contract.\n▾\n\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/rewards"
+  },
+  "/otc": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "● PENDING CLAIMS"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "FILTERS"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Save a snapshot of this section"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": ""
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OPENSEA ↗"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect to buy"
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "◀"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "1"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "2"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "27"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "▶"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Save a snapshot of this section"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H2",
+        "text": "The Board (265 listed)"
+      },
+      {
+        "level": "H2",
+        "text": "List From Your Inventory"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.98 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.98 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nEvery live QUOTRONS listing on OpenSea, readable and postable from right here.\n▾\nTHE BOARD (265 LISTED)\nFLOOR 1.999 ETH\n$5,028.36\n● PENDING CLAIMS\nFILTERS\nQUOTRON #2149 ● LIT\n1.999 ETH\n$5,028.36\n+$0.09 GME\nⓘ\n0XCC1C…EDFE\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #204 ● LIT\n1.999 ETH\n$5,028.36\n+$0.06 SPY\nⓘ\n0X4FE5…40C2\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #3377 ● LIT\n1.999 ETH\n$5,028.36\n+$0.06 TSLA\nⓘ\n0X4FE5…40C2\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #2629 ● LIT\n2.05 ETH\n$5,156.64\n+$0.21 AAPL\nⓘ\n0X7B8A…8DBE\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #3555 ● LIT\n2.05 ETH\n$5,156.64\n+$13.72 PLTR\nⓘ\n0X8193…9998\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #2608 ● LIT\n2.11 ETH\n$5,307.57\n+$0.31 GME\nⓘ\n0X4718…4EF9\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #3555 ● LIT\n2.12 ETH\n$5,332.73\n+$13.72 PLTR\nⓘ\n0X8193…9998\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #2608 ● LIT\n2.13 ETH\n$5,357.88\n+$0.31 GME\nⓘ\n0X4718…4EF9\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #3555 ● LIT\n2.14 ETH\n$5,383.03\n+$13.72 PLTR\nⓘ\n0X8193…9998\nOPENSEA ↗\nCONNECT TO BUY\nQUOTRON #2608 ● LIT\n2.15 ETH\n$5,408.19\n+$0.31 GME\nⓘ\n0X4718…4EF9\nOPENSEA ↗\nCONNECT TO BUY\n◀\n1\n2\n…\n27\n▶\nLIST FROM YOUR INVENTORY\n\nConnect a wallet to list your terminals for sale on OpenSea directly from this desk.\n\nCONNECT WALLET\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/otc"
+  },
+  "/relics": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Preview Hardwired"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Preview Hardwired"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Preview Hardwired"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Preview Hardwired"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H1",
+        "text": "THE RELICS"
+      },
+      {
+        "level": "H2",
+        "text": "#4441 · The Semaphore (1814)"
+      },
+      {
+        "level": "H2",
+        "text": "#4442 · The Universal Ticker (1871)"
+      },
+      {
+        "level": "H2",
+        "text": "#4443 · The Trans-Lux (1923)"
+      },
+      {
+        "level": "H2",
+        "text": "#4444 · The Gold Indicator (1867)"
+      },
+      {
+        "level": "H2",
+        "text": "How To Get One"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.98 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.98 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nTHE RELICS\nFour machines, one of each.\n▾\nPREVIEW HARDWIRED\n#4441 · THE SEMAPHORE (1814)\n\nFrance's optical flag-relay network moved a signal at roughly 900 miles per hour, decades before the telegraph.\n▾\n\n0.083% of all volume\nREWARD STREAM ONCE HARDWIRED\n1 of 1\nSUPPLY\n\nHardwired, the wood warms and the beam signals.\n\nPREVIEW HARDWIRED\n#4442 · THE UNIVERSAL TICKER (1871)\n\nEdison's synchronized stock ticker, built for the Gold & Stock Telegraph Company.\n▾\n\n0.083% of all volume\nREWARD STREAM ONCE HARDWIRED\n1 of 1\nSUPPLY\n\nHardwired, the tape runs.\n\nPREVIEW HARDWIRED\n#4443 · THE TRANS-LUX (1923)\n\nThe NYSE's rear-projection movie ticker threw quotes onto a translucent screen so a whole trading floor could read the tape at once.\n▾\n\n0.083% of all volume\nREWARD STREAM ONCE HARDWIRED\n1 of 1\nSUPPLY\n\nHardwired, all ten reward stocks crawl across the band.\n\nPREVIEW HARDWIRED\n#4444 · THE GOLD INDICATOR (1867)\n\nSamuel Laws' needle dial above the New York Gold Exchange, patent 72,742.\n▾\n\n0.10% of all volume, paid as all ten tokenized stocks\nREWARD STREAM ONCE HARDWIRED\n1 of 1\nSUPPLY\n\nHardwired, the needle ticks, the drums tremble, and it accrues every reward stock.\n\nHOW TO GET ONE\n\nThe same way as any other terminal: buy whole $QUOTRON tokens and machines materialize at random from whatever is unclaimed.\n▾\n\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/relics"
+  },
+  "/v1": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H1",
+        "text": "V1 → V2 DISTRIBUTION ARCHIVE"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.95 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.95 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nFINALIZED INCIDENT RECORD\nV1 → V2 DISTRIBUTION ARCHIVE\n\nConnect a snapshot wallet to inspect its published eligibility, completed leaves and V1 approval safety.\n\nThe zero-action V2 distribution is finalized. No new migration, assignment, handoff or restitution transaction can be submitted.\n\nV2 includes disclosed emergency controls: an owner guardian can freeze addresses, and a 2-of-2 Safe can recover V2 QUOTRON or terminals from a wallet.\n\nCONNECT WALLET\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/v1"
+  },
+  "/docs": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Show more"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "How do I connect my wallet?"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "How do I get a terminal?"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "How do I hardwire my terminal?"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "What are reflections?"
+      },
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": "Ask about QUOTRONS..."
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "Ask"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Status"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "The Short Version"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Glossary"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "V1 → V2"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "The Machines"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "The Reroll"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Reward Epochs"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Fee Split"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "The Routing Lock"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Hardwiring"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "The 4,444 Invariant"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Alliance"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Security & Trust"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Transfers & Royalties"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Verify It Yourself"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Live Contracts"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Swap API"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Stonks Incinerator"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Errors & Events"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "LLM File"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "The Venue"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Fees & Dividends"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Ink Contracts"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Integration Guide"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Brand Assets"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "FAQ"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Risks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Audit the calculation."
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "migration manifest"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "public post-mortem record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "The 4,444 Invariant"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x53…AbF0"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x71…7866"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x15…bA89"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xd8…01d7"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xA0…0000"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xd1…9e58"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x71…7866"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy code"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "#"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x5a…0D7F"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x02…9d6e"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xe0…d3Ec"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x94…aC81"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x62…B0cc"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x42…1C18"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xb8…2df2"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x24…a2FE"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xc3…38F9"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0xd1…0760"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x59…6f0a"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Copy address"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "0x4b…cCBe"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H1",
+        "text": "DOCS"
+      },
+      {
+        "level": "H2",
+        "text": "Ask The Desk"
+      },
+      {
+        "level": "H2",
+        "text": "Current V2 Status#"
+      },
+      {
+        "level": "H2",
+        "text": "The Short Version#"
+      },
+      {
+        "level": "H2",
+        "text": "Glossary#"
+      },
+      {
+        "level": "H2",
+        "text": "V1 Retirement And V2 Distribution#"
+      },
+      {
+        "level": "H2",
+        "text": "The Machines#"
+      },
+      {
+        "level": "H2",
+        "text": "The Reroll#"
+      },
+      {
+        "level": "H2",
+        "text": "The 10 Reward Stocks#"
+      },
+      {
+        "level": "H2",
+        "text": "Reward Epochs#"
+      },
+      {
+        "level": "H2",
+        "text": "Where Every Dollar Goes#"
+      },
+      {
+        "level": "H2",
+        "text": "The Routing Lock#"
+      },
+      {
+        "level": "H2",
+        "text": "Hardwiring#"
+      },
+      {
+        "level": "H2",
+        "text": "The 4,444 Invariant#"
+      },
+      {
+        "level": "H2",
+        "text": "The STONK BROKERS Alliance#"
+      },
+      {
+        "level": "H2",
+        "text": "Security Controls And Trust Assumptions#"
+      },
+      {
+        "level": "H2",
+        "text": "NFT Transfers And Creator Earnings#"
+      },
+      {
+        "level": "H2",
+        "text": "Verify It Yourself#"
+      },
+      {
+        "level": "H2",
+        "text": "Live Contracts#"
+      },
+      {
+        "level": "H2",
+        "text": "The Swap API#"
+      },
+      {
+        "level": "H2",
+        "text": "The Stonks Incinerator#"
+      },
+      {
+        "level": "H2",
+        "text": "Errors & Events Reference#"
+      },
+      {
+        "level": "H2",
+        "text": "Feed This To Your AI#"
+      },
+      {
+        "level": "H2",
+        "text": "The Venue#"
+      },
+      {
+        "level": "H2",
+        "text": "Fees And Dividends#"
+      },
+      {
+        "level": "H2",
+        "text": "Ink Contracts#"
+      },
+      {
+        "level": "H2",
+        "text": "Integration Guide#"
+      },
+      {
+        "level": "H2",
+        "text": "Brand Assets#"
+      },
+      {
+        "level": "H3",
+        "text": "The mark"
+      },
+      {
+        "level": "H3",
+        "text": "Wordmark"
+      },
+      {
+        "level": "H3",
+        "text": "App icon"
+      },
+      {
+        "level": "H3",
+        "text": "Banners"
+      },
+      {
+        "level": "H3",
+        "text": "Animated"
+      },
+      {
+        "level": "H3",
+        "text": "Cards & wallpapers"
+      },
+      {
+        "level": "H3",
+        "text": "Brochures"
+      },
+      {
+        "level": "H3",
+        "text": "Colour"
+      },
+      {
+        "level": "H2",
+        "text": "FAQ#"
+      },
+      {
+        "level": "H2",
+        "text": "Risks#"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.95 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.95 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nDOCS\nHow the terminals work, where the money goes, and how to verify every claim on this page yourself.\nASK THE DESK\n\nA clerk who has read every page of this catalog.\n▾\n\nHow do I connect my wallet?\nHow do I get a terminal?\nHow do I hardwire my terminal?\nWhat are reflections?\nASK\nSTART HERE\nStatus\nThe Short Version\nGlossary\nV1 → V2\nTHE MACHINES\nThe Machines\nThe Reroll\nReward Stocks\nReward Epochs\nTHE MONEY\nFee Split\nThe Routing Lock\nHardwiring\nThe 4,444 Invariant\nAlliance\nTRUST & VERIFY\nSecurity & Trust\nTransfers & Royalties\nVerify It Yourself\nLive Contracts\nBUILDERS\nSwap API\nStonks Incinerator\nErrors & Events\nLLM File\nXSTOCKS ON INK\nThe Venue\nFees & Dividends\nInk Contracts\nIntegration Guide\nBRAND\nBrand Assets\nQUESTIONS\nFAQ\nLEGAL\nRisks\nCURRENT V2 STATUS#\nDEPLOYED\nSEPARATE V2 COLLECTION\nFINAL\nZERO-ACTION DISTRIBUTION\nFROZEN\nMETADATA FREEZE\nOPEN\nCANONICAL MARKET\n\nThese states are read from the production contracts every 30 seconds, not hardcoded. The collection and snapshot distribution can be live while trading remains staged; trading opens only after liquidity is seeded and the one-way onchain launch transaction succeeds. Metadata becomes immutable when the launch transaction freezes its base URIs.\n\nTHE SHORT VERSION#\n\n$QUOTRON is a token with only 4,444 units in existence, trading through one canonical QUOTRON/WETH pool. Hold a whole liquid token and a dark terminal appears in your wallet, assigned to one of ten stock-reward tracks. Sell below a whole token and the dark terminal dissolves back into circulation.\n\nBurn the token backing a terminal and it is hardwired: permanent, irreversible, and earning its assigned tokenized-stock rewards from that moment on. The token supply shrinks with every hardwire; the fee stream it earns from does not.\n\nEvery buy and sell pays a permanent 3% fee, enforced by the token itself rather than by this website. 2% of volume flows to hardwired terminals as stock, 0.6375% compounds the locked liquidity, 0.2125% buys and burns $STONKBROKER, and 0.15% pays the creator.\n\nThat is the whole system: a gacha for flippers, a one-way commitment for holders, and a fee engine that cannot be routed around feeding the committed. Every section below expands one of those claims and links the contract that makes it true.\n\nGLOSSARY#\n\nThe vocabulary is proprietary on purpose — the machines are real, the states are not standard ERC-721 states. Every term used on this page:\n\n▾\nALL TERMS\nDark terminal\tA terminal backed by 1.0 liquid $QUOTRON. It trades with the token, can dissolve, can reroll, and earns nothing.\nHardwired (lit) terminal\tA terminal whose backing token has been burned. Permanent, freely transferable as a plain NFT, and the only state that earns reflections. The screen lights up and animates.\nMaterialize\tWhat happens when your liquid balance crosses up through a whole unit: a terminal is drawn from the unclaimed pool and appears in your wallet.\nDissolve\tWhat happens when your balance drops below a whole unit: your most recently received dark terminal returns to the pool.\nReroll\tDissolving and rematerializing draws a different random ID. Selling below a whole token and buying back is the gacha loop.\nFloor / track\tOne of ten groups of 444 terminals, each assigned a single reward stock (NVDA, AAPL, TSLA, GME, SPCX, SPY, PLTR, NFLX, RDDT, MSTR).\nTier\tMachine model rarity: T1 (1.0x), T2 (1.5x), T3 (2.5x), T4 (5.0x) reflection weight.\nRelic\tOne of four unique pre-screen machines (ids 4441–4444) with their own reward streams instead of a floor assignment.\nReflections\tThe 2% of trading volume that accrues to hardwired terminals, paid in each floor's tokenized stock.\nEpoch\tOne batch conversion of queued WETH fees into the ten reward stocks through the sealed converter routes.\nPoke\tA permissionless call that re-prices a terminal's Broker boost from live balances. Anyone can poke any hardwired id.\nBoost\t1.25x reflection weight on every standard terminal you hardwired while your wallet holds at least one STONK BROKER.\nCanonical router\tThe only contract that can move $QUOTRON into the PoolManager. Immutable, ETH-native on both sides.\nHook\tThe Uniswap v4 contract attached to the QUOTRON/WETH pool. It takes the fee on the WETH side and authorizes each swap's settlement.\nKeeper\tThe operational address that runs conversions, epochs, and pot sweeps. Disclosed and rate-limited by contract rules.\nV1 RETIREMENT AND V2 DISTRIBUTION#\n\nV2 is a separate contract stack and a separate OpenSea collection. It does not replace, mutate, or reuse the retired V1 mirror. The reviewed V2 ledger was distributed directly to eligible wallets; holders did not need to claim or sign a migration transaction.\n\n▾\nWHAT HAPPENED, AND WHAT WAS PRESERVED\n\nV1 was paused after an approvals-related incident on the V1 mirror: an ERC-721 approval could survive a burn and rematerialization cycle. V2's mirror clears each token's individual approval on every ownership or state change — including hardwiring — so that class of bug is closed by construction, not by policy.\n\nV1 generated $113,850 in tokenized-stock rewards for hardwired holders before retirement. The exact archived value is $113,849.84, calculated from the final onchain fee pots at the frozen V1 accounting marks — not today's market prices. Audit the calculation.\n\nEligible hardwired terminals kept their exact IDs and lit state. This is what the V2 pool's inverse index exists for: specific IDs can be pulled from the unclaimed pool, so a V1 hardwire migrated to the same machine, not a lookalike.\nEligible liquid allocations were rerolled under the published plan, and reviewed restitution allocations were included.\nPurchases after the applicable cutoff created no V2 entitlement — on OpenSea, in unofficial external pools, or anywhere else. The cutoffs are documented below.\nFinalization required the committed distribution cap to be fully delivered and the migration reserve to hold zero QUOTRON.\n\nDistribution finalization permanently closed every remaining claim, assignment, handoff, fractional, and restitution path. The V1 Migration Record is read-only except for tools that help users revoke unsafe legacy operator approvals.\n\n▾\nTHE TWO SNAPSHOT CUTOFFS\n\nTwo cutoff blocks governed V2 eligibility. Both are committed in the published migration manifest and documented in the public post-mortem record:\n\nHalt block 34,984,482 — August 12, 2026, 8:09:32 PM CT, the block where trading was halted on-chain. Dark terminal ownership, liquid and fractional QUOTRON balances, and the set of terminals eligible for lit copies froze here. Terminals unminted at this block had no allocation to copy.\nHardwired ownership block 35,337,540 — August 13, 2026, 6:00 AM CT, the announced stop-trading deadline. Only for the 2,001 terminals already hardwired at the halt block: their lit V2 copies followed V1 NFT ownership through this later block. This cutoff never applied to dark terminals.\n\nPurchases, sales, and transfers after the applicable cutoff created no V2 entitlement — on any venue, including OpenSea and unofficial external pools. Each V2 copy went to the wallet holding the asset at its cutoff block; in a post-cutoff sale that is the seller, not the buyer.\n\nTHE MACHINES#\n\nEvery terminal is a real machine from the history of stock quotation, drawn as 8-bit pixel art. Rarer machines carry more reflection weight.\n\nTIER\tMACHINE\tSUPPLY\tWEIGHT\nT1\tQuotron I Keypad (1960)\t2,450\t1.0x\nT2\tQuotron II Desk Unit (1962)\t1,330\t1.5x\nT3\tQuotron 800 (1970s)\t530\t2.5x\nT4\tNASDANK Terminal (1971)\t130\t5.0x\nRelic\tThe Semaphore (1814)\t1\t0.083% of all volume\nRelic\tThe Universal Ticker (1871)\t1\t0.083% of all volume\nRelic\tThe Trans-Lux (1923)\t1\t0.083% of all volume\nRelic\tThe Gold Indicator (1867)\t1\t0.10% of all volume, paid as all ten tokenized stocks\n▾\nTHE HISTORY BEHIND THE MODELS\nTHE REROLL#\n\nDark terminals are not stable assignments — they are draws. When your liquid balance crosses down through a whole unit, your most recently received dark terminal dissolves back into the unclaimed pool. When it crosses back up, a new terminal is drawn at random from whatever the pool currently holds. Sell 0.1 $QUOTRON and buy it back, and you are holding a different machine.\n\nThis is the gacha half of the protocol. A T1 draw can be rerolled for another shot at a T4 by cycling through the pool, at the cost of the 3% fee each way plus price impact. The odds are exactly the pool's live composition — and the pool is public state, so the odds are checkable at any moment.\n\n▾\nHOW THE DRAW WORKS ONCHAIN\n\nThe pool is a lazy Fisher–Yates shuffle over the unclaimed IDs. A slot whose stored value is zero implicitly holds slot + 1, so the 4,444-entry pool costs no storage until touched. Draws index into it with a hash of the previous block's randomness, the timestamp, the recipient, and a nonce:\n\nSOLIDITY\nQuotron404V2 — the draw\nCOPY\nfunction _draw(address account) internal returns (uint256 id) {\n    uint256 position = uint256(\n        keccak256(abi.encodePacked(\n            block.prevrandao, block.timestamp,\n            block.number, account, ++_drawNonce\n        ))\n    ) % poolSize;\n    id = _slotValue(position);\n    _removePoolP",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/docs"
+  },
+  "/about": {
+    "actions": [
+      {
+        "disabled": false,
+        "kind": "input",
+        "label": ""
+      },
+      {
+        "disabled": true,
+        "kind": "button",
+        "label": "I Understand & Agree"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRONS"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Home"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "My Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Exchange"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "xStocks Pools"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Social Market"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Reward Stocks"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "OTC Desk"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Relics"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "V1 Migration Record"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Docs"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on X"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "Quotrons on OpenSea"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DexScreener"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "QUOTRON/WETH on DEXTools"
+      },
+      {
+        "disabled": false,
+        "kind": "button",
+        "label": "Connect Wallet"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "info@quotrons.cash"
+      },
+      {
+        "disabled": false,
+        "kind": "a",
+        "label": "About & Legal"
+      }
+    ],
+    "dialogs": [],
+    "headings": [
+      {
+        "level": "H2",
+        "text": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ"
+      },
+      {
+        "level": "H3",
+        "text": "ABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS"
+      },
+      {
+        "level": "H2",
+        "text": "About & Legal"
+      }
+    ],
+    "mainText": "⚠ EXPERIMENTAL SOFTWARE: PLEASE READ\n\nBefore you connect a wallet or interact with Quotrons, please read and acknowledge the following:\n\nQuotrons is experimental software on Robinhood Chain mainnet.\nNothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).\nCrypto assets, NFTs, and tokens are highly volatile. Their value can fall sharply, even to zero, at any time and for any reason.\nHardwiring burns tokens IRREVERSIBLY. There is no guarantee of reward drops, reflections, stock-reward conversions, or any other outcome. Past activity is not a promise of future results.\nYou are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity.\n\nNever invest, hardwire, or trade with more than you can afford to lose completely.\nSwapping for stock tokens is restricted in the United States region.\n\nABOUT REFLECTIONS AND REWARD DROPS: THESE ARE NOT DIVIDENDS\nDistributions to hardwired terminals are promotional rewards paid under the Quotrons Rewards Program for taking part in the protocol. They are not dividends and they are not investment income.\nHolding a terminal or a token gives you no equity, no ownership stake, no shareholder rights, and no share of any revenue or profits of any company, including the companies whose tokenized stocks trade on Robinhood Chain.\nSwapping for stock tokens is restricted in the United States region. Do not use these features if you are located in, or a resident of, the United States.\nThis site is a user interface only. It lets you interact with permissionless smart contracts that live fully on chain.\nBy using this protocol you agree that the use of these types of financial products is legal in your jurisdiction.\nI have read and understand this disclaimer. I acknowledge that Quotrons is experimental, that this is not financial advice, that stock token swaps are restricted in the United States region, that hardwiring is irreversible, and that I may lose some or all of any funds I risk.\nI UNDERSTAND & AGREE\n\nQuotrons is a product of Mavrk, Inc.\n\nQUOTRONS\nHOME\nMY DESK\nEXCHANGE\nXSTOCKS POOLS\nSOCIAL MARKET\nREWARD STOCKS\nOTC DESK\nRELICS\nV1 MIGRATION RECORD\nDOCS\nCONNECT WALLET\nV2 LIVE · 3% BASE FEE\n4,444 TERMINALS · 1 TOKEN = 1 MACHINE · ONE CANONICAL WETH POOL · BURN TO HARDWIRE\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.95 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nNVDA $229.22 · AAPL $327.73 · TSLA $376.33 · GME $19.35 · SPCX $149.95 · SPY $773.53 · PLTR $182.65 · NFLX $82.79 · RDDT $158.06 · MSTR $149.16\nTHE TERMINAL EXCHANGE\nRobinhood Chain mainnet · V2 · one canonical QUOTRON/WETH market · lit terminals print stocks\nABOUT & LEGAL\n\nQuotrons is a product of Mavrk, Inc., a Delaware corporation.\n\nOperated by: Mavrk, Inc.\nIncorporated: June 12, 2026\nContact: info@quotrons.cash\nQuotrons is a product of Mavrk, Inc.\nAbout & Legal",
+    "title": "QUOTRONS",
+    "url": "https://www.quotrons.cash/about"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "identity": {
+    "transientCollectible": "Grounded Craft",
+    "permanentCollectible": "Orbiter",
+    "basketRelic": "Station",
+    "indicatorRelic": "Observatory",
+    "metadataDescription": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+    "transientImage": "placeholder://orbit-4444/grounded-craft",
+    "permanentImage": "placeholder://orbit-4444/orbiter",
+    "basketRelicImage": "placeholder://orbit-4444/station",
+    "indicatorRelicImage": "placeholder://orbit-4444/observatory"
+  },
+  "cases": [
+    {
+      "identityId": 12,
+      "permanent": true,
+      "expectedJson": "{\"name\":\"Orbiter #12\",\"description\":\"A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.\",\"image\":\"placeholder://orbit-4444/orbiter\",\"attributes\":[{\"display_type\":\"number\",\"trait_type\":\"Identity ID\",\"value\":12},{\"trait_type\":\"State\",\"value\":\"Orbiter\"},{\"trait_type\":\"Reward Track\",\"value\":\"GOOGLc\"},{\"trait_type\":\"Rarity Tier\",\"value\":\"III\"},{\"trait_type\":\"Reward Weight\",\"value\":2.5},{\"trait_type\":\"Collectible Kind\",\"value\":\"Ordinary\"}]}"
+    },
+    {
+      "identityId": 4441,
+      "permanent": false,
+      "expectedJson": "{\"name\":\"Station 1\",\"description\":\"A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.\",\"image\":\"placeholder://orbit-4444/station\",\"attributes\":[{\"display_type\":\"number\",\"trait_type\":\"Identity ID\",\"value\":4441},{\"trait_type\":\"State\",\"value\":\"Grounded Craft\"},{\"trait_type\":\"Reward Track\",\"value\":\"All Reward Tracks\"},{\"trait_type\":\"Rarity Tier\",\"value\":\"Special\"},{\"trait_type\":\"Reward Weight\",\"value\":0},{\"trait_type\":\"Collectible Kind\",\"value\":\"Station\"}]}"
+    },
+    {
+      "identityId": 4444,
+      "permanent": true,
+      "expectedJson": "{\"name\":\"Observatory\",\"description\":\"A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.\",\"image\":\"placeholder://orbit-4444/observatory\",\"attributes\":[{\"display_type\":\"number\",\"trait_type\":\"Identity ID\",\"value\":4444},{\"trait_type\":\"State\",\"value\":\"Orbiter\"},{\"trait_type\":\"Reward Track\",\"value\":\"All Reward Tracks\"},{\"trait_type\":\"Rarity Tier\",\"value\":\"Special\"},{\"trait_type\":\"Reward Weight\",\"value\":0},{\"trait_type\":\"Collectible Kind\",\"value\":\"Observatory\"}]}"
+    }
+  ]
+}

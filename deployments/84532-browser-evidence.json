@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "application": {
+    "origin": "http://localhost:3001",
+    "walletOnboarding": "Reown AppKit / WalletConnect",
+    "reownProjectIdPresent": true,
+    "rabbyUsed": false
+  },
+  "wallets": {
+    "ordinaryCollector": "0x2D9C9FFF103716BB8DADb68A7251Bd276A231445",
+    "operator": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "justification": "One ephemeral ordinary collector proves the user boundary and owns the browser-created craft. The funded development signer holds the POC operator roles. No extra wallet was created per action."
+  },
+  "surfaceChecks": [
+    {
+      "surface": "/status",
+      "walletState": "disconnected",
+      "result": "healthy public state remained readable"
+    },
+    {
+      "surface": "/operations",
+      "walletState": "disconnected",
+      "result": "privileged controls remained disabled"
+    },
+    {
+      "surface": "/operations",
+      "walletState": "ordinary collector",
+      "result": "no privileged transaction could be prepared"
+    },
+    {
+      "surface": "/operations",
+      "walletState": "chain 1 emitted by the WalletConnect peer",
+      "result": "wrong-network boundary appeared and switched only to Base Sepolia"
+    },
+    {
+      "surface": "/operations",
+      "walletState": "operator",
+      "result": "owner, keeper, guardian, creator, recovery-authority, and liquidity-executor capabilities were observed"
+    }
+  ],
+  "ordinaryCollectorFlow": {
+    "identityId": 1016,
+    "observedAttributes": {
+      "rewardTrack": "AAPLc",
+      "rarityTier": "I",
+      "weight": "1x",
+      "stateBeforeCommitment": "Grounded Craft",
+      "stateAfterCommitment": "Orbiter"
+    },
+    "finalBalances": {
+      "fuelWei": "163323740250745708",
+      "wethWei": "90745006840135911"
+    },
+    "transactions": [
+      {
+        "label": "fund ordinary collector with valueless test WETH",
+        "transactionHash": "0xb6ab02b82dab8a55218fe268629baf65a8ef0cf941adc1fe72f0b3f5b3f906cc",
+        "blockNumber": "46038593",
+        "gasUsed": "51594",
+        "status": "success"
+      },
+      {
+        "label": "fund ordinary collector with Base Sepolia gas ETH",
+        "transactionHash": "0x3afee9398c43e6b2a77df5eb9677395d0383caac7728be5011f612a8bcd57b41",
+        "blockNumber": "46038598",
+        "gasUsed": "21000",
+        "status": "success"
+      },
+      {
+        "label": "approve test WETH in Chrome",
+        "transactionHash": "0x99a98529289d9ea27d3109185779c585844b1d667ab3a94a710f20d3fea3c26f",
+        "blockNumber": "46038640",
+        "gasUsed": "46159",
+        "status": "success"
+      },
+      {
+        "label": "buy FUEL and discover craft 1016 in Chrome",
+        "transactionHash": "0x6f6d22c04a8400b320ae530572acc0ff8dbd7ae523cfbd6ab3b2da763a882bf2",
+        "blockNumber": "46038665",
+        "gasUsed": "504810",
+        "status": "success"
+      },
+      {
+        "label": "Launch craft 1016 in Chrome",
+        "transactionHash": "0xa180909f116e86d2cecb693cb902bb172006e74d54000a714ba7ebf1841f33aa",
+        "blockNumber": "46038704",
+        "gasUsed": "187095",
+        "status": "success"
+      },
+      {
+        "label": "approve FUEL in Chrome",
+        "transactionHash": "0xf81249ad6f8b488bd1b4f5dfb9207a6ac1e7de7cbebbaa4f390006db43f5bd30",
+        "blockNumber": "46038791",
+        "gasUsed": "64159",
+        "status": "success"
+      },
+      {
+        "label": "post-Launch FUEL sale in Chrome",
+        "transactionHash": "0xc15302bf2cca7c891a136930e3b923557aae0019788c097c2eae6befd15b9191",
+        "blockNumber": "46038817",
+        "gasUsed": "244983",
+        "status": "success"
+      }
+    ]
+  },
+  "operatorFlow": {
+    "transactions": [
+      {
+        "label": "WETH-only Protocol-Owned Liquidity cycle in Chrome",
+        "transactionHash": "0xe1407a2f85b1e6e76492ee8354ef14030bb38ba186725edb5e10523e3d16429f",
+        "blockNumber": "46036919",
+        "gasUsed": "201934",
+        "status": "success"
+      },
+      {
+        "label": "open Reward Epoch 3 in Chrome",
+        "transactionHash": "0xf967d394c364b0adf41468ee832931b9e773558fc7e3bb4c863d3a0b5dc7ea6c",
+        "blockNumber": "46039076",
+        "gasUsed": "170856",
+        "status": "success"
+      },
+      {
+        "label": "execute AAPLc Reward Track in Chrome",
+        "transactionHash": "0xfcb3c20efc34bd04ab41f0fc3b19339b26ce28150a2f0b306142b2dcf9db6bb1",
+        "blockNumber": "46039193",
+        "gasUsed": "389003",
+        "status": "success"
+      },
+      {
+        "label": "execute GOOGLc Reward Track after RPC retry in Chrome",
+        "transactionHash": "0x65717ca4b10c4f2aaaf7a90ab5a6afe6623d1dbf75c68db0252a484de185b06c",
+        "blockNumber": "46039341",
+        "gasUsed": "354192",
+        "status": "success"
+      },
+      {
+        "label": "execute METAc Reward Track in Chrome",
+        "transactionHash": "0x569c5c655cffdc06f99e85878befb94706078266a621c0ae1eaae6ad4e25d979",
+        "blockNumber": "46039383",
+        "gasUsed": "357816",
+        "status": "success"
+      },
+      {
+        "label": "execute NVDAc Reward Track in Chrome",
+        "transactionHash": "0x60cc08432cec413ac7cca50c1f3755d5ba4aa86f7b5bea1b8ff33fca5c3321ae",
+        "blockNumber": "46039408",
+        "gasUsed": "357020",
+        "status": "success"
+      },
+      {
+        "label": "claim permanent-craft AAPLc rewards in Chrome",
+        "transactionHash": "0xba911c7e050f8fa9d3b79af02a2ba6706aa9175eead258c93ae3d36896121735",
+        "blockNumber": "46039661",
+        "gasUsed": "173266",
+        "status": "success"
+      }
+    ]
+  },
+  "finalObservations": {
+    "identity1016Permanent": true,
+    "identity1016Owner": "0x2D9C9FFF103716BB8DADb68A7251Bd276A231445",
+    "identity1016PendingAaplcRawUnits": "135874162713197001",
+    "operatorClaimedIdentityIds": [29, 328, 349],
+    "operatorClaimedPendingAfter": ["0", "0", "0", "0"],
+    "rewardTrackQueuesWei": ["0", "0", "0", "0"],
+    "fuelTotalSupplyWei": "4440000000000000000000",
+    "permanentIdentityCount": 4,
+    "maximumEconomicUnitsWei": "4444000000000000000000"
+  }
+}

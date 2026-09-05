@@ -1,0 +1,14 @@
+diff --git a/dist/index.js b/dist/index.js
+index 066ed675286f80e04814e22ea9418038f83cd3bb..4da74fcc56519626eab6d15e461af867acf09348 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -9431,8 +9431,7 @@ var Ri = {
+ 		if (this.config.showOHLC) {
+ 			e.font = `${s}px ${n.font.family}`;
+ 			let t = i.close >= i.open, r = (e) => e.toLocaleString(void 0, {
+-				minimumFractionDigits: 2,
+-				maximumFractionDigits: 2
++				maximumSignificantDigits: 8
+ 			}), o = [
+ 				{
+ 					label: "O",

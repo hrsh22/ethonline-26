@@ -1,0 +1,13 @@
+diff --git a/dist/DragDropImporter-CLtRQjKD.js b/dist/DragDropImporter-CLtRQjKD.js
+index f5a258d71cda5419123c5aee9c790747991572f1..8a9755f531a8732a2849fb87469b9ec7f7c66337 100644
+--- a/dist/DragDropImporter-CLtRQjKD.js
++++ b/dist/DragDropImporter-CLtRQjKD.js
+@@ -1330,7 +1330,7 @@ var ft = 6, pt = class {
+ 			};
+ 			this.themeManager.setTheme(t);
+ 		}
+-		e.pricePrecision !== void 0 && (this.tradingManager.setConfig({ pricePrecision: e.pricePrecision }), this.alertManager.setPricePrecision(e.pricePrecision), this.streamManager?.priceLine.setPricePrecision(e.pricePrecision), this.crosshairHandler.setPricePrecision(e.pricePrecision)), this.syncRenderContext(), this.engine.requestRender();
++		e.pricePrecision !== void 0 && (this.tradingManager.setConfig({ pricePrecision: e.pricePrecision }), this.alertManager.setPricePrecision(e.pricePrecision), this.currentPriceLine.setPricePrecision(e.pricePrecision), this.streamManager?.priceLine.setPricePrecision(e.pricePrecision), this.crosshairHandler.setPricePrecision(e.pricePrecision)), this.syncRenderContext(), this.engine.requestRender();
+ 	}
+ 	getMarket() {
+ 		return this.marketConfig;

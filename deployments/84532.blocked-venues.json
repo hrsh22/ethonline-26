@@ -1,0 +1,82 @@
+{
+  "$schema": "./blocked-venue-schema.json",
+  "schemaVersion": 1,
+  "chainId": 84532,
+  "network": "base-sepolia",
+  "observedAtBlock": "46216262",
+  "$comment": "The deployment-specific inventory of alternative-venue codehashes to block. FuelCore.setBlockedVenueCodehash reverts once the token launches, so anything omitted here can never be added to this deployment. Every entry was read from chain with eth_getCode and hashed; see docs/adr/0002-enforce-a-single-uniswap-v4-market.md for what this can and cannot cover.",
+  "entries": [
+    {
+      "label": "uniswap-v3-swap-router-02",
+      "address": "0x94cC0AaC535CCDB3C01d6787D6413C739ae12bc4",
+      "codehash": "0x60e9352f5af4eee63b41456f85bf80c63044e98123ad599d41d87f2d068de0be",
+      "source": "https://developers.uniswap.org/deployments.json (protocol v3, contract SwapRouter02)",
+      "verifiedBy": "factory() == 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
+      "rationale": "The standard path to swap on a Uniswap V3 pool. V3 pools embed token0, token1 and fee as immutables, so each pool has its own codehash and the pools themselves cannot be enumerated. The singleton router can be."
+    },
+    {
+      "label": "uniswap-v3-position-manager",
+      "address": "0x27F971cb582BF9E50F397e4d29a5C7A34f11faA2",
+      "codehash": "0x60f3e548ae28f43dfdedd281dc9233b7135dcae55050662c985583df84bc453d",
+      "source": "https://developers.uniswap.org/deployments.json (protocol v3, contract NonfungiblePositionManager)",
+      "verifiedBy": "factory() == 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24",
+      "rationale": "The standard path to add liquidity to a Uniswap V3 pool. Without liquidity provision no V3 market can form, which makes this the more load-bearing of the two V3 entries."
+    },
+    {
+      "label": "uniswap-v3-migrator",
+      "address": "0xCbf8b7f80800bd4888Fbc7bf1713B80FE4E23E10",
+      "codehash": "0xb6e5b218c2c98a2b50387313bb6f408a47015bc3102c8bb986f8f8d8d8e1694b",
+      "source": "https://developers.uniswap.org/deployments.json (protocol v3, contract V3Migrator)",
+      "verifiedBy": "listed for chainId 84532 in the Uniswap deployments feed",
+      "rationale": "Moves liquidity into a V3 pool without going through the position manager, so leaving it out would leave the V3 liquidity path half-closed."
+    },
+    {
+      "label": "uniswap-universal-router",
+      "address": "0x492E6456D9528771018DeB9E87ef7750EF184104",
+      "codehash": "0x952c879f642706a4d399eb917827b5a2a5519328446dba72aef3579909bf15ef",
+      "source": "https://developers.uniswap.org/deployments.json (protocol universal-router, contract UniversalRouter)",
+      "verifiedBy": "listed for chainId 84532 in the Uniswap deployments feed",
+      "rationale": "Routes to V2, V3 and V4 alike. The protocol trades exclusively through its own CanonicalRouter, so blocking this closes a route without closing any route the product uses."
+    },
+    {
+      "label": "uniswap-swap-proxy",
+      "address": "0x02E5be68D46DAc0B524905bfF209cf47EE6dB2a9",
+      "codehash": "0x24a203c24b85e0994ae6aecccc2bc0c1df4e22f1b3d63f33d18bec0245867aaf",
+      "source": "https://developers.uniswap.org/deployments.json (protocol universal-router, contract SwapProxy)",
+      "verifiedBy": "listed for chainId 84532 in the Uniswap deployments feed",
+      "rationale": "Ships alongside the universal router and can mediate the same swaps, so blocking one without the other leaves the pair inconsistent."
+    },
+    {
+      "label": "uniswap-v4-pool-swap-test",
+      "address": "0x8B5bcC363ddE2614281aD875bad385E0A785D3B9",
+      "codehash": "0xcf254a8704600b8e9824f60d4d9858f761f17baf27a71de7dfb8239484eaa73d",
+      "source": "https://developers.uniswap.org/deployments.json (protocol v4, contract PoolSwapTest)",
+      "verifiedBy": "listed for chainId 84532 in the Uniswap deployments feed",
+      "rationale": "A public V4 router that can reach any pool in the PoolManager. CanonicalMarketRegistry.isAuthorizedFuelSettlement already rejects unauthorized PoolManager settlement, so this is defence in depth rather than the primary control."
+    },
+    {
+      "label": "uniswap-v4-pool-modify-liquidity-test",
+      "address": "0x37429cD17Cb1454C34E7F50b09725202Fd533039",
+      "codehash": "0x5d39a7244938a909f70906d72c9814c8024046513f5699cd6fb30d10d7e0a5db",
+      "source": "https://developers.uniswap.org/deployments.json (protocol v4, contract PoolModifyLiquidityTest)",
+      "verifiedBy": "listed for chainId 84532 in the Uniswap deployments feed",
+      "rationale": "The liquidity-provision counterpart to PoolSwapTest, and public on this testnet in a way it is not on mainnet."
+    },
+    {
+      "label": "uniswap-liquidity-launcher",
+      "address": "0x00004c4ccc709Ef590F7C81102C0689F0263D4e9",
+      "codehash": "0x672007315147b9202d825c5a4f5fed556179de55a89d8052f64d1c49ef366ed6",
+      "source": "https://developers.uniswap.org/deployments.json (protocol liquidity-launchpad, contract LiquidityLauncher)",
+      "verifiedBy": "listed for chainId 84532 in the Uniswap deployments feed",
+      "rationale": "Creates new liquidity-bootstrapping markets for an arbitrary token, which is precisely the alternative-venue formation this blocklist exists to prevent."
+    },
+    {
+      "label": "pancakeswap-v3-swap-router",
+      "address": "0x1b81D678ffb9C0263b24A97847620C99d213eB14",
+      "codehash": "0x2cbdac93453dc8ebb7906446b3af75ada8ff43a6225a08ed2e0ee6eb12057b42",
+      "source": "resolved on chain; PancakeSwap V3 is the only non-Uniswap AMM found deployed on Base Sepolia",
+      "verifiedBy": "factory() == 0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865, the PancakeSwap V3 factory",
+      "rationale": "PancakeSwap V3 is a Uniswap V3 fork, so its pools carry the same per-pool immutables and are equally non-enumerable. Its router is the enumerable part."
+    }
+  ]
+}

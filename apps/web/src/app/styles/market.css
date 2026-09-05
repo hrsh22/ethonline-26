@@ -1,0 +1,57 @@
+/* TradeCanvas builds its own DOM at runtime under `[data-library="tradecanvas"]`
+   and themes it through `--tcw-*` custom properties on `.tcw-root`. These are
+   the only rules the collector keeps as a stylesheet: everything else on the
+   Market route is a Tailwind utility over the Graphite tokens. */
+[data-library="tradecanvas"] .tcw-root {
+  color: var(--text-primary);
+  background: var(--chart-surface);
+  font-family: var(--font-mono), monospace;
+  --tcw-bg: var(--chart-surface);
+  --tcw-bg-surface: var(--surface-2);
+  --tcw-bg-elevated: var(--surface-3);
+  --tcw-bg-overlay: color-mix(in oklch, var(--surface-2) 80%, transparent);
+  --tcw-border: var(--border-subtle);
+  --tcw-border-strong: var(--border-strong);
+  --tcw-divider: var(--border-subtle);
+  --tcw-text: var(--text-primary);
+  --tcw-text-dim: var(--text-secondary);
+  --tcw-text-muted: var(--text-tertiary);
+  --tcw-accent: var(--chart-primary);
+  --tcw-accent-hover: var(--accent-text);
+  --tcw-accent-soft: color-mix(in oklch, var(--chart-primary) 14%, transparent);
+  --tcw-accent-glow: color-mix(in oklch, var(--chart-primary) 22%, transparent);
+  --tcw-accent-line: color-mix(in oklch, var(--chart-primary) 55%, transparent);
+  --tcw-ring: 0 0 0 2px var(--ring);
+  --tcw-red: var(--chart-negative);
+  --tcw-red-soft: color-mix(in oklch, var(--chart-negative) 12%, transparent);
+  --tcw-green: var(--chart-positive);
+  --tcw-green-soft: color-mix(in oklch, var(--chart-positive) 12%, transparent);
+  --tcw-amber: var(--status-warning-text);
+  --tcw-hover-bg: var(--surface-3);
+  --tcw-active-bg: var(--surface-3);
+  --tcw-radius-sm: var(--radius-control);
+  --tcw-radius: var(--radius-surface);
+  --tcw-radius-lg: var(--radius-surface);
+  --tcw-radius-xl: var(--radius-surface);
+  --tcw-font-mono: var(--font-mono), monospace;
+}
+[data-library="tradecanvas"] .tcw-toolbar {
+  border-color: var(--border-subtle);
+  background: var(--surface-2);
+}
+@media (max-width: 780px) {
+  /* The vendor toolbar keeps every trading control on one row. On phones that
+     row must be swipeable instead of clipping its right half. */
+  [data-library="tradecanvas"] .tcw-toolbar {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  [data-library="tradecanvas"] .tcw-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  [data-library="tradecanvas"] .tcw-toolbar-group,
+  [data-library="tradecanvas"] .tcw-toolbar-symbol {
+    flex: none;
+  }
+}

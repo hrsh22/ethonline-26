@@ -1,0 +1,127 @@
+import { spawn } from "node:child_process";
+import { setTimeout as wait } from "node:timers/promises";
+
+import { Effect } from "effect";
+
+import { rpc, runMain, spawnProcess } from "../../../scripts/effect-runtime.ts";
+import { nextRuntimeArguments } from "../../../scripts/next-runtime-command.ts";
+import { runBrowserMatrix, writeMatrixReport } from "../browser/run-matrix.ts";
+import { runHarnessSelfTest } from "../browser/self-test.ts";
+
+const PORT = 3_108;
+const ORIGIN = `http://127.0.0.1:${PORT}`;
+
+const argument = (name: string): string | undefined => {
+  const prefix = `--${name}=`;
+  const found = process.argv.find((value) => value.startsWith(prefix));
+  return found?.slice(prefix.length);
+};
+
+const awaitReady = async (output: readonly string[]): Promise<void> => {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    try {
+      const response = await fetch(ORIGIN);
+      if (response.ok) return;
+    } catch {
+      // The server is still starting.
+    }
+    await wait(250);
+  }
+  throw new Error(
+    `Production application server did not become ready.\n${output.join("")}`,
+  );
+};
+
+runMain(
+  Effect.gen(function* () {
+    const server = yield* spawnProcess(
+      "Could not start the production Next.js server",
+      () =>
+        spawn(
+          process.execPath,
+          nextRuntimeArguments("start", "--port", String(PORT)),
+          {
+            cwd: new URL("..", import.meta.url),
+            env: {
+              NEXT_PUBLIC_API_URL: "http://127.0.0.1:8800",
+              // next.config.ts fails a production start without the app
+              // origin, because it is signed into operator commands and
+              // published as wallet metadata. The audit server satisfies the
+              // guard explicitly; browser-visible values were baked at build.
+              NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3001",
+              NEXT_TELEMETRY_DISABLED: "1",
+              NODE_ENV: "production",
+              __NEXT_PROCESSED_ENV: "true",
+            },
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        ),
+    );
+    const output: string[] = [];
+    server.stdout.on("data", (chunk) => output.push(String(chunk)));
+    server.stderr.on("data", (chunk) => output.push(String(chunk)));
+
+    yield* rpc("Production browser matrix failed", async () => {
+      try {
+        await awaitReady(output);
+
+        if (process.argv.includes("--self-test")) {
+          const selfTest = await runHarnessSelfTest(ORIGIN);
+          const undetected = selfTest.filter((entry) => !entry.detected);
+          if (undetected.length > 0) {
+            throw new Error(
+              [
+                "The browser harness did not produce every expected result:",
+                ...undetected.map(
+                  (entry) =>
+                    `  - ${entry.name} (expected ${entry.expected}); observed: ${
+                      entry.observed.length === 0
+                        ? "nothing"
+                        : entry.observed
+                            .map(
+                              (failure) =>
+                                `[${failure.kind}] ${failure.detail}`,
+                            )
+                            .join(" | ")
+                    }`,
+                ),
+              ].join("\n"),
+            );
+          }
+          console.log(
+            `Harness self-test passed: verified ${selfTest.length} cases (${selfTest
+              .map((entry) => entry.name)
+              .join(", ")})`,
+          );
+          return;
+        }
+
+        const only = argument("only")?.split(",").filter(Boolean);
+        const result = await runBrowserMatrix({
+          origin: ORIGIN,
+          ...(only === undefined ? {} : { only }),
+          screenshotDirectory: argument("screenshots"),
+        });
+        writeMatrixReport(
+          argument("report") ?? "browser-matrix-report.json",
+          result,
+        );
+        if (result.failures.length > 0) {
+          throw new Error(
+            [
+              `Production browser matrix found ${result.failures.length} failure(s):`,
+              ...result.failures.map(
+                (failure) => `  - [${failure.kind}] ${failure.detail}`,
+              ),
+            ].join("\n"),
+          );
+        }
+        console.log(
+          `Production browser matrix passed ${result.cases.length} case(s)`,
+        );
+      } finally {
+        server.kill("SIGTERM");
+      }
+    });
+  }),
+);

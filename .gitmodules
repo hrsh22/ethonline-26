@@ -1,0 +1,9 @@
+[submodule "packages/contracts/lib/v4-core"]
+	path = packages/contracts/lib/v4-core
+	url = https://github.com/Uniswap/v4-core
+[submodule "packages/contracts/lib/chainlink-evm"]
+	path = packages/contracts/lib/chainlink-evm
+	url = https://github.com/smartcontractkit/chainlink-evm
+[submodule "packages/contracts/lib/openzeppelin-contracts-4.9.6"]
+	path = packages/contracts/lib/openzeppelin-contracts-4.9.6
+	url = https://github.com/openzeppelin/openzeppelin-contracts

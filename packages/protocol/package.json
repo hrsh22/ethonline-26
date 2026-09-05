@@ -1,0 +1,80 @@
+{
+  "name": "@orbit/protocol",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./operator-policy": {
+      "types": "./dist/operator-policy.d.ts",
+      "import": "./dist/operator-policy.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts.d.ts",
+      "import": "./dist/contracts.js"
+    },
+    "./domain": {
+      "types": "./dist/domain.d.ts",
+      "import": "./dist/domain.js"
+    },
+    "./discovery": {
+      "types": "./dist/discovery.d.ts",
+      "import": "./dist/discovery.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    },
+    "./events": {
+      "types": "./dist/events.d.ts",
+      "import": "./dist/events.js"
+    },
+    "./health": {
+      "types": "./dist/health.d.ts",
+      "import": "./dist/health.js"
+    },
+    "./genesis-curve": {
+      "types": "./dist/genesis-curve.d.ts",
+      "import": "./dist/genesis-curve.js"
+    },
+    "./history": {
+      "types": "./dist/history.d.ts",
+      "import": "./dist/history.js"
+    },
+    "./market-history": {
+      "types": "./dist/market-history.d.ts",
+      "import": "./dist/market-history.js"
+    },
+    "./pol-planner": {
+      "types": "./dist/pol-planner.d.ts",
+      "import": "./dist/pol-planner.js"
+    },
+    "./reader": {
+      "types": "./dist/reader.d.ts",
+      "import": "./dist/reader.js"
+    },
+    "./transactions": {
+      "types": "./dist/transactions.d.ts",
+      "import": "./dist/transactions.js"
+    },
+    "./viem-transport": {
+      "types": "./dist/viem-transport.d.ts",
+      "import": "./dist/viem-transport.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src test --max-warnings=0",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit"
+  },
+  "dependencies": {
+    "@orbit/config": "workspace:*",
+    "effect": "3.22.1",
+    "viem": "2.55.19"
+  },
+  "devDependencies": {
+    "@types/node": "26.3.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

@@ -1,0 +1,50 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  getProtocolHealthReadScope,
+  shouldLoadMarketHistory,
+  shouldLoadPublicStatus,
+} from "./protocol-read-scope";
+
+describe("protocol health route scope", () => {
+  it("keeps detailed operational history inside admin routes", () => {
+    expect(getProtocolHealthReadScope("/exchange")).toEqual({
+      includeConnectedWallet: true,
+      includeOperationalHistory: false,
+      includeRewardHistory: false,
+    });
+    expect(getProtocolHealthReadScope("/admin")).toEqual({
+      includeConnectedWallet: true,
+      includeOperationalHistory: true,
+      includeRewardHistory: false,
+    });
+    expect(getProtocolHealthReadScope("/admin/diagnostics")).toEqual({
+      includeConnectedWallet: true,
+      includeOperationalHistory: true,
+      includeRewardHistory: true,
+    });
+    expect(getProtocolHealthReadScope("/status")).toEqual({
+      includeConnectedWallet: false,
+      includeOperationalHistory: false,
+      includeRewardHistory: true,
+    });
+  });
+
+  it("loads indexed market history only on the dedicated public Market route", () => {
+    expect([
+      shouldLoadMarketHistory("/market"),
+      shouldLoadMarketHistory("/exchange"),
+      shouldLoadMarketHistory("/status"),
+    ]).toEqual([true, false, false]);
+  });
+
+  it("shares the sanitized status projection with public evidence routes", () => {
+    expect([
+      shouldLoadPublicStatus("/status"),
+      shouldLoadPublicStatus("/market"),
+      shouldLoadPublicStatus("/status/private"),
+      shouldLoadPublicStatus("/admin/diagnostics"),
+      shouldLoadPublicStatus("/exchange"),
+    ]).toEqual([true, true, false, false, false]);
+  });
+});
