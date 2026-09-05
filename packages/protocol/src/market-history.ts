@@ -11,8 +11,6 @@ import {
   assertIndexedHistorySnapshotsCoherent,
   collectIndexedHistoryPages,
   indexedHistoryLineageKey,
-  type CanonicalMarketCandleFeed,
-  type CanonicalMarketCandleObservation,
   type IndexedHistoryReaders,
   type IndexedHistoryItem,
   type IndexedHistoryPage,
@@ -29,7 +27,6 @@ import {
 } from "./indexed-history-cache.js";
 
 const MINUTELY_INTERVAL_SECONDS = 60n;
-const HOURLY_INTERVAL_SECONDS = 3_600n;
 
 export type CanonicalMarketCandleInterval = "1m" | "1h";
 
@@ -92,8 +89,7 @@ export interface CanonicalMarketHistoryInput {
   readonly manifest: ProtocolDeploymentManifest;
   readonly identity: IdentityConfiguration;
   readonly index: IndexedHistoryServiceStatus;
-  readonly swaps?: HistoryCollection;
-  readonly candleFeed?: CanonicalMarketCandleFeed;
+  readonly swaps: HistoryCollection;
   readonly fees: HistoryCollection;
   readonly liquidityCycles: HistoryCollection;
 }
@@ -209,7 +205,9 @@ const feesByTransaction = (fees: readonly IndexedHistoryItem[]) => {
       throw new TypeError(`Expected a fee event, received ${fee.eventName}`);
     }
     const key = fee.transactionHash.toLowerCase();
-    grouped.set(key, [...(grouped.get(key) ?? []), fee]);
+    const bucket = grouped.get(key);
+    if (bucket === undefined) grouped.set(key, [fee]);
+    else bucket.push(fee);
   });
   return grouped;
 };
@@ -348,7 +346,9 @@ const minuteCandles = (
       MINUTELY_INTERVAL_SECONDS,
     );
     const key = start.toString();
-    byInterval.set(key, [...(byInterval.get(key) ?? []), observation]);
+    const bucket = byInterval.get(key);
+    if (bucket === undefined) byInterval.set(key, [observation]);
+    else bucket.push(observation);
   });
   const starts = [...byInterval.keys()].map(BigInt).sort(compareBigint);
   // A no-trade minute is not market data. Omitting empty buckets keeps sparse
@@ -361,161 +361,6 @@ const minuteCandles = (
       byInterval.get(start.toString()) ?? [],
     ),
   );
-};
-
-interface FeeBucket {
-  readonly fees: readonly IndexedHistoryItem[];
-  readonly grossWethVolume: bigint;
-  readonly protocolFeeWeth: bigint;
-}
-
-const EMPTY_FEE_BUCKET: FeeBucket = {
-  fees: [],
-  grossWethVolume: 0n,
-  protocolFeeWeth: 0n,
-};
-
-const pricesFromExternal = (
-  observation: CanonicalMarketCandleObservation | undefined,
-): Pick<
-  MarketCandle,
-  | "openWethPerLiquidTokenX18"
-  | "highWethPerLiquidTokenX18"
-  | "lowWethPerLiquidTokenX18"
-  | "closeWethPerLiquidTokenX18"
-> =>
-  observation === undefined
-    ? {
-        openWethPerLiquidTokenX18: undefined,
-        highWethPerLiquidTokenX18: undefined,
-        lowWethPerLiquidTokenX18: undefined,
-        closeWethPerLiquidTokenX18: undefined,
-      }
-    : {
-        openWethPerLiquidTokenX18: observation.openWethPerLiquidTokenX18,
-        highWethPerLiquidTokenX18: observation.highWethPerLiquidTokenX18,
-        lowWethPerLiquidTokenX18: observation.lowWethPerLiquidTokenX18,
-        closeWethPerLiquidTokenX18: observation.closeWethPerLiquidTokenX18,
-      };
-
-const feeBuckets = (
-  fees: readonly IndexedHistoryItem[],
-): ReadonlyMap<string, FeeBucket> => {
-  const items = new Map<string, IndexedHistoryItem[]>();
-  fees.forEach((fee) => {
-    if (fee.eventName !== "fee-accrued") {
-      throw new TypeError(`Expected a fee event, received ${fee.eventName}`);
-    }
-    const start = intervalStart(
-      fee.blockTimestamp,
-      HOURLY_INTERVAL_SECONDS,
-    ).toString();
-    items.set(start, [...(items.get(start) ?? []), fee]);
-  });
-  return new Map(
-    [...items].map(([start, bucket]) => [
-      start,
-      {
-        fees: bucket,
-        grossWethVolume: bucket.reduce(
-          (total, fee) => total + payloadBigint(fee, "wethVolume"),
-          0n,
-        ),
-        protocolFeeWeth: bucket.reduce(
-          (total, fee) => total + payloadBigint(fee, "totalFee"),
-          0n,
-        ),
-      },
-    ]),
-  );
-};
-
-const externalCandleFrom = (
-  observation: CanonicalMarketCandleObservation | undefined,
-  start: bigint,
-  feeBucket: FeeBucket | undefined,
-): MarketCandle => {
-  const swapCount = observation?.swapCount ?? 0;
-  const observedFees = feeBucket ?? EMPTY_FEE_BUCKET;
-  const feeCount = observedFees.fees.length;
-  return {
-    intervalStart: start,
-    intervalEnd: start + HOURLY_INTERVAL_SECONDS,
-    ...pricesFromExternal(observation),
-    grossWethVolume: observedFees.grossWethVolume,
-    protocolFeeWeth: observedFees.protocolFeeWeth,
-    swapCount,
-    matchedFeeCount: Math.min(swapCount, feeCount),
-    feeMatchState: swapCount === feeCount ? "complete" : "partial",
-  };
-};
-
-const externalHourlyCandles = (
-  observations: readonly CanonicalMarketCandleObservation[],
-  fees: readonly IndexedHistoryItem[],
-): readonly MarketCandle[] => {
-  const first = observations[0]?.intervalStart;
-  const last = observations.at(-1)?.intervalStart;
-  if (first === undefined || last === undefined) return [];
-  const feesByInterval = feeBuckets(
-    fees.filter(
-      (fee) =>
-        fee.blockTimestamp >= first && fee.blockTimestamp < last + 3_600n,
-    ),
-  );
-  return observations.map((observation) =>
-    externalCandleFrom(
-      observation,
-      observation.intervalStart,
-      feesByInterval.get(observation.intervalStart.toString()),
-    ),
-  );
-};
-
-const externalFeeMatching = (
-  observations: readonly CanonicalMarketCandleObservation[],
-  fees: readonly IndexedHistoryItem[],
-): CanonicalMarketHistorySnapshot["feeMatching"] => {
-  const first = observations[0]?.intervalStart;
-  const last = observations.at(-1)?.intervalEnd;
-  const relevantFees =
-    first === undefined || last === undefined
-      ? []
-      : fees.filter(
-          (fee) => fee.blockTimestamp >= first && fee.blockTimestamp < last,
-        );
-  const swapCounts = new Map(
-    observations.map((observation) => [
-      observation.intervalStart.toString(),
-      observation.swapCount,
-    ]),
-  );
-  const feeCounts = new Map(
-    [...feeBuckets(relevantFees)].map(([start, bucket]) => [
-      start,
-      bucket.fees.length,
-    ]),
-  );
-  const starts = new Set([...swapCounts.keys(), ...feeCounts.keys()]);
-  let matchedSwapCount = 0;
-  let unmatchedSwapCount = 0;
-  let unmatchedFeeCount = 0;
-  starts.forEach((start) => {
-    const swaps = swapCounts.get(start) ?? 0;
-    const observedFees = feeCounts.get(start) ?? 0;
-    matchedSwapCount += Math.min(swaps, observedFees);
-    unmatchedSwapCount += Math.max(0, swaps - observedFees);
-    unmatchedFeeCount += Math.max(0, observedFees - swaps);
-  });
-  return {
-    state:
-      unmatchedSwapCount === 0 && unmatchedFeeCount === 0
-        ? "complete"
-        : "partial",
-    matchedSwapCount,
-    unmatchedSwapCount,
-    unmatchedFeeCount,
-  };
 };
 
 const minimumDefined = (
@@ -531,24 +376,20 @@ const combinedStatus = (
   input: CanonicalMarketHistoryInput,
 ): CanonicalMarketHistorySnapshot["status"] => {
   const endpointStatuses = [
-    ...(input.swaps === undefined ? [] : [input.swaps.status]),
+    input.swaps.status,
     input.fees.status,
     input.liquidityCycles.status,
   ];
-  const externalFeed =
-    input.candleFeed?.state === "available" ? input.candleFeed : undefined;
   return {
     state:
       input.index.status.state === "partial" ||
-      endpointStatuses.some((status) => status.state === "partial") ||
-      externalFeed?.hasIndexingErrors === true
+      endpointStatuses.some((status) => status.state === "partial")
         ? "partial"
         : "complete",
     fromBlock: input.index.status.coverage.fromBlock,
     indexedThroughBlock: minimumDefined([
       input.index.status.coverage.indexedThroughBlock,
       ...endpointStatuses.map((status) => status.coverage.indexedThroughBlock),
-      externalFeed?.indexedThroughBlock,
     ]),
     indexedThroughTime: minimumDefined([
       input.index.status.coverage.indexedThroughTime,
@@ -562,30 +403,6 @@ const combinedStatus = (
 export const deriveCanonicalMarketHistorySnapshot = (
   input: CanonicalMarketHistoryInput,
 ): CanonicalMarketHistorySnapshot => {
-  if (input.candleFeed?.state === "available") {
-    const feeMatching = externalFeeMatching(
-      input.candleFeed.candles,
-      input.fees.items,
-    );
-    return {
-      interval: "1h",
-      candleSource: {
-        kind: "uniswap-v4-subgraph",
-        state: input.candleFeed.hasIndexingErrors ? "partial" : "complete",
-        indexedThroughBlock: input.candleFeed.indexedThroughBlock,
-      },
-      status: combinedStatus(input),
-      feeMatching,
-      liquidityCycles: liquidityHistory(input.liquidityCycles.items),
-      candles: externalHourlyCandles(
-        input.candleFeed.candles,
-        input.fees.items,
-      ),
-    };
-  }
-  if (input.swaps === undefined) {
-    throw new TypeError("Indexed swaps are required without a candle feed");
-  }
   const matched = matchSwapFees(
     input.swaps.items,
     input.fees.items,
@@ -708,21 +525,6 @@ export const createCanonicalMarketHistoryReader = ({
     liquidityCycles = undefined;
     cachedLineage = undefined;
   };
-  const unavailableCandleFeed = (): CanonicalMarketCandleFeed => ({
-    source: "uniswap-v4-subgraph",
-    state: "unavailable",
-  });
-  const readCandleFeed = async (): Promise<CanonicalMarketCandleFeed> => {
-    if (history.market.candles === undefined) return unavailableCandleFeed();
-    try {
-      return await history.market.candles();
-    } catch {
-      // The external feed is an enhancement. A public API rolling deployment,
-      // provider outage, or malformed external response must degrade to the
-      // canonical PoolManager events rather than remove market history.
-      return unavailableCandleFeed();
-    }
-  };
   const readLatest = async (): Promise<CanonicalMarketHistorySnapshot> => {
     try {
       const index = await history.status();
@@ -747,9 +549,17 @@ export const createCanonicalMarketHistoryReader = ({
         });
       }
       const fromBlock = index.status.coverage.fromBlock;
-      const [candleFeed, refreshedFees, refreshedLiquidityCycles] =
+      // Prices, fees and liquidity share one canonical checkpoint. The optional
+      // subgraph endpoint cannot prove that identity and is not an input here.
+      const [refreshedSwaps, refreshedFees, refreshedLiquidityCycles] =
         await Promise.all([
-          readCandleFeed(),
+          readCollection(
+            history.market.swaps,
+            swaps,
+            fromBlock,
+            toBlock,
+            index.snapshot,
+          ),
           readCollection(
             history.market.fees,
             fees,
@@ -765,22 +575,12 @@ export const createCanonicalMarketHistoryReader = ({
             index.snapshot,
           ),
         ]);
-      const refreshedSwaps =
-        candleFeed.state === "available"
-          ? undefined
-          : await readCollection(
-              history.market.swaps,
-              swaps,
-              fromBlock,
-              toBlock,
-              index.snapshot,
-            );
       const finalIndex = await history.status();
       assertIndexedHistoryProgress(index.snapshot, finalIndex.snapshot);
       const refreshed = [
         refreshedFees,
         refreshedLiquidityCycles,
-        ...(refreshedSwaps === undefined ? [] : [refreshedSwaps]),
+        refreshedSwaps,
       ];
       refreshed.forEach((collection) =>
         assertIndexedHistoryProgress(collection.snapshot, finalIndex.snapshot),
@@ -790,7 +590,7 @@ export const createCanonicalMarketHistoryReader = ({
         ...refreshed.map((collection) => collection.snapshot),
         finalIndex.snapshot,
       ]);
-      if (refreshedSwaps !== undefined) swaps = refreshedSwaps;
+      swaps = refreshedSwaps;
       fees = refreshedFees;
       liquidityCycles = refreshedLiquidityCycles;
       cachedLineage = currentLineage;
@@ -798,10 +598,9 @@ export const createCanonicalMarketHistoryReader = ({
         manifest,
         identity,
         index,
-        ...(refreshedSwaps === undefined ? {} : { swaps: refreshedSwaps }),
+        swaps: refreshedSwaps,
         fees: refreshedFees,
         liquidityCycles: refreshedLiquidityCycles,
-        candleFeed,
       });
     } catch (cause) {
       clearCaches();
