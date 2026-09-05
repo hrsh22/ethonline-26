@@ -17,6 +17,8 @@ export type BrowserFailureKind =
   | "published-metadata"
   | "idle-request"
   | "protected-request"
+  | "state-not-reached"
+  | "http-response"
   | "accessibility";
 
 export interface BrowserFailure {
@@ -333,4 +335,62 @@ export const focusFailure = async (
         kind: "focus-broken",
         detail: `${label}: first focused control <${focused.tag}> has no visible box`,
       };
+};
+
+/** Check computed styles and rendered geometry, independent of CSS class names. */
+export const renderedStyleFailures = async (
+  page: Page,
+  label: string,
+): Promise<readonly BrowserFailure[]> => {
+  const details = await page.evaluate(() => {
+    const failures: string[] = [];
+    for (const input of document.querySelectorAll<HTMLInputElement>(
+      'input[type="number"], input[inputmode="decimal"]',
+    )) {
+      if (input.getClientRects().length === 0) continue;
+      if (Number.parseFloat(getComputedStyle(input).fontSize) < 16) {
+        failures.push(
+          `numeric input ${input.getAttribute("aria-label") ?? input.name ?? input.id} is smaller than 16px`,
+        );
+      }
+    }
+    // Put a real base-unit balance into the narrowest rendered metric cell.
+    // Keep and restore the original nodes; only the data varies, not markup.
+    const cell = [...document.querySelectorAll<HTMLElement>("dl dd")]
+      .filter((candidate) => candidate.getClientRects().length > 0)
+      .sort((a, b) => a.clientWidth - b.clientWidth)[0];
+    if (cell !== undefined) {
+      const children = [...cell.childNodes];
+      try {
+        cell.textContent = "0.000000000000000001 WETH";
+        if (cell.scrollWidth > cell.clientWidth + 1)
+          failures.push("exact base-unit balance overflows its metric cell");
+      } finally {
+        cell.replaceChildren(...children);
+      }
+    }
+    return failures;
+  });
+  const chart = page.getByRole("img", { name: /market history$/u });
+  if ((await chart.count()) > 0) {
+    await chart.first().focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    const visibleFocus = await chart.first().evaluate((element) => {
+      const style = getComputedStyle(element);
+      return (
+        document.activeElement === element &&
+        element.matches(":focus-visible") &&
+        style.outlineStyle !== "none" &&
+        Number.parseFloat(style.outlineWidth) > 0 &&
+        style.outlineColor !== "rgba(0, 0, 0, 0)"
+      );
+    });
+    if (!visibleFocus)
+      details.push("keyboard focus on the chart has no visible outline");
+  }
+  return details.map((detail) => ({
+    kind: "accessibility",
+    detail: `${label}: ${detail}`,
+  }));
 };

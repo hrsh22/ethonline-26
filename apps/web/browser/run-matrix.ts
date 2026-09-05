@@ -12,6 +12,7 @@ import {
   observePage,
   overflowFailure,
   pageOverflow,
+  renderedStyleFailures,
   type BrowserFailure,
 } from "./failure-detectors.ts";
 import {
@@ -56,19 +57,113 @@ const AXE_OPTIONS = {
 } as const;
 
 /**
- * Waits for React to take over. Axe and geometry checks before hydration would
- * measure the server envelope, which is exactly the gap in the JSDOM harness.
+ * Opening a controlled dialog proves React handled a real user interaction.
+ * The server-rendered document alone cannot satisfy this readiness check.
  */
-const awaitHydration = async (page: Page): Promise<void> => {
+export const awaitHydration = async (page: Page): Promise<void> => {
   await page.waitForLoadState("domcontentloaded");
+  const connect = page
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .first();
+  const dialog = page.getByRole("alertdialog");
+  const deadline = Date.now() + 15_000;
+  while (!(await dialog.isVisible())) {
+    // A click before hydration is discarded by the browser. Retry the user
+    // action until its visible result appears, never accept elapsed time alone.
+    await connect.click({ timeout: 1_000 }).catch((error) => {
+      if (Date.now() >= deadline) throw error;
+    });
+    await dialog
+      .waitFor({ state: "visible", timeout: 1_000 })
+      .catch((error) => {
+        if (Date.now() >= deadline) throw error;
+      });
+  }
   await page
-    .waitForFunction(
-      () => document.documentElement.getAttribute("lang") !== null,
-      undefined,
-      { timeout: 15_000 },
-    )
-    .catch(() => undefined);
-  await page.waitForTimeout(250);
+    .getByRole("button", { name: "Not now", exact: true })
+    .or(page.getByRole("button", { name: "Close", exact: true }))
+    .first()
+    .click();
+  await dialog.waitFor({ state: "hidden" });
+};
+
+const connectWallet = async (
+  page: Page,
+  wallet: WalletFixture,
+): Promise<void> => {
+  if (wallet === "disconnected") return;
+  await page
+    .getByRole("button", { name: "Connect wallet", exact: true })
+    .first()
+    .click();
+  const continueChoice = page.getByRole("button", {
+    name: "Choose wallet",
+    exact: true,
+  });
+  const walletChoice = page.getByText("Browser Matrix Wallet", { exact: true });
+  const walletMenu = page.getByRole("button", {
+    name: "Continue with a wallet",
+    exact: true,
+  });
+  await continueChoice
+    .or(walletChoice)
+    .or(walletMenu)
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
+  if (await continueChoice.isVisible()) await continueChoice.click();
+  await walletChoice
+    .or(walletMenu)
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
+  if (await walletMenu.isVisible()) await walletMenu.click();
+  await page
+    .getByText("Browser Matrix Wallet", { exact: true })
+    .click({ timeout: 15_000 });
+  if (wallet === "wrong-network") {
+    await page
+      .locator('[data-wallet-state="connected"]')
+      .first()
+      .waitFor({ state: "visible" });
+    // Model a user changing networks in the wallet, through EIP-1193 rather
+    // than editing the application's wallet state or storage.
+    await page.evaluate(async () => {
+      const ethereum = (
+        window as unknown as {
+          ethereum: { request: (request: unknown) => Promise<unknown> };
+        }
+      ).ethereum;
+      await ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x1" }],
+      });
+    });
+  }
+  const expected = wallet === "ordinary" ? "connected" : wallet;
+  await page
+    .locator(`[data-wallet-state="${expected}"]`)
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
+  if (wallet === "connecting") {
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page
+      .locator('[data-wallet-state="connecting"]')
+      .first()
+      .waitFor({ state: "visible" });
+  } else {
+    const chainId = await page.evaluate(async () => {
+      const ethereum = (
+        window as unknown as {
+          ethereum: { request: (request: unknown) => Promise<unknown> };
+        }
+      ).ethereum;
+      return ethereum.request({ method: "eth_chainId" });
+    });
+    const expectedChain = wallet === "wrong-network" ? "0x1" : "0x14a34";
+    if (chainId !== expectedChain)
+      throw new Error(
+        `Wallet reported ${String(chainId)} instead of ${expectedChain}`,
+      );
+  }
 };
 
 const runAxe = async (
@@ -131,6 +226,7 @@ interface VisitInput {
   readonly axe: boolean;
   readonly data: DataFixture;
   readonly expectFinalPath?: string | undefined;
+  readonly expectedHeading?: string | undefined;
   readonly label: string;
   readonly options: MatrixOptions;
   readonly path: string;
@@ -250,6 +346,7 @@ const inspectPage = async (
   if (collision !== undefined) failures.push(collision);
   const focus = await focusFailure(page, input.label);
   if (focus !== undefined) failures.push(focus);
+  failures.push(...(await renderedStyleFailures(page, input.label)));
   if (input.axe) failures.push(...(await runAxe(page, input.label)));
   if (
     input.screenshot === true &&
@@ -282,7 +379,31 @@ const visit = async (
     await page.goto(`${input.options.origin}${input.path}`, {
       waitUntil: "commit",
     });
-    await awaitHydration(page);
+    // The global 404 is a static recovery document, without the wallet shell.
+    if (input.path === "/does-not-exist") {
+      await page
+        .getByRole("heading", { level: 1 })
+        .waitFor({ state: "visible" });
+    } else {
+      await awaitHydration(page);
+    }
+    await connectWallet(page, input.wallet);
+    if (input.expectedHeading !== undefined) {
+      await page
+        .getByRole("heading", { name: input.expectedHeading, exact: true })
+        .waitFor({ state: "visible", timeout: 15_000 });
+    }
+    if (input.data === "funded") {
+      await page
+        .locator('[data-funding-state="funded"]')
+        .getByRole("link", { name: "Buy $FUEL on Trade", exact: true })
+        .waitFor({ state: "visible" });
+    }
+    if (input.data === "market") {
+      await page
+        .getByRole("img", { name: /market history$/u })
+        .waitFor({ state: "visible", timeout: 15_000 });
+    }
     if (input.verifyIdleTraffic === true) {
       await awaitApplicationTrafficQuiet(page, traffic);
       traffic.reset();
@@ -291,6 +412,15 @@ const visit = async (
       if (idleFailure !== undefined) failures.push(idleFailure);
     }
     failures.push(...(await inspectPage(page, input)));
+  } catch (error) {
+    const visibleState = await page
+      .locator("body")
+      .ariaSnapshot()
+      .catch(() => "");
+    failures.push({
+      kind: "state-not-reached",
+      detail: `${input.label}: ${String(error)}\n${visibleState.slice(-4000)}`,
+    });
   } finally {
     await context.close();
   }
@@ -303,6 +433,47 @@ const visit = async (
 const selected = (options: MatrixOptions, label: string): boolean =>
   options.only === undefined ||
   options.only.some((filter) => label.includes(filter));
+
+/** HTTP status and framing policy are independent of client-side rendering. */
+const inspectHttp = async (origin: string): Promise<MatrixCaseResult> => {
+  const failures: BrowserFailure[] = [];
+  for (const route of [
+    ...ROUTE_CASES,
+    { path: "/api/admin/auth/session", status: 401, finalPath: undefined },
+  ]) {
+    const response = await fetch(`${origin}${route.path}`, {
+      redirect: "manual",
+    });
+    const expected = route.status ?? 200;
+    const messages: string[] = [];
+    if (response.status !== expected)
+      messages.push(`expected HTTP ${expected}, received ${response.status}`);
+    if (route.finalPath !== undefined) {
+      const location = response.headers.get("location");
+      const target = new URL(location ?? "", origin);
+      if (`${target.pathname}${target.search}` !== route.finalPath) {
+        messages.push(
+          `expected redirect to ${route.finalPath}, received ${location}`,
+        );
+      }
+    }
+    if (
+      response.headers.get("content-security-policy") !==
+      "frame-ancestors 'none'"
+    )
+      messages.push("missing framing-only Content-Security-Policy");
+    if (response.headers.get("x-frame-options") !== "DENY")
+      messages.push("missing X-Frame-Options DENY");
+    failures.push(
+      ...messages.map((message) => ({
+        kind: "http-response" as const,
+        detail: `${route.path}: ${message}`,
+      })),
+    );
+    await response.body?.cancel();
+  }
+  return { label: "http:routes-and-security", failures };
+};
 
 /** Every route at each release viewport, using the shipped dark theme. */
 const routePlan = (options: MatrixOptions): readonly VisitInput[] =>
@@ -336,17 +507,16 @@ const shellPlan = (options: MatrixOptions): readonly VisitInput[] =>
 
 /** Wallet and data states, paired with the routes that model them. */
 const statePlan = (options: MatrixOptions): readonly VisitInput[] =>
-  STATE_CASES.flatMap((state) =>
-    state.paths.map((path) => ({
-      axe: true,
-      data: state.data,
-      label: `state:${state.label}${path} (${walletFixtureLabels[state.wallet]}, ${dataFixtureLabels[state.data]})`,
-      options,
-      path,
-      viewport: RELEASE_VIEWPORTS[0] as Viewport,
-      wallet: state.wallet,
-    })),
-  );
+  STATE_CASES.map((state) => ({
+    axe: true,
+    data: state.data,
+    expectedHeading: state.heading,
+    label: `state:${state.label}${state.path} (${walletFixtureLabels[state.wallet]}, ${dataFixtureLabels[state.data]})`,
+    options,
+    path: state.path,
+    viewport: RELEASE_VIEWPORTS[0] as Viewport,
+    wallet: state.wallet,
+  }));
 
 /** A connected wallet still needs an admin session for either protected route. */
 const adminPlan = (options: MatrixOptions): readonly VisitInput[] =>
@@ -397,8 +567,13 @@ export const runBrowserMatrix = async (
     ...adminPlan(options),
     ...idleTrafficPlan(options),
   ].filter((entry) => selected(options, entry.label));
+  const cases: MatrixCaseResult[] = selected(
+    options,
+    "http:routes-and-security",
+  )
+    ? [await inspectHttp(options.origin)]
+    : [];
   const browser = await chromium.launch();
-  const cases: MatrixCaseResult[] = [];
   try {
     for (const entry of plan) {
       cases.push(await visit(browser, entry));

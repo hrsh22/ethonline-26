@@ -27,7 +27,6 @@ import {
 type EnvironmentVariables = Readonly<Record<string, string | undefined>>;
 
 export type WebRuntimeTarget =
-  | "a11y"
   | "browser"
   | "browser:self"
   | "build"
@@ -162,7 +161,6 @@ export const assertNoUncheckedNextEnvironmentFiles = (
 };
 
 const webRuntimeTargets: readonly WebRuntimeTarget[] = [
-  "a11y",
   "browser",
   "browser:self",
   "build",
@@ -181,7 +179,7 @@ const webRuntimeTarget = (arguments_: readonly string[]): WebRuntimeTarget => {
     !webRuntimeTargets.includes(positional[0] as WebRuntimeTarget)
   ) {
     throw new Error(
-      "Web runtime target must be a11y, browser, browser:self, build, dev, dev:local, start, or typecheck",
+      "Web runtime target must be browser, browser:self, build, dev, dev:local, start, or typecheck",
     );
   }
   return positional[0] as WebRuntimeTarget;
@@ -287,16 +285,6 @@ const webRuntimeCommands = (
         command: process.execPath,
         cwd: webRoot,
         label: "web TypeScript check",
-      },
-    ];
-  }
-  if (target === "a11y") {
-    return [
-      {
-        arguments: [join(webRoot, "scripts/test-accessibility.ts")],
-        command: process.execPath,
-        cwd: webRoot,
-        label: "production accessibility audit",
       },
     ];
   }

@@ -1,10 +1,8 @@
 # Production browser matrix
 
-The pre-existing accessibility gate fetches pre-hydration HTML into JSDOM. That
-cannot observe hydration mismatch, failed production assets, real layout
-geometry, wallet behaviour, or requests issued after a page becomes
-interactive. This matrix runs the real production build in Chromium and fails
-on each of those.
+One runner checks the production build's HTTP responses, hydrated accessibility,
+layout, wallet connection, and funding states in Chromium. There is no separate
+SSR/JSDOM axe pass.
 
 ## Commands
 
@@ -12,7 +10,8 @@ on each of those.
 | --------------------------------------- | ------------------------------------------------ |
 | `pnpm --dir apps/web test:browser`      | Full release matrix against an already-built app |
 | `pnpm --dir apps/web test:browser:self` | Proves the harness fails on injected defects     |
-| `pnpm --dir apps/web test:release`      | Build, accessibility gate, then the full matrix  |
+| `pnpm --dir apps/web test:release`      | Build once, then run HTTP and browser checks     |
+| `pnpm --dir apps/web test:production`   | Alias for `test:release`                         |
 
 Focused runs stay available per ticket:
 
@@ -20,6 +19,7 @@ Focused runs stay available per ticket:
 pnpm --dir apps/web test:browser --only=exchange,faucet
 pnpm --dir apps/web test:browser --only=state:wrong-network
 pnpm --dir apps/web test:browser --only=shell
+pnpm --dir apps/web test:browser --only=http:
 ```
 
 `--only` matches against case labels. `--report=<path>` writes the JSON report
@@ -51,6 +51,10 @@ matrix; the browser is not vendored into the repository.
 - a first Tab that reaches nothing, or reaches a control with no visible box;
 - a request to a protected admin path before a session exists;
 - an Axe WCAG 2.1 A/AA violation, run **after** hydration.
+- a numeric input smaller than 16px, an exact base-unit balance overflowing its
+  metric cell, or a rendered keyboard-focusable chart without a visible outline;
+- a fixture state whose expected wallet indicator, heading, or action never appears;
+- an incorrect HTTP status, protected-route redirect, CSP, or frame policy.
 
 ## Coverage
 
@@ -63,19 +67,37 @@ matrix; the browser is not vendored into the repository.
 - **Wallet states** — disconnected, connecting, wrong-network, and an ordinary
   connected wallet, through an injected EIP-1193 provider so the real wallet
   code paths run without an extension or a live signer.
-- **Data states** — reads in flight, empty inventory, failed reads, stale
-  evidence, already funded, recipient cooldown, and an exhausted service
-  budget, through request interception.
+- **Funding states** — reads in flight, eligible, empty inventory, failed reads,
+  already funded, and recipient cooldown. Each is
+  checked once on the faucet, where its distinct outcome is observable.
 - **Admin session boundary**: a connected wallet without an admin session is
   redirected from both protected routes and issues no protected request.
   Role-specific controls are covered by the admin component tests.
 
 ## Determinism
 
-Route, shell, and admin-session coverage use the `stubbed` fixture: the public API
-answers from fixtures so results do not depend on a running funding or history
-worker. The `live` fixture leaves the network alone and is reserved for a run
-against real services.
+HTTP fixtures use endpoint-specific history envelopes checked through the actual
+indexed-history reader, and funding responses checked by the shared Effect schema.
+RPC chain identity is valid; unsupported chain reads explicitly fail. These cases
+do not claim to cover healthy onchain balances. A separate market-history case
+supplies two canonical swaps with matching fee records and requires a rendered
+priced chart before inspecting its keyboard focus and layout.
+
+Every interactive page must handle a real dialog interaction before inspection.
+The static global 404 is checked as a recovery document, without a wallet shell. Connected
+cases then open the wallet picker and select a locally injected EIP-6963 wallet.
+Its provider emits account/chain changes and refuses all signing and sending.
+Installing it alone does not count as a connection.
+
+Release and CI builds use a fixed public test Reown project ID. Only Reown's
+directory/configuration/image requests are stubbed; the application and wallet
+connector are real. A normal app build is not changed. Running `test:browser`
+against an arbitrary prior build requires wallet connection to be configured.
+
+Retained stale evidence and chart data transitions are covered at the rendered
+component seam and checked in Chrome with working reads. The old matrix's
+"stale" case merely failed the first read, so it has been removed.
+Authenticated admin input sizing is checked during the manual login pass.
 
 ## Screenshot baselines
 

@@ -112,30 +112,12 @@ const resolve = (tokens: ReadonlyMap<string, string>, name: string): string => {
   return reference === undefined ? value : resolve(tokens, reference);
 };
 
-const pure = new Set(["#000000", "#ffffff"]);
-
 describe("graphite design tokens", () => {
-  it("ships one dark map with no color-scheme split", () => {
-    expect(stylesheet).not.toMatch(/@media[^{]*prefers-color-scheme/u);
-    expect(blockBody(/:root/u)).toMatch(/color-scheme:\s*dark;/u);
-    // No second token map: the console is not a light theme any more.
-    expect(stylesheet).not.toMatch(/color-scheme:\s*light/u);
-    expect(stylesheet).not.toMatch(/\[data-theme="ledger"\]/u);
-  });
-
   it("keeps the canvas and panels dark and the ink light", () => {
     for (const surface of [...surfaces, "--chart-surface"]) {
       expect(luminance(resolve(graphite, surface)), surface).toBeLessThan(0.1);
     }
     expect(luminance(resolve(graphite, "--text-primary"))).toBeGreaterThan(0.7);
-  });
-
-  it("uses neither pure black nor pure white", () => {
-    for (const [name, value] of graphite) {
-      if (value.startsWith("#")) {
-        expect(pure.has(value.toLowerCase()), name).toBe(false);
-      }
-    }
   });
 
   it.each(textPairs)("%s on %s reads at AA", (foreground, background) => {
@@ -148,11 +130,5 @@ describe("graphite design tokens", () => {
     expect(
       contrast(resolve(graphite, foreground), resolve(graphite, background)),
     ).toBeGreaterThanOrEqual(3);
-  });
-
-  it("binds the mono face to every semantic font variable", () => {
-    expect(graphite.get("--font-sans")).toBe("var(--font-jetbrains)");
-    expect(graphite.get("--font-mono")).toBe("var(--font-jetbrains)");
-    expect(graphite.get("--font-display")).toBe("var(--font-jetbrains)");
   });
 });

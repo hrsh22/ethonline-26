@@ -8,11 +8,10 @@
     "dev:local": "node ../../scripts/staging-web.ts dev:local",
     "build": "node ../../scripts/staging-web.ts build",
     "start": "node ../../scripts/staging-web.ts start",
-    "test:a11y": "node ../../scripts/staging-web.ts a11y",
-    "test:production": "NEXT_PUBLIC_APP_URL=https://orbit.test pnpm build && pnpm test:a11y",
+    "test:production": "pnpm test:release",
     "test:browser": "node ../../scripts/staging-web.ts browser",
     "test:browser:self": "node ../../scripts/staging-web.ts browser:self",
-    "test:release": "NEXT_PUBLIC_APP_URL=https://orbit.test pnpm build && pnpm test:a11y && pnpm test:browser",
+    "test:release": "NEXT_PUBLIC_APP_URL=https://orbit.test NEXT_PUBLIC_REOWN_PROJECT_ID=00000000000000000000000000000000 pnpm build && pnpm test:browser",
     "lint": "eslint --max-warnings=0",
     "test": "vitest run",
     "typecheck": "node ../../scripts/staging-web.ts typecheck"

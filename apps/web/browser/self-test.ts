@@ -1,6 +1,9 @@
 import axe from "axe-core";
 import { chromium, type Page } from "playwright";
 
+import { installDataFixture } from "./fixtures.ts";
+import { awaitHydration } from "./run-matrix.ts";
+
 import {
   collectorHeaderCollisionFailure,
   focusFailure,
@@ -9,6 +12,7 @@ import {
   observePage,
   overflowFailure,
   pageOverflow,
+  renderedStyleFailures,
   type BrowserFailure,
   type BrowserFailureKind,
   type BrowserObserver,
@@ -38,6 +42,7 @@ const withPage = async <Value>(
     const page = await context.newPage();
     try {
       void origin;
+      await installDataFixture(page, "stubbed");
       return await body(page);
     } finally {
       await context.close();
@@ -47,10 +52,7 @@ const withPage = async <Value>(
   }
 };
 
-const settle = async (page: Page): Promise<void> => {
-  await page.waitForLoadState("domcontentloaded");
-  await page.waitForTimeout(400);
-};
+const settle = awaitHydration;
 
 /**
  * Hydration, request failures, and network leaks are reported asynchronously,
@@ -81,6 +83,36 @@ export const runHarnessSelfTest = async (
   origin: string,
 ): Promise<readonly SelfTestOutcome[]> => {
   const outcomes: SelfTestOutcome[] = [];
+
+  for (const defect of [
+    "none",
+    "small-input",
+    "balance-overflow",
+    "invisible-focus",
+  ] as const) {
+    outcomes.push(
+      await withPage(origin, "/", async (page) => {
+        await page.setContent(`
+        <style>
+          input { font-size: ${defect === "small-input" ? 12 : 16}px }
+          dd { width: 100px; ${defect === "balance-overflow" ? "" : "overflow-wrap: anywhere"} }
+          :focus-visible { outline: ${defect === "invisible-focus" ? "none" : "2px solid orange"} }
+        </style>
+        <input type="number" aria-label="Amount">
+        <dl><dt>Balance</dt><dd>1 WETH</dd></dl>
+        <svg role="img" aria-label="Token market history" tabindex="0" width="200" height="100"></svg>
+        <button>After chart</button>
+      `);
+        const failures = await renderedStyleFailures(page, defect);
+        return {
+          name: `rendered styles: ${defect}`,
+          expected: defect === "none" ? "none" : "accessibility",
+          detected: failures.length > 0 === (defect !== "none"),
+          observed: failures,
+        };
+      }),
+    );
+  }
 
   // Check clean layouts as well as defects: a detector that always reports
   // a collision would otherwise pass every collision injection below.
@@ -116,13 +148,18 @@ export const runHarnessSelfTest = async (
       const observer = observePage(page);
       await page.route("**/*.js", (route) => route.abort("failed"));
       await page.goto(`${origin}/`, { waitUntil: "commit" });
-      await settle(page);
+      const preventedHydration = await awaitHydration(page).then(
+        () => false,
+        () => true,
+      );
       return {
-        detected: await waitForFailure(
-          page,
-          observer,
-          (failure) => failure.kind === "asset-failed",
-        ),
+        detected:
+          preventedHydration &&
+          (await waitForFailure(
+            page,
+            observer,
+            (failure) => failure.kind === "asset-failed",
+          )),
         expected: "asset-failed" as const,
         name: "broken production asset",
         observed: observer.failures,
@@ -242,13 +279,10 @@ export const runHarnessSelfTest = async (
         });
       });
       await page.goto(`${origin}/`, { waitUntil: "commit" });
-      await settle(page);
       const detected = await waitForFailure(
         page,
         observer,
-        (failure) =>
-          failure.kind === "hydration-mismatch" ||
-          failure.kind === "console-error",
+        (failure) => failure.kind === "hydration-mismatch",
       );
       return {
         detected,

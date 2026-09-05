@@ -343,6 +343,9 @@ jobs:
     if: needs.classify.outputs.web_production == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # The browser harness stubs Reown's public directory/config endpoints.
+      NEXT_PUBLIC_REOWN_PROJECT_ID: "00000000000000000000000000000000"
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -371,9 +374,6 @@ jobs:
 
       - name: Build the production application once
         run: node scripts/staging-web.ts build
-
-      - name: Audit the existing production build
-        run: pnpm --dir apps/web test:a11y
 
       # Playwright pins its own Chromium build; it is not vendored.
       - name: Install the pinned Chromium build
