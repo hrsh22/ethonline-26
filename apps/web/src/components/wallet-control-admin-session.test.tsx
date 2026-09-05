@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
     status: "connected" as "connected" | "disconnected",
   },
   disconnect: vi.fn(),
+  disconnectStatus: "idle" as "idle" | "pending" | "error" | "success",
   endSession: vi.fn(),
 }));
 
@@ -29,7 +30,10 @@ vi.mock("@/components/admin/admin-session-boundary", () => ({
 
 vi.mock("wagmi", () => ({
   useConnection: () => state.connection,
-  useDisconnect: () => ({ mutate: state.disconnect }),
+  useDisconnect: () => ({
+    mutate: state.disconnect,
+    status: state.disconnectStatus,
+  }),
   useSwitchChain: () => ({ mutate: vi.fn() }),
 }));
 
@@ -46,6 +50,7 @@ describe("admin wallet disconnect", () => {
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
     state.disconnect.mockReset();
+    state.disconnectStatus = "idle";
     state.endSession.mockReset();
     state.endSession.mockResolvedValue(undefined);
     state.connection = {
@@ -92,6 +97,46 @@ describe("admin wallet disconnect", () => {
     expect(signOut).toBeDefined();
     expect(state.endSession).toHaveBeenCalledOnce();
     expect(state.disconnect).not.toHaveBeenCalled();
+  });
+
+  it("shows pending teardown and lets the user retry a failed disconnect", async () => {
+    state.disconnect.mockImplementationOnce(() => {
+      state.disconnectStatus = "pending";
+    });
+    await act(async () => root.render(<WalletControl />));
+    await act(async () => {
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="Disconnect"]')
+        ?.click();
+    });
+    await act(async () => root.render(<WalletControl />));
+
+    const pending = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Disconnecting wallet"]',
+    );
+    expect(pending?.disabled).toBe(true);
+    expect(container.querySelector('[role="status"]')?.textContent).toContain(
+      "Waiting for the wallet session to close.",
+    );
+
+    state.disconnectStatus = "error";
+    await act(async () => root.render(<WalletControl />));
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "The wallet is still connected. Retry disconnecting.",
+    );
+    const retry = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Retry disconnect"]',
+    );
+    expect(retry?.disabled).toBe(false);
+
+    state.disconnect.mockImplementationOnce(() => {
+      state.disconnectStatus = "success";
+      state.connection = { ...state.connection, status: "disconnected" };
+    });
+    await act(async () => retry?.click());
+    await act(async () => root.render(<WalletControl />));
+    expect(container.textContent).toContain("Connect wallet");
+    expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 
   it("keeps an explicit admin sign-out available when the wallet is disconnected", async () => {

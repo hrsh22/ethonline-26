@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./public-status-codec": {
+      "types": "./dist/public-status-codec.d.ts",
+      "import": "./dist/public-status-codec.js"
+    },
     "./operator-policy": {
       "types": "./dist/operator-policy.d.ts",
       "import": "./dist/operator-policy.js"
@@ -47,6 +51,10 @@
     "./pol-planner": {
       "types": "./dist/pol-planner.d.ts",
       "import": "./dist/pol-planner.js"
+    },
+    "./read-lifetime": {
+      "types": "./dist/read-lifetime.d.ts",
+      "import": "./dist/read-lifetime.js"
     },
     "./reader": {
       "types": "./dist/reader.d.ts",

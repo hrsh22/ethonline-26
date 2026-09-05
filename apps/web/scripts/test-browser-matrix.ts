@@ -3,8 +3,13 @@ import { setTimeout as wait } from "node:timers/promises";
 
 import { Effect } from "effect";
 
-import { rpc, runMain, spawnProcess } from "../../../scripts/effect-runtime.ts";
+import {
+  acquireManagedProcess,
+  rpc,
+  runInterruptibleMain,
+} from "../../../scripts/effect-runtime.ts";
 import { nextRuntimeArguments } from "../../../scripts/next-runtime-command.ts";
+import { startAdminFixtureServer } from "../browser/admin-fixture.ts";
 import { runBrowserMatrix, writeMatrixReport } from "../browser/run-matrix.ts";
 import { runHarnessSelfTest } from "../browser/self-test.ts";
 
@@ -32,37 +37,52 @@ const awaitReady = async (output: readonly string[]): Promise<void> => {
   );
 };
 
-runMain(
-  Effect.gen(function* () {
-    const server = yield* spawnProcess(
-      "Could not start the production Next.js server",
-      () =>
-        spawn(
-          process.execPath,
-          nextRuntimeArguments("start", "--port", String(PORT)),
-          {
-            cwd: new URL("..", import.meta.url),
-            env: {
-              NEXT_PUBLIC_API_URL: "http://127.0.0.1:8800",
-              // next.config.ts fails a production start without the app
-              // origin, because it is signed into operator commands and
-              // published as wallet metadata. The audit server satisfies the
-              // guard explicitly; browser-visible values were baked at build.
-              NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3001",
-              NEXT_TELEMETRY_DISABLED: "1",
-              NODE_ENV: "production",
-              __NEXT_PROCESSED_ENV: "true",
+runInterruptibleMain(
+  Effect.scoped(
+    Effect.gen(function* () {
+      const only = argument("only")?.split(",").filter(Boolean);
+      if (
+        !process.argv.includes("--self-test") &&
+        (only === undefined ||
+          only.some((filter) =>
+            "admin-inputs:keeper-and-creator@375".includes(filter),
+          ))
+      ) {
+        yield* Effect.acquireRelease(
+          rpc("Could not start test-only admin API on 127.0.0.1:8800", () =>
+            startAdminFixtureServer(),
+          ),
+          (api) => Effect.promise(() => api[Symbol.asyncDispose]()),
+        );
+      }
+      const server = yield* acquireManagedProcess(
+        "production Next.js server",
+        () =>
+          spawn(
+            process.execPath,
+            nextRuntimeArguments("start", "--port", String(PORT)),
+            {
+              cwd: new URL("..", import.meta.url),
+              env: {
+                NEXT_PUBLIC_API_URL: "http://127.0.0.1:8800",
+                // next.config.ts fails a production start without the app
+                // origin, because it is signed into operator commands and
+                // published as wallet metadata. The audit server satisfies the
+                // guard explicitly; browser-visible values were baked at build.
+                NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3001",
+                NEXT_TELEMETRY_DISABLED: "1",
+                NODE_ENV: "production",
+                __NEXT_PROCESSED_ENV: "true",
+              },
+              stdio: ["ignore", "pipe", "pipe"],
             },
-            stdio: ["ignore", "pipe", "pipe"],
-          },
-        ),
-    );
-    const output: string[] = [];
-    server.stdout.on("data", (chunk) => output.push(String(chunk)));
-    server.stderr.on("data", (chunk) => output.push(String(chunk)));
+          ),
+      );
+      const output: string[] = [];
+      server.stdout?.on("data", (chunk) => output.push(String(chunk)));
+      server.stderr?.on("data", (chunk) => output.push(String(chunk)));
 
-    yield* rpc("Production browser matrix failed", async () => {
-      try {
+      yield* rpc("Production browser matrix failed", async () => {
         await awaitReady(output);
 
         if (process.argv.includes("--self-test")) {
@@ -96,7 +116,6 @@ runMain(
           return;
         }
 
-        const only = argument("only")?.split(",").filter(Boolean);
         const result = await runBrowserMatrix({
           origin: ORIGIN,
           ...(only === undefined ? {} : { only }),
@@ -119,9 +138,7 @@ runMain(
         console.log(
           `Production browser matrix passed ${result.cases.length} case(s)`,
         );
-      } finally {
-        server.kill("SIGTERM");
-      }
-    });
-  }),
+      });
+    }),
+  ),
 );

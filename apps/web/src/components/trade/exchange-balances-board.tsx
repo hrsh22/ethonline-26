@@ -13,6 +13,7 @@ import { applicationCopy } from "@/lib/identity";
  */
 export interface ExchangeBalanceRow {
   readonly asset: string;
+  readonly observedBlock?: bigint | undefined;
   readonly reason: string;
   readonly wei: bigint | undefined;
 }
@@ -66,6 +67,10 @@ export function ExchangeBalancesBoard({
   readonly payAsset: string;
   readonly rows: readonly ExchangeBalanceRow[];
 }) {
+  const separateRows = rows.filter(
+    (row) =>
+      row.observedBlock !== undefined && row.observedBlock !== observedBlock,
+  );
   return (
     <div>
       <dl aria-labelledby={labelledBy} data-balances-list>
@@ -83,12 +88,18 @@ export function ExchangeBalancesBoard({
                 </Badge>
               ) : null}
             </dt>
-            <dd className="font-mono text-body-sm text-ink tabular-nums">
+            <dd className="font-mono text-body-sm text-ink tabular-nums text-right">
               {row.wei === undefined ? (
                 <Unavailable reason={row.reason} />
               ) : (
                 <Amount minimumFractionDigits={4} value={row.wei} />
               )}
+              {row.observedBlock !== undefined && separateRows.includes(row) ? (
+                <span className="mt-1 flex justify-end gap-1.5 text-caption text-ink-faint">
+                  {applicationCopy.exchange.balancesObservedLabel}
+                  <Count value={row.observedBlock} />
+                </span>
+              ) : null}
             </dd>
           </div>
         ))}
@@ -97,6 +108,12 @@ export function ExchangeBalancesBoard({
         className="mt-2 flex items-baseline gap-1.5 font-mono text-caption text-ink-faint"
         data-balances-observed
       >
+        {separateRows.length > 0
+          ? rows
+              .filter((row) => !separateRows.includes(row))
+              .map((row) => row.asset)
+              .join(" / ")
+          : null}
         {observedBlock === undefined ? (
           applicationCopy.exchange.balancesObservedUnknown
         ) : (

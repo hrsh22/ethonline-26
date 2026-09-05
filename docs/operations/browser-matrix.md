@@ -1,10 +1,8 @@
 # Production browser matrix
 
-The pre-existing accessibility gate fetches pre-hydration HTML into JSDOM. That
-cannot observe hydration mismatch, failed production assets, real layout
-geometry, wallet behaviour, or requests issued after a page becomes
-interactive. This matrix runs the real production build in Chromium and fails
-on each of those.
+One runner checks the production build's HTTP responses, hydrated accessibility,
+layout, wallet connection, and funding states in Chromium. There is no separate
+SSR/JSDOM axe pass.
 
 ## Commands
 
@@ -12,7 +10,8 @@ on each of those.
 | --------------------------------------- | ------------------------------------------------ |
 | `pnpm --dir apps/web test:browser`      | Full release matrix against an already-built app |
 | `pnpm --dir apps/web test:browser:self` | Proves the harness fails on injected defects     |
-| `pnpm --dir apps/web test:release`      | Build, accessibility gate, then the full matrix  |
+| `pnpm --dir apps/web test:release`      | Build once, then run HTTP and browser checks     |
+| `pnpm --dir apps/web test:production`   | Alias for `test:release`                         |
 
 Focused runs stay available per ticket:
 
@@ -20,6 +19,7 @@ Focused runs stay available per ticket:
 pnpm --dir apps/web test:browser --only=exchange,faucet
 pnpm --dir apps/web test:browser --only=state:wrong-network
 pnpm --dir apps/web test:browser --only=shell
+pnpm --dir apps/web test:browser --only=http:
 ```
 
 `--only` matches against case labels. `--report=<path>` writes the JSON report
@@ -34,6 +34,36 @@ pnpm --dir apps/web exec playwright install chromium
 
 Playwright pins its own Chromium build. CI must run the same command before the
 matrix; the browser is not vendored into the repository.
+
+## Long-lived local verification
+
+`pnpm dev` is a foreground command. When an agent's terminal session expires,
+its output pipes may close while Next.js stays alive. On 2026-09-05 this left
+the server at 101% CPU with every HTTP request timing out: the Node debugger
+captured `write EPIPE`, and Next.js repeatedly tried to log that error to the
+same closed stderr pipe. This was a process-launch failure, not slow rendering.
+
+For local verification that must outlive a terminal session, use a process
+supervisor or give the existing launcher file-backed output and no terminal
+input. From the repository root:
+
+```bash
+pnpm build:packages
+mkdir -p .data
+umask 077
+nohup node scripts/staging-web.ts dev </dev/null >>.data/web-dev.log 2>&1 &
+echo "Web launcher PID: $!"
+curl --max-time 30 --fail http://127.0.0.1:3000/faucet --output /dev/null
+```
+
+Record the launcher PID. Verify its identity with `ps` before stopping it with
+`kill -TERM <launcher-pid>`; do not kill every Node process. `.data` is ignored
+by Git, and newly created logs are owner-only. Keep logs local and do not print
+environment files. Apply the same output handling to individually launched
+history/API workers, but never start a second history writer or funding signer.
+Use a real supervisor when automatic restart is required; `nohup` does not
+restart crashed services. A listening port alone is not readiness: require a
+successful page response and the API's `/readyz` response before browser checks.
 
 ## What fails a run
 
@@ -51,6 +81,10 @@ matrix; the browser is not vendored into the repository.
 - a first Tab that reaches nothing, or reaches a control with no visible box;
 - a request to a protected admin path before a session exists;
 - an Axe WCAG 2.1 A/AA violation, run **after** hydration.
+- a numeric input smaller than 16px, an exact base-unit balance overflowing its
+  metric cell, or a rendered keyboard-focusable chart without a visible outline;
+- a fixture state whose expected wallet indicator, heading, or action never appears;
+- an incorrect HTTP status, protected-route redirect, CSP, or frame policy.
 
 ## Coverage
 
@@ -63,19 +97,49 @@ matrix; the browser is not vendored into the repository.
 - **Wallet states** — disconnected, connecting, wrong-network, and an ordinary
   connected wallet, through an injected EIP-1193 provider so the real wallet
   code paths run without an extension or a live signer.
-- **Data states** — reads in flight, empty inventory, failed reads, stale
-  evidence, already funded, recipient cooldown, and an exhausted service
-  budget, through request interception.
+- **Funding states** — reads in flight, eligible, empty inventory, failed reads,
+  already funded, and recipient cooldown. Each is
+  checked once on the faucet, where its distinct outcome is observable.
 - **Admin session boundary**: a connected wallet without an admin session is
   redirected from both protected routes and issues no protected request.
-  Role-specific controls are covered by the admin component tests.
+- **Admin controls**: a keeper/creator session reaches the real protected route
+  at 375px. The raw minimum disclosure and exact WETH withdrawal input accept
+  user input and must compute to at least 16px. A temporary 12px style on the
+  actual minimum input must fail the same detector before its style is restored.
+  Role-specific behavior remains covered by the admin component tests.
 
 ## Determinism
 
-Route, shell, and admin-session coverage use the `stubbed` fixture: the public API
-answers from fixtures so results do not depend on a running funding or history
-worker. The `live` fixture leaves the network alone and is reserved for a run
-against real services.
+HTTP fixtures use endpoint-specific history envelopes checked through the actual
+indexed-history reader, and funding responses checked by the shared Effect schema.
+RPC chain identity is valid; unsupported chain reads explicitly fail. These cases
+do not claim to cover healthy onchain balances. A separate market-history case
+supplies two canonical swaps with matching fee records and requires a rendered
+priced chart before inspecting its keyboard focus and layout.
+
+Every interactive page must handle a real dialog interaction before inspection.
+The static global 404 is checked as a recovery document, without a wallet shell. Connected
+cases then open the wallet picker and select a locally injected EIP-6963 wallet.
+Its provider emits account/chain changes and refuses all signing and sending.
+Installing it alone does not count as a connection.
+
+Release and CI builds use a fixed public test Reown project ID. Only Reown's
+directory/configuration/image requests are stubbed; the application and wallet
+connector are real. A normal app build is not changed. Running `test:browser`
+against an arbitrary prior build requires wallet connection to be configured.
+
+The `state:cached-stale` case loads a real encoded public snapshot from browser
+storage, fails the live refresh, and requires the same collection count, funds,
+block and observation time alongside the visible stale/last-known markers. It
+does not present a failed first read as prior evidence. Rendered component tests
+separately cover the fresh-to-stale TTL and chart data transitions.
+The admin-input case starts a test-only API on `127.0.0.1:8800` for the runner's
+lifetime; an occupied port fails startup. Only its opaque fixture cookie gets a
+valid deployment-bound session. Verification and action endpoints are denied;
+missing diagnostics return unavailable rather than falsely revoking the session.
+Its partial chain fixture observes only the creator fee balance. Other contract
+reads explicitly fail, so this case does not claim transaction readiness or
+healthy operator state. No production authentication bypass is installed.
 
 ## Screenshot baselines
 
@@ -86,6 +150,29 @@ pnpm --dir apps/web test:browser --screenshots=apps/web/browser/baseline
 Review the diff before committing. Baselines are captured at 1440 px for the
 marked routes only; adding more is a deliberate choice, since every baseline is
 a file a reviewer must inspect.
+
+## Chrome connection recovery
+
+The user authorizes agents to launch Chrome, open its extension-enabled profile,
+and open or claim project test tabs without asking again. This permission covers
+browser testing for this repository, not new access grants, security changes,
+extension installation, credential handling, or transaction approvals.
+
+1. Load the current Chrome skill and reuse a working browser connection. An empty
+   tab list is valid; only a disconnected browser needs reconnection.
+2. If connection fails, follow the skill's bundled extension and native-host
+   diagnostics. A running Chrome process does not prove a usable window exists.
+3. When those checks pass, use `node scripts/open-chrome-window.js --browser chrome`
+   from the current Chrome plugin root. It selects the extension-enabled profile.
+   Wait two seconds, reconnect once, and verify a real page through the plugin.
+4. Use the Computer Use skill for native UI fallback. If it reports
+   `cgWindowNotFound`, retry after opening that profile window. Leave user-owned
+   Chrome windows open after testing. Request user action only if the remaining
+   recovery requires a new grant, reinstall, or another restricted action.
+
+Verified on 2026-09-05: the extension and native-host checks passed while no
+browser was connected and Computer Use could not find a Chrome window. Opening
+the selected Profile 1 restored both plugins without installation or new grants.
 
 ## Manual Chrome checklist
 

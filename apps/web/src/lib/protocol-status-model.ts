@@ -1,4 +1,6 @@
 import type { ProtocolHealthCheck } from "@orbit/protocol/health";
+import type { PublicStatusModel } from "@orbit/protocol/public-status-codec";
+export type { PublicStatusModel } from "@orbit/protocol/public-status-codec";
 import type {
   createProtocolReader,
   RewardHistoryEvent,
@@ -30,7 +32,10 @@ export type PublicStatusSnapshotInput = {
   readonly market: Pick<
     ProtocolHealthSnapshot["market"],
     "creatorPotWeth" | "liquidityPotWeth" | "rewardPotWeth"
-  >;
+  > & {
+    readonly price?:
+      { readonly wethPerLiquidTokenWei?: bigint | undefined } | undefined;
+  };
   readonly operations: Pick<
     ProtocolOperations,
     "rewardEpochCount" | "rewardHistory" | "rewardHistoryStatus"
@@ -151,13 +156,18 @@ export const derivePublicStatusModel = (health: PublicStatusSnapshotInput) => {
     network: health.deployment.network,
     observedAt: health.deployment.observedAt,
     observedBlock: health.deployment.observedBlock,
+    priceWethPerLiquidTokenWei: health.market.price?.wethPerLiquidTokenWei,
     collection: {
       permanent: health.collection.permanentCount,
       transient: health.collection.transientCount,
       pending: health.collection.pendingDiscoveryCount,
       available: health.collection.availableIdentityCount,
     },
-    funds: deriveProtocolFunds(health),
+    funds: {
+      ...deriveProtocolFunds(health),
+      rewardPotWeth: health.market.rewardPotWeth,
+      liquidityQueuedWeth: health.operations.protocolOwnedLiquidity.queuedWeth,
+    },
     rewardActivity: {
       epochCount: health.operations.rewardEpochCount,
       historyStatus: health.operations.rewardHistoryStatus,
@@ -169,10 +179,8 @@ export const derivePublicStatusModel = (health: PublicStatusSnapshotInput) => {
         amount: track.rawLiability,
       })),
     },
-  } as const;
+  } as const satisfies PublicStatusModel;
 };
-
-export type PublicStatusModel = ReturnType<typeof derivePublicStatusModel>;
 
 const unavailableKeeperAttemptEvidence =
   (): ProtocolOperations["keeperAttemptEvidence"] => ({

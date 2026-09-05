@@ -171,8 +171,11 @@ const candleFrom = (
 };
 
 const swapTimestampsFrom = (value: unknown): readonly bigint[] => {
-  if (!Array.isArray(value) || value.length > MAXIMUM_CANDLES) {
-    throw new TypeError("Uniswap v4 swaps must be a bounded array");
+  if (!Array.isArray(value)) {
+    throw new TypeError("Uniswap v4 swaps must be an array");
+  }
+  if (value.length >= MAXIMUM_CANDLES) {
+    throw new RangeError("Uniswap v4 swap coverage may be truncated");
   }
   const timestamps = value.map((item) =>
     unsignedInteger(
@@ -261,17 +264,11 @@ const candlesFrom = (
   if (!Array.isArray(data.poolHourDatas)) {
     throw new TypeError("Uniswap v4 PoolHourData must be an array");
   }
-  if (data.poolHourDatas.length > MAXIMUM_CANDLES) {
-    throw new RangeError("Uniswap v4 PoolHourData exceeds its query limit");
+  if (data.poolHourDatas.length >= MAXIMUM_CANDLES) {
+    throw new RangeError("Uniswap v4 hourly coverage may be truncated");
   }
   const swapTimestamps = swapTimestampsFrom(data.swaps);
   const swapCounts = swapCountsByHour(swapTimestamps);
-  const oldestSwapTimestamp = swapTimestamps.at(-1);
-  const oldestPossiblyTruncatedHour =
-    swapTimestamps.length === MAXIMUM_CANDLES &&
-    oldestSwapTimestamp !== undefined
-      ? oldestSwapTimestamp - (oldestSwapTimestamp % HOURLY_INTERVAL_SECONDS)
-      : undefined;
   return (
     data.poolHourDatas
       .map((item) => {
@@ -287,13 +284,9 @@ const candlesFrom = (
         );
       })
       // PoolHourData is also touched by initialization and liquidity changes.
-      // Keep only hours proved to contain Swap entities. When the raw-swap page
-      // is full, its oldest hour may be truncated, so exclude that boundary too.
-      .filter(
-        (candle) =>
-          candle.swapCount > 0 &&
-          candle.intervalStart !== oldestPossiblyTruncatedHour,
-      )
+      // Keep only hours proved to contain Swap entities. Full pages are rejected
+      // above: silently omitting a boundary hour would conceal missing history.
+      .filter((candle) => candle.swapCount > 0)
       .reverse()
   );
 };

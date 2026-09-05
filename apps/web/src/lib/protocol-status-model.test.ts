@@ -202,7 +202,9 @@ describe("public protocol status model", () => {
         available: 3_604,
       },
       funds: {
+        rewardPotWeth: 10n ** 18n,
         rewardWethWaiting: 5n * 10n ** 18n,
+        liquidityQueuedWeth: 5n * 10n ** 18n,
         liquidityWaitingWeth: 7n * 10n ** 18n,
         liquidityLockedWeth: 6n * 10n ** 18n,
         creatorWeth: 3n * 10n ** 18n,

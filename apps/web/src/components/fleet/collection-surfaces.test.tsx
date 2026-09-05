@@ -168,23 +168,59 @@ describe("collection surfaces", () => {
       );
     });
 
-    it("makes each holding explain consequence, eligibility, and observation time", async () => {
-      testState.protocol = protocol({
-        status: "loaded",
-        snapshot: walletSnapshot([1], [2]),
-      });
-      await render(<FleetPanel />);
+    it.each([
+      [0n, "observed", true, "No rewards ready to claim."],
+      [1n, "observed", true, "Attached rewards are ready to claim."],
+      [
+        1n,
+        "observed",
+        false,
+        "Rewards are attached; claiming is not available yet.",
+      ],
+      [0n, "unavailable", true, "could not be loaded"],
+      [1n, "unavailable", true, "could not be loaded"],
+    ] as const)(
+      "explains rewards from %s units, %s evidence, and eligibility %s",
+      async (rawTokenUnits, pendingRewardsStatus, claimEligible, message) => {
+        const snapshot = walletSnapshot([1], [2]);
+        testState.protocol = protocol({
+          status: "loaded",
+          snapshot: {
+            ...snapshot,
+            collectibles: {
+              ...snapshot.collectibles,
+              permanent: [
+                {
+                  ...craft(2),
+                  stateLabel: "Orbiter",
+                  claimEligible,
+                  pendingRewardsStatus,
+                  pendingRewards: [{ track: "Track 1", rawTokenUnits }],
+                },
+              ],
+            },
+          },
+        });
+        await render(<FleetPanel />);
 
-      const cards = [...container.querySelectorAll("article")];
-      expect(cards[0]?.textContent).toContain("Launch burns 1 $FUEL forever");
-      expect(cards[0]?.textContent).toContain(
-        "Reward claims begin after Launch",
-      );
-      expect(cards[1]?.textContent).toContain("No rewards ready to claim");
-      for (const card of cards) {
-        expect(card.textContent).toContain("Last confirmed");
-      }
-    });
+        const cards = [...container.querySelectorAll("article")];
+        expect(cards[0]?.textContent).toContain("Launch burns 1 $FUEL forever");
+        expect(cards[0]?.textContent).toContain(
+          "Reward claims begin after Launch",
+        );
+        expect(cards[1]?.textContent).toContain(message);
+        if (pendingRewardsStatus === "unavailable") {
+          expect(cards[1]?.textContent).not.toContain("None attached");
+          expect(cards[1]?.textContent).not.toContain("No rewards ready");
+          expect(cards[1]?.textContent).not.toContain(
+            "Attached rewards are ready",
+          );
+        }
+        for (const card of cards) {
+          expect(card.textContent).toContain("Last confirmed");
+        }
+      },
+    );
 
     it("offers a wrong-network wallet the network, not a connect button", async () => {
       testState.protocol = protocol({

@@ -1,5 +1,11 @@
 import { Effect } from "effect";
-import { parseAbiItem, type AbiEvent, type Address, type Hex } from "viem";
+import {
+  InternalRpcError,
+  parseAbiItem,
+  type AbiEvent,
+  type Address,
+  type Hex,
+} from "viem";
 
 import { redactDiagnostic } from "../effect-runtime.ts";
 import type { HistoryIndexConfiguration } from "./configuration.ts";
@@ -202,6 +208,7 @@ const rangeFailure = (message: string): boolean =>
 const retryableFailure = (cause: unknown, message: string): boolean => {
   const status = errorStatus(cause);
   return (
+    cause instanceof InternalRpcError ||
     status === 429 ||
     (status !== undefined && status >= 500) ||
     /(rate limit|throttl|timeout|timed out|temporar|fetch failed|network|connection reset|socket hang up|econnreset|econnrefused|enotfound|eai_again)/iu.test(

@@ -150,4 +150,44 @@ describe("Uniswap v4 candle source", () => {
       "pool identity",
     );
   });
+
+  it.each([999, 1_000, 1_001])(
+    "fails closed when %i swaps may exceed the external page",
+    async (count) => {
+      const source = sourceWith(async () =>
+        response(
+          graphResponse({
+            swaps: Array.from({ length: count }, () => ({
+              timestamp: "1700000100",
+            })),
+          }),
+        ),
+      );
+
+      if (count < 1_000) {
+        await expect(source.readLatest()).resolves.toMatchObject({
+          state: "available",
+          candles: [expect.objectContaining({ swapCount: 999 })],
+        });
+      } else {
+        await expect(source.readLatest()).rejects.toThrow();
+      }
+    },
+  );
+
+  it("rejects a full hourly page whose older requested coverage is unproven", async () => {
+    const hour = graphResponse().data.poolHourDatas[0];
+    const source = sourceWith(async () =>
+      response(
+        graphResponse({
+          poolHourDatas: Array.from({ length: 1_000 }, (_, index) => ({
+            ...hour,
+            periodStartUnix: String(1_699_999_200 - index * 3_600),
+          })),
+        }),
+      ),
+    );
+
+    await expect(source.readLatest()).rejects.toThrow();
+  });
 });

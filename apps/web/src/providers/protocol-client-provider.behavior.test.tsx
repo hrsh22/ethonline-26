@@ -8,14 +8,19 @@ import {
   type TransactionRuntimeContext,
 } from "@orbit/protocol/transactions";
 import { AdminActionAuthorizationDeniedError } from "@/lib/admin-action-authorization";
+import { AccessNotice } from "@/components/access-notice";
+import { TransactionStatus } from "@/components/transaction-status";
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import {
   CallExecutionError,
   encodeErrorResult,
   InvalidParamsRpcError,
   RawContractError,
   RpcRequestError,
+  TransactionExecutionError,
+  UserRejectedRequestError,
 } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,7 +47,13 @@ const testState = vi.hoisted(() => {
   };
   const wallet = {
     observedBlock: 100n,
-    collectibles: { transient: [], permanent: [] },
+    collectibles: {
+      transient: [],
+      permanent: [],
+      permanentHoldingsStatus: "complete" as const,
+      permanentObservedBlock: 100n,
+    },
+    partialFailures: [],
   };
   const prepared = {
     abi: [
@@ -80,6 +91,18 @@ const testState = vi.hoisted(() => {
     isPending: false,
     refetch: vi.fn(async () => ({ data: undefined })),
   };
+  const nativeBalance = {
+    observedBlock: 101n,
+    formatted: "0.01",
+    rawWei: 10_000_000_000_000_000n,
+  };
+  const nativeBalanceQuery = {
+    data: nativeBalance,
+    error: null,
+    isFetching: false,
+    isPending: false,
+    refetch: vi.fn(async () => ({ data: nativeBalance })),
+  };
   return {
     address,
     hash,
@@ -90,6 +113,8 @@ const testState = vi.hoisted(() => {
     wallet,
     walletQuery,
     marketQuery,
+    nativeBalance,
+    nativeBalanceQuery,
     queryClient: {
       cancelQueries: vi.fn(async () => undefined),
       refetchQueries: vi.fn(async () => undefined),
@@ -149,6 +174,8 @@ vi.mock("@tanstack/react-query", () => ({
         return testState.healthQuery;
       case "protocol-wallet":
         return testState.walletQuery;
+      case "protocol-native-balance":
+        return testState.nativeBalanceQuery;
       default:
         return testState.marketQuery;
     }
@@ -182,6 +209,7 @@ vi.mock("@/lib/deployment", () => ({
 vi.mock("@/lib/wagmi", () => ({
   protocolChain: { id: 84_532 },
   protocolReadClient: {},
+  createProtocolReadClient: () => ({}),
   protocolTransactionClient: testState.transactionClient,
 }));
 
@@ -337,6 +365,11 @@ describe("protocol client transaction coordination", () => {
       .mockResolvedValue({ amount: 0n });
     testState.reader.readHealth.mockReset().mockResolvedValue(testState.health);
     testState.reader.readWallet.mockReset().mockResolvedValue(testState.wallet);
+    testState.walletQuery.data = testState.wallet;
+    testState.nativeBalanceQuery.data = testState.nativeBalance;
+    testState.nativeBalanceQuery.refetch
+      .mockReset()
+      .mockResolvedValue({ data: testState.nativeBalance });
     testState.healthQuery.refetch
       .mockReset()
       .mockResolvedValue({ data: testState.health });
@@ -496,9 +529,96 @@ describe("protocol client transaction coordination", () => {
     });
 
     expect(testState.walletQuery.refetch).toHaveBeenCalledOnce();
-    expect(testState.marketQuery.refetch).toHaveBeenCalledOnce();
+    expect(testState.nativeBalanceQuery.refetch).toHaveBeenCalledOnce();
     expect(testState.healthQuery.refetch).not.toHaveBeenCalled();
   });
+
+  it.each(["permanent", "native"] as const)(
+    "keeps confirmed transactions visibly synchronizing until %s evidence includes their receipt, without resubmitting",
+    async (laggingRead) => {
+      const action = {
+        type: "set-pause",
+        module: "rewards",
+        paused: true,
+      } as const;
+      const currentBalances = {
+        ...testState.wallet,
+        observedBlock: 101n,
+        collectibles: {
+          ...testState.wallet.collectibles,
+          permanentObservedBlock: laggingRead === "permanent" ? 100n : 101n,
+        },
+      };
+      if (laggingRead === "native") {
+        const staleNative = { ...testState.nativeBalance, observedBlock: 100n };
+        testState.nativeBalanceQuery.data = staleNative;
+        testState.nativeBalanceQuery.refetch.mockResolvedValue({
+          data: staleNative,
+        });
+      }
+      testState.walletQuery.data = currentBalances;
+      testState.walletQuery.refetch.mockResolvedValue({
+        data: currentBalances,
+      });
+      testState.transactionClient.waitForTransactionReceipt.mockResolvedValue({
+        blockNumber: 101n,
+        status: "success",
+      });
+      await act(async () => {
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+            <AccessNotice />
+          </ProtocolClientProvider>,
+        );
+        await currentProtocol.execute(action, "Pause Reward Ledger");
+      });
+
+      expect(currentProtocol.transaction.status).toBe("confirmed");
+      expect(currentProtocol.walletSynchronizing).toBe(true);
+      expect(currentProtocol.walletRead).toMatchObject({
+        status: "loaded",
+        snapshot: {
+          collectibles: {
+            permanentHoldingsStatus:
+              laggingRead === "permanent" ? "unavailable" : "complete",
+          },
+        },
+      });
+      expect(currentProtocol.getActionState(action).enabled).toBe(false);
+      expect(container.textContent).toContain(
+        "Updating wallet data from the confirmed block",
+      );
+
+      const caughtUp = {
+        ...currentBalances,
+        collectibles: {
+          ...currentBalances.collectibles,
+          permanentObservedBlock: 101n,
+        },
+      };
+      testState.walletQuery.data = caughtUp;
+      testState.walletQuery.refetch.mockResolvedValue({ data: caughtUp });
+      testState.nativeBalanceQuery.data = testState.nativeBalance;
+      testState.nativeBalanceQuery.refetch.mockResolvedValue({
+        data: testState.nativeBalance,
+      });
+      const refresh = [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Retry wallet read",
+      );
+      expect(refresh).toBeDefined();
+      await act(async () => {
+        refresh?.click();
+      });
+      expect(currentProtocol.walletSynchronizing).toBe(false);
+      expect(currentProtocol.walletRead).toMatchObject({
+        status: "loaded",
+        snapshot: { collectibles: { permanentHoldingsStatus: "complete" } },
+      });
+      expect(currentProtocol.transaction.status).toBe("confirmed");
+      expect(testState.sendTransaction).toHaveBeenCalledOnce();
+    },
+  );
 
   it("does not launch wallet refresh reads while wallet access is blocked", async () => {
     testState.pathname = "/exchange";
@@ -1017,42 +1137,48 @@ describe("protocol client transaction coordination", () => {
     },
   );
 
-  it("reconciles an unknown submitted outcome without sending it again", async () => {
-    const action = {
-      type: "set-pause",
-      module: "rewards",
-      paused: true,
-    } as const;
-    testState.transactionClient.waitForTransactionReceipt
-      .mockRejectedValueOnce(new Error("receipt rpc timed out"))
-      .mockResolvedValueOnce({ blockNumber: 100n, status: "success" });
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+  it.each([
+    new Error("receipt rpc timed out"),
+    new UserRejectedRequestError(new Error("provider secret")),
+  ])(
+    "reconciles an unknown submitted outcome without sending it again %#",
+    async (receiptFailure) => {
+      const action = {
+        type: "set-pause",
+        module: "rewards",
+        paused: true,
+      } as const;
+      testState.transactionClient.waitForTransactionReceipt
+        .mockRejectedValueOnce(receiptFailure)
+        .mockResolvedValueOnce({ blockNumber: 100n, status: "success" });
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
 
-    await act(async () => {
-      await currentProtocol.execute(action, "Pause Reward Ledger");
-    });
+      await act(async () => {
+        await currentProtocol.execute(action, "Pause Reward Ledger");
+      });
 
-    expect(currentProtocol.transaction).toMatchObject({
-      status: "outcome-unknown",
-      hash: testState.hash,
-    });
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "outcome-unknown",
+        hash: testState.hash,
+      });
 
-    await act(async () => {
-      await currentProtocol.retry();
-    });
+      await act(async () => {
+        await currentProtocol.retry();
+      });
 
-    expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
-    expect(
-      testState.transactionClient.waitForTransactionReceipt,
-    ).toHaveBeenCalledTimes(2);
-    expect(currentProtocol.transaction).toMatchObject({
-      status: "confirmed",
-      hash: testState.hash,
-    });
-    consoleError.mockRestore();
-  });
+      expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
+      expect(
+        testState.transactionClient.waitForTransactionReceipt,
+      ).toHaveBeenCalledTimes(2);
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "confirmed",
+        hash: testState.hash,
+      });
+      consoleError.mockRestore();
+    },
+  );
 
   it("keeps reconciliation single-flight and the execution lock owned until refresh settles", async () => {
     const action = {
@@ -1416,6 +1542,61 @@ describe("protocol client transaction coordination", () => {
     );
     expect(testState.sendTransaction).toHaveBeenCalledTimes(2);
     expect(currentProtocol.transaction.status).toBe("confirmed");
+  });
+
+  it("reports a cancelled wallet approval as unsubmitted and lets the user retry", async () => {
+    const action: SwapAction = {
+      type: "swap-exact-input",
+      quote: createSwapQuote({ amountOut: 10_000n }),
+      liquidTokenForWeth: false,
+      exactAmountIn: 10_000n,
+      minimumAmountOut: 9_750n,
+      recipient: testState.address as `0x${string}`,
+      deadline: 1_600n,
+      useNative: false,
+    };
+    testState.reader.quoteExactInput.mockResolvedValue(
+      createSwapQuote({ amountOut: 10_000n, observedBlock: 101n }),
+    );
+    testState.sendTransaction.mockRejectedValueOnce(
+      new TransactionExecutionError(
+        new UserRejectedRequestError(new Error("provider secret")),
+        { account: null },
+      ),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await act(async () => {
+      await currentProtocol.execute(action, "Buy $FUEL");
+    });
+    expect(currentProtocol.transaction).toMatchObject({
+      status: "retriable",
+      label: "Approve WETH for exchange",
+    });
+    expect(
+      testState.transactionClient.waitForTransactionReceipt,
+    ).not.toHaveBeenCalled();
+    const html = renderToStaticMarkup(
+      <TransactionStatus
+        state={currentProtocol.transaction}
+        onRetry={() => void currentProtocol.retry()}
+      />,
+    );
+    expect(html).toContain(
+      "The wallet cancelled this request. No transaction was submitted.",
+    );
+    expect(html).toContain("Try again");
+    expect(html).not.toContain("provider secret");
+    expect(html).not.toContain("protocol read could not be completed");
+
+    await act(async () => {
+      await currentProtocol.retry();
+    });
+    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(testState.sendTransaction).toHaveBeenCalledTimes(3);
+    expect(
+      testState.transactionClient.waitForTransactionReceipt,
+    ).toHaveBeenCalledTimes(2);
   });
 
   it("reconciles an unknown approval, refreshes review, and waits for an explicit swap submit", async () => {

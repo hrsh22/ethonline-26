@@ -106,29 +106,32 @@ describe("operator supervisor", () => {
     first.store.close();
   });
 
-  it("prevents the next signing boundary when a stop arrives mid-cycle", () => {
-    const first = supervisor("supervisor-1");
-    enableLive(first.store);
-    const grant = first.supervisor.beginCycle();
-    expect(grant?.maySignNow()).toBe(true);
+  it.each([0, -1_000, 1_000])(
+    "prevents signing after Stop with a %i ms clock change",
+    (clockChange) => {
+      const first = supervisor("supervisor-1");
+      enableLive(first.store);
+      const grant = first.supervisor.beginCycle();
+      expect(grant?.maySignNow()).toBe(true);
 
-    now += 1_000;
-    first.store.applyCommand({
-      actor: "0x1",
-      appliedAt: now,
-      command: "stop",
-      commandId: "c".repeat(32),
-      nextMode: "stopped",
-      nextOneShot: "none",
-      previousMode: "live",
-      previousOneShot: "none",
-      result: "applied",
-      role: "keeper",
-      transactionHash: undefined,
-    });
-    expect(grant?.maySignNow()).toBe(false);
-    first.store.close();
-  });
+      now += clockChange;
+      first.store.applyCommand({
+        actor: "0x1",
+        appliedAt: now,
+        command: "stop",
+        commandId: "c".repeat(32),
+        nextMode: "stopped",
+        nextOneShot: "none",
+        previousMode: "live",
+        previousOneShot: "none",
+        result: "applied",
+        role: "keeper",
+        transactionHash: undefined,
+      });
+      expect(grant?.maySignNow()).toBe(false);
+      first.store.close();
+    },
+  );
 
   it("still reports a transaction already broadcast before the stop", () => {
     const first = supervisor("supervisor-1");
@@ -169,6 +172,62 @@ describe("operator supervisor", () => {
     const restarted = supervisor("supervisor-1");
     expect(restarted.supervisor.beginCycle()?.authority).toBe("skip");
     restarted.store.close();
+  });
+
+  it.each(["none", "live"] as const)(
+    "starts stopped after a restart with queued pass %s",
+    (oneShot) => {
+      const first = supervisor("supervisor-1");
+      enableLive(first.store);
+      if (oneShot === "live")
+        first.store.applyCommand({
+          actor: "0x1",
+          appliedAt: now,
+          command: "request-live-run",
+          commandId: "queued-pass",
+          nextMode: "live",
+          nextOneShot: "live",
+          previousMode: "live",
+          previousOneShot: "none",
+          result: "applied",
+          role: "keeper",
+          transactionHash: undefined,
+        });
+      first.store.close();
+      const restarted = supervisor("supervisor-2");
+      expect(restarted.supervisor.initialize()).toBe(true);
+      expect(restarted.supervisor.beginCycle()?.authority).toBe("skip");
+      expect(restarted.store.recentCommands(1)[0]?.result).toBe(
+        "supervisor-restarted",
+      );
+      restarted.supervisor.release();
+      restarted.store.applyCommand({
+        actor: "0x1",
+        appliedAt: now,
+        command: "enable-live",
+        commandId: "new-authorization",
+        nextMode: "live",
+        nextOneShot: "none",
+        previousMode: "stopped",
+        previousOneShot: "none",
+        result: "applied",
+        role: "keeper",
+        transactionHash: undefined,
+      });
+      expect(restarted.supervisor.beginCycle()?.maySignNow()).toBe(true);
+      restarted.store.close();
+    },
+  );
+
+  it("does not reset the policy when another supervisor still owns the lease", () => {
+    const first = supervisor("supervisor-1");
+    enableLive(first.store);
+    const grant = first.supervisor.beginCycle()!;
+    const second = supervisor("supervisor-2");
+    expect(second.supervisor.initialize()).toBe(false);
+    expect(grant.maySignNow()).toBe(true);
+    second.store.close();
+    first.store.close();
   });
 
   it("blocks a claimed live pass when a stop arrives before signing", () => {
@@ -212,6 +271,26 @@ describe("operator supervisor", () => {
 
     const second = supervisor("supervisor-2");
     expect(second.supervisor.beginCycle()).toBeUndefined();
+    second.store.close();
+    first.store.close();
+  });
+
+  it("renews an active run exclusively and cannot revive an expired grant", () => {
+    const first = supervisor("supervisor-1");
+    enableLive(first.store);
+    const grant = first.supervisor.beginCycle()!;
+    now += 40_000;
+    expect(grant.renew()).toBe(true);
+    now += 40_000;
+    const second = supervisor("supervisor-2");
+    expect(second.supervisor.beginCycle()).toBeUndefined();
+    expect(grant.maySignNow()).toBe(true);
+    now += 20_001;
+    expect(grant.maySignNow()).toBe(false);
+    expect(grant.renew()).toBe(false);
+    expect(second.supervisor.beginCycle()).toBeDefined();
+    first.supervisor.release();
+    expect(second.store.readWriterLease()?.holder).toBe("supervisor-2");
     second.store.close();
     first.store.close();
   });

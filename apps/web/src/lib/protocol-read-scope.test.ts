@@ -40,11 +40,29 @@ describe("protocol health route scope", () => {
 
   it("shares the sanitized status projection with public evidence routes", () => {
     expect([
+      shouldLoadPublicStatus("/"),
+      shouldLoadPublicStatus("/learn"),
+      shouldLoadPublicStatus("/admin/sign-in"),
       shouldLoadPublicStatus("/status"),
       shouldLoadPublicStatus("/market"),
       shouldLoadPublicStatus("/status/private"),
       shouldLoadPublicStatus("/admin/diagnostics"),
       shouldLoadPublicStatus("/exchange"),
-    ]).toEqual([true, true, false, false, false]);
+      shouldLoadPublicStatus("/faucet"),
+      shouldLoadPublicStatus("/fleet"),
+      shouldLoadPublicStatus("/rewards"),
+    ]).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 });

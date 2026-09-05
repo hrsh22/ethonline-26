@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/hrsh22/base-quotron/blob/main/deployments/schema.json",
+  "$id": "https://github.com/hrsh22/ethonline-26/blob/main/deployments/schema.json",
   "title": "ORBIT 4444 deployment manifest",
   "$comment": "This portable schema enforces exact structure, scalar syntax, and contiguous transaction names. Cross-field address/hash equality and value uniqueness require the shared validateDeploymentManifestSemantics post-schema boundary.",
   "$defs": {

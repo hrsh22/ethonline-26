@@ -30,6 +30,7 @@ import { normalizeProtocolError } from "@orbit/protocol/errors";
 import { createIndexedHistoryReaders } from "@orbit/protocol/history";
 import { createCanonicalMarketHistoryReader } from "@orbit/protocol/market-history";
 import { makeViemProtocolTransport } from "@orbit/protocol/viem-transport";
+import { bindReadSignal, runPublicRead } from "@orbit/protocol/read-lifetime";
 import { PUBLIC_API_PATHS } from "@orbit/config/public-api";
 
 import {
@@ -75,6 +76,7 @@ import {
 } from "@/lib/transaction-execution";
 import {
   protocolChain,
+  createProtocolReadClient,
   protocolReadClient,
   protocolTransactionClient,
 } from "@/lib/wagmi";
@@ -140,7 +142,11 @@ const adminHistoryBasePath = "/api/admin/history";
 const canLoadPublicStatus = (
   reader: ProtocolReader | undefined,
   pathname: string,
-): boolean => reader !== undefined && shouldLoadPublicStatus(pathname);
+  connected: boolean,
+): boolean =>
+  reader !== undefined &&
+  (shouldLoadPublicStatus(pathname) ||
+    (!connected && !isProtectedAdminPath(pathname)));
 
 const canLoadWallet = (
   reader: ProtocolReader | undefined,
@@ -281,16 +287,15 @@ type ProtocolClientContextValue = {
   readonly publicStatusError: Error | null;
   readonly marketHistory: IndexedMarketHistoryRead;
   readonly exchangeQuoteRevision: number;
-  /** A confirmed transaction is ahead of the indexed wallet snapshot. */
+  /** A confirmed transaction is ahead of a wallet balance or holdings read. */
   readonly walletSynchronizing: boolean;
   readonly walletRead: ProtocolWalletRead;
   readonly nativeBalanceRead: ProtocolNativeBalanceRead;
   readonly transaction: TransactionState;
   /**
-   * A bare refresh reads once. The wallet read is taken at the indexed block,
-   * which trails the chain, so a caller that knows a balance changed at or
-   * before some block passes it and the read retries a bounded number of times
-   * until it has caught up.
+   * A bare refresh reads once. A caller that knows a balance or holding changed
+   * passes its block so direct balances and indexed holdings retry together,
+   * a bounded number of times, until every observation has caught up.
    */
   readonly refresh: (minimumWalletBlock?: bigint) => Promise<void>;
   /** Refreshes wallet-scoped balances and holdings without rereading protocol health. */
@@ -321,161 +326,9 @@ const getError = (error: unknown) =>
       ? null
       : new Error(String(error));
 
-const PUBLIC_READ_TIMEOUT_MILLISECONDS = 8_000;
+export { runPublicRead as withPublicReadTimeout } from "@orbit/protocol/read-lifetime";
 
-export const withPublicReadTimeout = async <Result,>(
-  read: () => Promise<Result>,
-  timeoutMilliseconds = PUBLIC_READ_TIMEOUT_MILLISECONDS,
-): Promise<Result> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      Promise.resolve().then(read),
-      new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-          () =>
-            reject(
-              new Error(
-                `Public protocol read timed out after ${timeoutMilliseconds / 1_000} seconds.`,
-              ),
-            ),
-          timeoutMilliseconds,
-        );
-      }),
-    ]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-const isBigIntOrUndefined = (value: unknown) =>
-  typeof value === "bigint" || value === undefined;
-const isCount = (value: unknown) =>
-  typeof value === "bigint" ||
-  (typeof value === "number" && Number.isFinite(value));
-const isCountOrUndefined = (value: unknown) =>
-  value === undefined || isCount(value);
-const isTrack = (value: unknown) =>
-  typeof value === "number" && [1, 2, 3, 4].includes(value);
-
-const eventBaseIsValid = (event: Record<string, unknown>) =>
-  [
-    typeof event.blockNumber === "bigint",
-    typeof event.logIndex === "number",
-    typeof event.transactionIndex === "number",
-    typeof event.transactionHash === "string",
-  ].every(Boolean);
-
-const rewardEpochIsValid = (event: Record<string, unknown>) => {
-  if (!isRecord(event.epoch)) return false;
-  return [
-    event.epoch.epochNumber,
-    event.epoch.openedWeth,
-    event.epoch.equalTrackShare,
-    event.epoch.finalTrackRemainder,
-  ].every((field) => typeof field === "bigint");
-};
-
-const rewardConversionIsValid = (event: Record<string, unknown>) => {
-  if (!isRecord(event.conversion)) return false;
-  return [
-    isTrack(event.track),
-    typeof event.conversion.spentWeth === "bigint",
-    typeof event.conversion.stockReceived === "bigint",
-    typeof event.conversion.remainingQueue === "bigint",
-  ].every(Boolean);
-};
-
-const rewardClaimIsValid = (event: Record<string, unknown>) => {
-  if (!isRecord(event.claim)) return false;
-  return [
-    isTrack(event.track),
-    typeof event.claim.amount === "bigint",
-    typeof event.claim.currentOwner === "string",
-    typeof event.claim.identityId === "number",
-  ].every(Boolean);
-};
-
-const isRewardHistoryEvent = (value: unknown): boolean => {
-  if (!isRecord(value) || !eventBaseIsValid(value)) return false;
-  if (value.type === "reward-epoch") return rewardEpochIsValid(value);
-  if (value.type === "track-conversion") return rewardConversionIsValid(value);
-  if (value.type === "reward-claim") return rewardClaimIsValid(value);
-  return false;
-};
-
-const isRewardHistoryEventOfType = (
-  value: unknown,
-  type: "reward-epoch" | "track-conversion",
-) => isRecord(value) && value.type === type && isRewardHistoryEvent(value);
-
-const publicStatusHeaderIsValid = (model: Record<string, unknown>) =>
-  [
-    ["healthy", "degraded", "critical"].includes(String(model.health)),
-    ["fresh", "stale", "unknown"].includes(String(model.freshness)),
-    typeof model.network === "string",
-    typeof model.observedAt === "number" && Number.isFinite(model.observedAt),
-    typeof model.observedBlock === "bigint",
-  ].every(Boolean);
-
-const publicCollectionIsValid = (value: unknown) =>
-  isRecord(value) &&
-  [value.permanent, value.transient, value.pending, value.available].every(
-    isCountOrUndefined,
-  );
-
-const publicFundsAreValid = (value: unknown) =>
-  isRecord(value) &&
-  [
-    value.creatorWeth,
-    value.liquidityLockedWeth,
-    value.liquidityWaitingWeth,
-    value.rewardWethWaiting,
-  ].every(isBigIntOrUndefined);
-
-const publicLiabilitiesAreValid = (value: unknown) =>
-  Array.isArray(value) &&
-  value.every(
-    (entry) =>
-      isRecord(entry) &&
-      [
-        typeof entry.track === "string",
-        isBigIntOrUndefined(entry.amount),
-      ].every(Boolean),
-  );
-
-const publicRewardActivityIsValid = (value: unknown) => {
-  if (!isRecord(value)) return false;
-  const history = value.history;
-  const conversions = value.recentConversions;
-  return [
-    isBigIntOrUndefined(value.epochCount),
-    ["complete", "partial", "unknown"].includes(String(value.historyStatus)),
-    Array.isArray(history) && history.every(isRewardHistoryEvent),
-    value.latestOpening === undefined ||
-      isRewardHistoryEventOfType(value.latestOpening, "reward-epoch"),
-    Array.isArray(conversions) &&
-      conversions.every((event) =>
-        isRewardHistoryEventOfType(event, "track-conversion"),
-      ),
-    publicLiabilitiesAreValid(value.collectorLiability),
-  ].every(Boolean);
-};
-
-/** Local storage is an untrusted compatibility boundary, not typed state. */
-export const isPublicStatusModel = (
-  value: unknown,
-): value is PublicStatusModel => {
-  if (!isRecord(value)) return false;
-  return [
-    publicStatusHeaderIsValid(value),
-    publicCollectionIsValid(value.collection),
-    publicFundsAreValid(value.funds),
-    publicRewardActivityIsValid(value.rewardActivity),
-  ].every(Boolean);
-};
+export { isPublicStatusModel } from "@orbit/protocol/public-status-codec";
 
 export const deriveCurrentHealth = (
   snapshot: HealthSnapshot | undefined,
@@ -539,12 +392,14 @@ export const deriveWalletRead = ({
   accessState,
   error,
   fetching,
+  minimumBlock,
   pending,
   snapshot,
 }: {
   readonly accessState: CollectorAccessState;
   readonly error: unknown;
   readonly fetching: boolean;
+  readonly minimumBlock?: bigint | undefined;
   readonly pending: boolean;
   readonly snapshot: WalletSnapshot | undefined;
 }): ProtocolWalletRead => {
@@ -554,6 +409,23 @@ export const deriveWalletRead = ({
   const walletError = getError(error);
   if (walletError !== null) return { status: "failed", error: walletError };
   if (snapshot !== undefined) {
+    if (
+      walletSnapshotIsSynchronizing(
+        minimumBlock,
+        snapshot.collectibles.permanentObservedBlock,
+      )
+    ) {
+      return {
+        status: "loaded",
+        snapshot: {
+          ...snapshot,
+          collectibles: {
+            ...snapshot.collectibles,
+            permanentHoldingsStatus: "unavailable",
+          },
+        },
+      };
+    }
     return { status: "loaded", snapshot };
   }
   if (pending || fetching) return { status: "loading" };
@@ -610,6 +482,26 @@ export const walletSnapshotIsSynchronizing = (
 ): boolean =>
   minimumBlock !== undefined &&
   (observedBlock === undefined || observedBlock < minimumBlock);
+
+const walletObservation = (
+  snapshot: WalletSnapshot | undefined,
+  nativeBalance: { readonly observedBlock: bigint } | undefined,
+) => {
+  const permanentBlock = snapshot?.collectibles.permanentObservedBlock;
+  if (
+    snapshot === undefined ||
+    permanentBlock === undefined ||
+    nativeBalance === undefined
+  )
+    return;
+  return {
+    observedBlock: [
+      snapshot.observedBlock,
+      permanentBlock,
+      nativeBalance.observedBlock,
+    ].reduce((oldest, block) => (block < oldest ? block : oldest)),
+  };
+};
 
 type WalletClient = ViemWalletClient;
 type PreparedTransaction = ReturnType<ProtocolReader["prepareTransaction"]>;
@@ -717,6 +609,7 @@ class TransactionScopeChangedError extends Error {
 }
 
 const retriableTransactionFailureCodes = new Set([
+  "wallet-rejected",
   "stale-quote",
   "deadline-expired",
   "rpc-failure",
@@ -1335,6 +1228,81 @@ export const readersForPath = (
   };
 };
 
+const createProtocolRuntime = (signal?: AbortSignal) => {
+  if (protocolDeploymentManifest === undefined) return undefined;
+  const readClient =
+    signal === undefined
+      ? protocolReadClient
+      : createProtocolReadClient(signal);
+  const publicHistory = createIndexedHistoryReaders({
+    basePath: publicApiUrl(PUBLIC_API_PATHS.history.root),
+    fetcher: signal === undefined ? fetch : bindReadSignal(fetch, signal),
+    identity,
+    manifest: protocolDeploymentManifest,
+  });
+  const adminHistory = createIndexedHistoryReaders({
+    basePath: adminHistoryBasePath,
+    fetcher:
+      signal === undefined
+        ? adminProtectedFetch
+        : bindReadSignal(adminProtectedFetch, signal),
+    identity,
+    manifest: protocolDeploymentManifest,
+  });
+  const adminProtocolHistory = composeAdminProtocolHistory(
+    publicHistory.protocol,
+    adminHistory.protocol,
+  );
+  const readTransport = makeViemProtocolTransport(
+    // Base-family viem chain types add deposit transactions; the protocol
+    // transport only uses the shared PublicClient read surface.
+    readClient as unknown as Parameters<typeof makeViemProtocolTransport>[0],
+    protocolDeploymentManifest,
+    identity,
+    undefined,
+    signal,
+  );
+  const transactionTransport = makeViemProtocolTransport(
+    protocolTransactionClient as unknown as Parameters<
+      typeof makeViemProtocolTransport
+    >[0],
+    protocolDeploymentManifest,
+    identity,
+    undefined,
+  );
+  return {
+    marketHistory: createCanonicalMarketHistoryReader({
+      history: publicHistory,
+      manifest: protocolDeploymentManifest,
+      identity,
+    }),
+    publicReader: createProtocolReader({
+      manifest: protocolDeploymentManifest,
+      identity,
+      history: publicHistory.protocol,
+      transport: readTransport,
+    }),
+    adminReader: createProtocolReader({
+      manifest: protocolDeploymentManifest,
+      identity,
+      history: adminProtocolHistory,
+      transport: readTransport,
+    }),
+    publicTransactionReader: createProtocolReader({
+      manifest: protocolDeploymentManifest,
+      identity,
+      history: publicHistory.protocol,
+      transport: transactionTransport,
+    }),
+    adminTransactionReader: createProtocolReader({
+      manifest: protocolDeploymentManifest,
+      identity,
+      history: adminProtocolHistory,
+      transport: transactionTransport,
+    }),
+  };
+};
+
 export function ProtocolClientProvider({
   children,
 }: {
@@ -1400,76 +1368,7 @@ export function ProtocolClientProvider({
     }
   }, [transactionScope, updateTransaction]);
 
-  const runtime = useMemo(() => {
-    if (protocolDeploymentManifest === undefined) return undefined;
-    const publicHistory = createIndexedHistoryReaders({
-      basePath: publicApiUrl(PUBLIC_API_PATHS.history.root),
-      fetcher: fetch,
-      identity,
-      manifest: protocolDeploymentManifest,
-    });
-    const adminHistory = createIndexedHistoryReaders({
-      basePath: adminHistoryBasePath,
-      fetcher: adminProtectedFetch,
-      identity,
-      manifest: protocolDeploymentManifest,
-    });
-    const adminProtocolHistory = composeAdminProtocolHistory(
-      publicHistory.protocol,
-      adminHistory.protocol,
-    );
-    const readTransport = makeViemProtocolTransport(
-      // Base-family viem chain types add deposit transactions; the protocol
-      // transport only uses the shared PublicClient read surface.
-      protocolReadClient as unknown as Parameters<
-        typeof makeViemProtocolTransport
-      >[0],
-      protocolDeploymentManifest,
-      identity,
-      undefined,
-      { scanFailedTransactions: false },
-    );
-    const transactionTransport = makeViemProtocolTransport(
-      protocolTransactionClient as unknown as Parameters<
-        typeof makeViemProtocolTransport
-      >[0],
-      protocolDeploymentManifest,
-      identity,
-      undefined,
-      { scanFailedTransactions: false },
-    );
-    return {
-      marketHistory: createCanonicalMarketHistoryReader({
-        history: publicHistory,
-        manifest: protocolDeploymentManifest,
-        identity,
-      }),
-      publicReader: createProtocolReader({
-        manifest: protocolDeploymentManifest,
-        identity,
-        history: publicHistory.protocol,
-        transport: readTransport,
-      }),
-      adminReader: createProtocolReader({
-        manifest: protocolDeploymentManifest,
-        identity,
-        history: adminProtocolHistory,
-        transport: readTransport,
-      }),
-      publicTransactionReader: createProtocolReader({
-        manifest: protocolDeploymentManifest,
-        identity,
-        history: publicHistory.protocol,
-        transport: transactionTransport,
-      }),
-      adminTransactionReader: createProtocolReader({
-        manifest: protocolDeploymentManifest,
-        identity,
-        history: adminProtocolHistory,
-        transport: transactionTransport,
-      }),
-    };
-  }, []);
+  const runtime = useMemo(() => createProtocolRuntime(), []);
   const { reader, transactionReader } = readersForPath(runtime, pathname);
 
   const accessState = getCollectorAccessState({
@@ -1487,7 +1386,13 @@ export function ProtocolClientProvider({
     includeConnectedWallet,
     connection.address,
   );
-  const publicStatusEnabled = canLoadPublicStatus(reader, pathname);
+  // Authorization diagnostics are needed for a connected transaction preview,
+  // not for an anonymous visitor to the same collector route.
+  const publicStatusEnabled = canLoadPublicStatus(
+    reader,
+    pathname,
+    connection.status === "connected",
+  );
   const publicStatusScope =
     protocolDeploymentManifest?.launch.transactionHash ?? "unpublished";
   const publicStatusQueryKey = useMemo(
@@ -1495,12 +1400,24 @@ export function ProtocolClientProvider({
     [publicStatusScope],
   );
   useLayoutEffect(() => {
-    if (!publicStatusEnabled) return;
-    for (const queryKey of [["protocol-health"], ["protocol-wallet"]]) {
-      void queryClient.cancelQueries({ queryKey });
-      queryClient.removeQueries({ queryKey });
+    if (publicStatusEnabled) {
+      for (const queryKey of [
+        ["protocol-health"],
+        ["protocol-wallet"],
+        ["protocol-native-balance"],
+      ]) {
+        void queryClient.cancelQueries({ queryKey });
+        queryClient.removeQueries({ queryKey });
+      }
+    } else {
+      void queryClient.cancelQueries({ queryKey: ["public-protocol-status"] });
     }
-  }, [publicStatusEnabled, queryClient]);
+    if (!shouldLoadMarketHistory(pathname)) {
+      void queryClient.cancelQueries({
+        queryKey: ["canonical-market-history"],
+      });
+    }
+  }, [pathname, publicStatusEnabled, queryClient]);
 
   const healthQuery = useQuery({
     queryKey: [
@@ -1510,16 +1427,27 @@ export function ProtocolClientProvider({
       includeOperationalHistory,
       includeRewardHistory,
     ],
-    queryFn: () => {
-      if (reader === undefined) throw new Error("Protocol reader unavailable");
-      const read = () =>
-        reader.readHealth(healthConnectedWallet, undefined, undefined, {
-          includeOperationalHistory,
-          includeRewardHistory,
-        });
+    queryFn: ({ signal }) => {
+      const read = (readSignal: AbortSignal) => {
+        const scopedReader = readersForPath(
+          createProtocolRuntime(readSignal),
+          pathname,
+        ).reader;
+        if (scopedReader === undefined)
+          throw new Error("Protocol reader unavailable");
+        return scopedReader.readHealth(
+          healthConnectedWallet,
+          undefined,
+          undefined,
+          {
+            includeOperationalHistory,
+            includeRewardHistory,
+          },
+        );
+      };
       return isProtectedAdminPath(pathname)
-        ? read()
-        : withPublicReadTimeout(read);
+        ? read(signal)
+        : runPublicRead(read, { signal });
     },
     enabled: reader !== undefined && !publicStatusEnabled,
     refetchInterval: false,
@@ -1527,13 +1455,15 @@ export function ProtocolClientProvider({
   });
   const publicStatusQuery = useQuery({
     queryKey: publicStatusQueryKey,
-    queryFn: async () => {
-      if (reader === undefined) throw new Error("Protocol reader unavailable");
-      const snapshot = await withPublicReadTimeout(() =>
-        reader.readHealth(undefined, undefined, undefined, {
-          includeOperationalHistory: false,
-          includeRewardHistory: true,
-        }),
+    queryFn: async ({ signal }) => {
+      const snapshot = await runPublicRead(
+        (readSignal) => {
+          const scopedReader = createProtocolRuntime(readSignal)?.publicReader;
+          if (scopedReader === undefined)
+            throw new Error("Protocol reader unavailable");
+          return scopedReader.readPublicStatus();
+        },
+        { signal },
       );
       const publicModel = derivePublicStatusModel(snapshot);
       if (typeof window !== "undefined") {
@@ -1557,11 +1487,11 @@ export function ProtocolClientProvider({
     ) {
       return;
     }
-    const cached = readPublicEvidenceCache<PublicStatusModel>(
+    const cached = readPublicEvidenceCache(
       window.localStorage,
       publicStatusScope,
     );
-    if (cached === undefined || !isPublicStatusModel(cached.model)) return;
+    if (cached === undefined) return;
     queryClient.setQueryData(publicStatusQueryKey, cached.model, {
       updatedAt: cached.savedAt,
     });
@@ -1600,10 +1530,22 @@ export function ProtocolClientProvider({
       protocolDeploymentManifest?.launch.transactionHash,
       connection.address,
     ],
-    queryFn: () => {
-      if (reader === undefined || connection.address === undefined)
+    queryFn: ({ signal }) => {
+      const address = connection.address;
+      if (address === undefined)
         throw new Error("Protocol wallet reader unavailable");
-      return reader.readWallet(connection.address);
+      return runPublicRead(
+        (readSignal) => {
+          const scopedReader = readersForPath(
+            createProtocolRuntime(readSignal),
+            pathname,
+          ).reader;
+          if (scopedReader === undefined)
+            throw new Error("Protocol wallet reader unavailable");
+          return scopedReader.readWallet(address);
+        },
+        { signal },
+      );
     },
     enabled: canLoadWallet(reader, connection, publicStatusEnabled),
     refetchInterval: false,
@@ -1615,21 +1557,23 @@ export function ProtocolClientProvider({
       protocolDeploymentManifest?.launch.transactionHash,
       connection.address,
     ],
-    queryFn: async () => {
-      if (connection.address === undefined) {
+    queryFn: async ({ signal }) => {
+      const address = connection.address;
+      if (address === undefined) {
         throw new Error("Native wallet balance reader unavailable");
       }
-      const rawWei = await protocolReadClient.getBalance({
-        address: connection.address,
-      });
-      return {
-        formatted: formatUnits(rawWei, 18),
-        observedBlock:
-          walletQuery.data?.observedBlock ??
-          currentHealth?.deployment.observedBlock ??
-          0n,
-        rawWei,
-      };
+      return runPublicRead(
+        async (readSignal) => {
+          const client = createProtocolReadClient(readSignal);
+          const observedBlock = await client.getBlockNumber({ cacheTime: 0 });
+          const rawWei = await client.getBalance({
+            address,
+            blockNumber: observedBlock,
+          });
+          return { formatted: formatUnits(rawWei, 18), observedBlock, rawWei };
+        },
+        { signal },
+      );
     },
     enabled: canLoadWallet(reader, connection, publicStatusEnabled),
     refetchInterval: false,
@@ -1642,12 +1586,16 @@ export function ProtocolClientProvider({
       "canonical-market-history",
       protocolDeploymentManifest?.launch.transactionHash,
     ],
-    queryFn: () => {
-      if (runtime === undefined) {
-        throw new Error("Indexed market history reader unavailable");
-      }
-      return runtime.marketHistory.readLatest();
-    },
+    queryFn: ({ signal }) =>
+      runPublicRead(
+        (readSignal) => {
+          const scopedRuntime = createProtocolRuntime(readSignal);
+          if (scopedRuntime === undefined)
+            throw new Error("Indexed market history reader unavailable");
+          return scopedRuntime.marketHistory.readLatest();
+        },
+        { signal },
+      ),
     enabled: marketHistoryEnabled,
     refetchInterval: false,
     retry: false,
@@ -1664,6 +1612,7 @@ export function ProtocolClientProvider({
     accessState,
     error: walletQuery.error,
     fetching: walletQuery.isFetching,
+    minimumBlock: minimumWalletBlock,
     pending: walletQuery.isPending,
     snapshot: walletQuery.data,
   });
@@ -1676,16 +1625,23 @@ export function ProtocolClientProvider({
   });
   const walletSynchronizing = walletSnapshotIsSynchronizing(
     minimumWalletBlock,
-    walletQuery.data?.observedBlock,
+    walletObservation(walletQuery.data, nativeBalanceQuery.data)?.observedBlock,
   );
 
   const refreshWallet = useCallback(
     async (requiredWalletBlock?: bigint) => {
       if (accessState !== "ready") return;
       const targetWalletBlock = requiredWalletBlock ?? minimumWalletBlock;
+      const refetchBalances = async () => {
+        const [wallet, native] = await Promise.all([
+          walletQuery.refetch(),
+          nativeBalanceQuery.refetch(),
+        ]);
+        return walletObservation(wallet.data, native.data);
+      };
       const refetchWallet = async () => {
         if (targetWalletBlock === undefined) {
-          await walletQuery.refetch();
+          await refetchBalances();
           return;
         }
         if (requiredWalletBlock !== undefined) {
@@ -1697,7 +1653,7 @@ export function ProtocolClientProvider({
         }
         const result = await refetchUntilObservedBlock({
           minimumBlock: targetWalletBlock,
-          refetch: async () => (await walletQuery.refetch()).data,
+          refetch: refetchBalances,
         });
         if (result.status === "caught-up") {
           setMinimumWalletBlock((current) =>
@@ -1709,7 +1665,6 @@ export function ProtocolClientProvider({
       };
       await Promise.all([
         refetchWallet(),
-        nativeBalanceQuery.refetch(),
         queryClient.refetchQueries({
           queryKey: ["protocol-collectible"],
           type: "active",

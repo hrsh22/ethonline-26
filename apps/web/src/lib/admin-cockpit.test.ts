@@ -108,7 +108,7 @@ describe("admin cockpit view", () => {
       (status) => status.id === "work-eligibility",
     );
     expect(idleStatus?.severity).toBe("ok");
-    expect(idleStatus?.impact).toContain("no protocol work");
+    expect(idleStatus?.impact).toContain("No WETH is queued in reward tracks");
     expect(unknownStatus?.severity).toBe("notice");
     expect(unknownStatus?.impact).toContain("could not be determined");
     expect(unknownStatus?.freshness).toBe("unknown");

@@ -160,6 +160,9 @@ const scriptedWorkflow = (input: {
   readonly runId?: string;
   readonly previousPolQueueObservedAt?: bigint;
   readonly unresolved?: readonly PendingKeeperAttemptDelivery[];
+  readonly localSubmissions?: ReturnType<
+    KeeperAttemptOutbox["localSubmissions"]
+  >;
   readonly reconciliations?: readonly OperatorSubmissionResolution[];
   readonly failPendingJournal?: boolean;
 }) => {
@@ -193,6 +196,9 @@ const scriptedWorkflow = (input: {
     },
   };
   const outbox: KeeperAttemptOutbox = {
+    enqueueLocalSubmission: () => undefined,
+    localSubmissions: () => input.localSubmissions ?? [],
+    resolveLocalSubmission: () => undefined,
     enqueue: (delivery) => {
       submittedDeliveries.push(delivery);
     },
@@ -210,6 +216,10 @@ const scriptedWorkflow = (input: {
     close: () => undefined,
   };
   const chain: OperatorChain = {
+    rebroadcastSubmission: async (rawTransaction) => {
+      trace.push(`chain:rebroadcast:${rawTransaction}`);
+      return transactionHash;
+    },
     accounts: {
       keeper: { address: keeper },
       "liquidity-executor": { address: liquidityExecutor },
@@ -290,6 +300,52 @@ const scriptedWorkflow = (input: {
 };
 
 describe("Base Sepolia operator workflow", () => {
+  it("does not begin Keeper work while a discovery transaction is unresolved", async () => {
+    const workflow = scriptedWorkflow({
+      execute: true,
+      observations: [],
+      attempts: [],
+      localSubmissions: [{ transactionHash, rawTransaction: "0x0102" }],
+      reconciliations: [
+        {
+          status: "submitted-unknown",
+          failureClass: "receipt-unavailable",
+          reason: "Discovery receipt unavailable",
+        },
+      ],
+    });
+    await expect(workflow.run()).rejects.toThrow("signing is gated");
+    expect(workflow.intents).toEqual([]);
+    expect(workflow.trace).toContain("chain:rebroadcast:0x0102");
+  });
+  it.each([true, false])(
+    "recovers a prepared transaction without planning a new one, execute=%s",
+    async (execute) => {
+      const workflow = scriptedWorkflow({
+        execute,
+        observations: [],
+        attempts: [],
+        unresolved: [
+          { ...unresolvedDelivery(transactionHash), rawTransaction: "0x0102" },
+        ],
+        reconciliations: [
+          {
+            status: "submitted-unknown",
+            failureClass: "receipt-unavailable",
+            reason: "Pending receipt",
+          },
+        ],
+      });
+      await expect(workflow.run()).rejects.toThrow("signing is gated");
+      expect(
+        workflow.trace.filter((event) =>
+          event.startsWith("chain:rebroadcast:"),
+        ),
+      ).toEqual(execute ? ["chain:rebroadcast:0x0102"] : []);
+      expect(workflow.intents).toEqual([]);
+      expect(workflow.unresolvedSubmissions()).toHaveLength(1);
+    },
+  );
   it("aborts immediately after broadcast when pending journal delivery fails", async () => {
     const hash = transactionHashFor("cf");
     const workflow = scriptedWorkflow({

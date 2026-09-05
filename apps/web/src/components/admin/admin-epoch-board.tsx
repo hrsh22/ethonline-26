@@ -44,7 +44,7 @@ export function AdminEpochBoard({
           label={applicationCopy.operations.lastEpoch}
           value={formatEpochTime(
             health?.operations.lastRewardEpochAt,
-            applicationCopy.operations.readyNow,
+            applicationCopy.operations.noPreviousEpoch,
           )}
         />
         <DataRow

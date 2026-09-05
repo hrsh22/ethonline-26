@@ -9,7 +9,7 @@ import { applicationCopy, identity } from "@/lib/identity";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
 
 type ProtocolClient = ReturnType<typeof useProtocolClient>;
-type Health = NonNullable<ProtocolClient["health"]>;
+type PublicStatus = NonNullable<ProtocolClient["publicStatus"]>;
 
 const wethOrUnavailable = (value: bigint | undefined, reason: string) =>
   value === undefined ? (
@@ -61,39 +61,37 @@ export function SpecimenPanel({ identityId }: { readonly identityId: number }) {
   );
 }
 
-const feeRows = (health: Health | undefined, reason: string) => {
-  const liquidity = health?.operations?.protocolOwnedLiquidity;
+const feeRows = (model: PublicStatus | undefined, reason: string) => {
   return [
     {
       label: applicationCopy.home.feeRewards,
       share: "2.00%",
-      value: wethOrUnavailable(health?.market?.rewardPotWeth, reason),
+      value: wethOrUnavailable(model?.funds.rewardPotWeth, reason),
     },
     {
       label: applicationCopy.home.feeLiquidity,
       share: "0.85%",
-      value: wethOrUnavailable(liquidity?.queuedWeth, reason),
+      value: wethOrUnavailable(model?.funds.liquidityQueuedWeth, reason),
     },
     {
       label: applicationCopy.home.feeCreator,
       share: "0.15%",
-      value: wethOrUnavailable(health?.market?.creatorPotWeth, reason),
+      value: wethOrUnavailable(model?.funds.creatorWeth, reason),
     },
   ] as const;
 };
 
 /** Where the 3% fee is right now, with the fixed split beside each queue. */
 export function FeeRoutingPanel() {
-  const { health, healthPending } = useProtocolClient();
-  const reason = healthPending
+  const { publicStatus, publicStatusPending } = useProtocolClient();
+  const reason = publicStatusPending
     ? "Refreshing"
     : applicationCopy.common.notObserved;
-  const locked =
-    health?.operations?.protocolOwnedLiquidity?.permanentlyLockedWeth;
+  const locked = publicStatus?.funds.liquidityLockedWeth;
   return (
     <Panel meta={<span>3.00%</span>} title={applicationCopy.home.feeRouting}>
       <DataList>
-        {feeRows(health, reason).map((row) => (
+        {feeRows(publicStatus, reason).map((row) => (
           <DataRow
             key={row.label}
             label={`${row.label} · ${row.share}`}
@@ -117,8 +115,8 @@ const trackIds = [1, 2, 3, 4] as const;
 
 /** The four reward tracks and what each currently owes its holders. */
 export function RewardTracksPanel() {
-  const { health, healthPending } = useProtocolClient();
-  const reason = healthPending
+  const { publicStatus, publicStatusPending } = useProtocolClient();
+  const reason = publicStatusPending
     ? "Refreshing"
     : applicationCopy.common.notObserved;
   return (
@@ -129,11 +127,10 @@ export function RewardTracksPanel() {
       <DataList>
         {trackIds.map((trackId) => {
           const label = identity.rewardTrackLabels[trackId];
-          // `rewards.tracks` is a dense array in track order, so track N lives
-          // at index N-1. Indexing it by the track id read one track high and
-          // left the fourth track permanently unavailable.
           const liability =
-            health?.rewards?.tracks?.[trackId - 1]?.rawLiability;
+            publicStatus?.rewardActivity.collectorLiability.find(
+              (track) => track.track === label,
+            )?.amount;
           return (
             <DataRow
               key={trackId}

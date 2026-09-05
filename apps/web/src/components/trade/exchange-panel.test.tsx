@@ -319,6 +319,58 @@ describe("Exchange panel", () => {
     await act(async () => refresh?.click());
     expect(protocol.refreshWallet).toHaveBeenCalledTimes(1);
     expect(protocol.refresh).not.toHaveBeenCalled();
+
+    protocol.nativeBalanceRead.balance.observedBlock = quote.observedBlock - 3n;
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+    const ethRow = [
+      ...container.querySelectorAll("[data-balances-list] > div"),
+    ].find((row) => row.querySelector("dt span")?.textContent === "ETH");
+    expect(ethRow?.textContent).toContain(
+      `Read at block${(quote.observedBlock - 3n).toLocaleString("en-US")}`,
+    );
+    expect(
+      container.querySelector("[data-balances-observed]")?.textContent,
+    ).toBe(
+      `WETH / $FUELRead at block${(quote.observedBlock - 1n).toLocaleString("en-US")}`,
+    );
+  });
+
+  it("shows pending receipt synchronization beside otherwise loaded balances", async () => {
+    const protocol = {
+      ...createProtocol(),
+      walletSynchronizing: true,
+      transaction: {
+        status: "confirmed" as const,
+        label: "Buy $FUEL",
+        hash: `0x${"12".repeat(32)}` as const,
+      },
+    };
+    testState.protocol = protocol;
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+
+    expect(container.textContent).toContain("Confirmed on Base Sepolia");
+    expect(container.textContent).toContain(
+      "Updating wallet data from the confirmed block",
+    );
+    const refresh = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Retry wallet read",
+    );
+    expect(refresh).toBeDefined();
+    await act(async () => refresh?.click());
+    expect(protocol.refreshWallet).toHaveBeenCalledOnce();
+    expect(protocol.execute).not.toHaveBeenCalled();
   });
 
   it("disables balance refresh until wallet reads are available", async () => {

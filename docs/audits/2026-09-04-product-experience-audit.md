@@ -294,13 +294,16 @@ Automated passes establish baseline correctness, not product excellence. They do
 
 ## Work tracking
 
-- [#102 — World-class collector experience map](https://github.com/hrsh22/base-quotron/issues/102)
-- [#105 — Single first-run path](https://github.com/hrsh22/base-quotron/issues/105)
-- [#104 — Trade review before submission](https://github.com/hrsh22/base-quotron/issues/104)
-- [#106 — Coherent public evidence and release metadata](https://github.com/hrsh22/base-quotron/issues/106)
-- [#108 — Progressive Market disclosure](https://github.com/hrsh22/base-quotron/issues/108)
-- [#109 — Fleet, Rewards, and Relics product storytelling](https://github.com/hrsh22/base-quotron/issues/109)
-- [#107 — Learn, Verify, About, and protocol history](https://github.com/hrsh22/base-quotron/issues/107)
-- [#103 — Wallet entry, motion, 404, and small-control polish](https://github.com/hrsh22/base-quotron/issues/103)
+Current work is tracked in [hrsh22/ethonline-26](https://github.com/hrsh22/ethonline-26/issues).
+The issue numbers below belong to the original audit and have not been migrated to this repository.
+
+- Original #102: World-class collector experience map
+- Original #105: Single first-run path
+- Original #104: Trade review before submission
+- Original #106: Coherent public evidence and release metadata
+- Original #108: Progressive Market disclosure
+- Original #109: Fleet, Rewards, and Relics product storytelling
+- Original #107: Learn, Verify, About, and protocol history
+- Original #103: Wallet entry, motion, 404, and small-control polish
 
 Do not start with decorative animation or a broad reskin. The strongest near-term result comes from making the existing system easier to understand, safer to decide in, faster to trust, and more rewarding to explore.

@@ -1,7 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { Effect, Schema } from "effect";
+import { Effect, Exit, Schema } from "effect";
 
 import {
   decodeEnvironment,
@@ -18,7 +18,11 @@ import {
   resolveRepositoryPath,
 } from "./base-sepolia-manifest.ts";
 import { createOperatorControlServer } from "./operator-control/http-server.ts";
-import { createOperatorSupervisor } from "./operator-control/runtime.ts";
+import {
+  createOperatorSupervisor,
+  type OperatorSupervisor,
+  type OperatorCycleGrant,
+} from "./operator-control/runtime.ts";
 import { openOperatorControlStore } from "./operator-control/store.ts";
 import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
 
@@ -234,87 +238,76 @@ const loadOperatorWatchEnvironment = Effect.gen(function* () {
   return operatorWatchEnvironment(decoded);
 });
 
-/**
- * Wraps one supervised run in the control-plane grant. The durable desired
- * policy decides whether the cycle runs at all, whether it may sign, and the
- * run's audit outcome. Without a control ledger the previous startup-flag
- * behaviour is preserved unchanged.
- */
+export const runSupervisedOperatorCycle = <E>({
+  supervisor,
+  leaseMilliseconds,
+  runChild,
+}: {
+  readonly supervisor: OperatorSupervisor;
+  readonly leaseMilliseconds: number;
+  readonly runChild: (grant: OperatorCycleGrant) => Effect.Effect<void, E>;
+}): Effect.Effect<void, E | Error> =>
+  Effect.gen(function* () {
+    const grant = yield* Effect.try(() => supervisor.beginCycle());
+    if (grant === undefined) return;
+    if (grant.authority === "skip") return;
+    const renew = Effect.forever(
+      Effect.sleep(Math.max(1, Math.floor(leaseMilliseconds / 3))).pipe(
+        Effect.andThen(
+          Effect.try(() => {
+            if (!grant.renew())
+              throw new Error("Operator writer lease renewal failed");
+          }),
+        ),
+      ),
+    );
+    yield* Effect.raceFirst(runChild(grant), renew).pipe(
+      Effect.onExit((exit) =>
+        Effect.sync(() =>
+          grant.finish({
+            outcome: Exit.isSuccess(exit) ? "completed" : "failed",
+            ...(Exit.isFailure(exit)
+              ? { sanitizedFailure: "Operator run failed or was interrupted" }
+              : {}),
+          }),
+        ),
+      ),
+    );
+  }).pipe(Effect.ensuring(Effect.sync(supervisor.release)));
+
 const supervisedRun = (
   configuration: OperatorWatchEnvironment,
-): Effect.Effect<void, never> => {
-  if (configuration.controlDatabasePath === undefined) {
-    return operatorProcess.pipe(Effect.catchAll(() => Effect.void));
-  }
-  const controlPath = configuration.controlDatabasePath;
-  // The cycle spends nearly all its time suspended while the operator child
-  // runs, and a `try/finally` inside `Effect.gen` does not run when the fiber
-  // is interrupted there (SIGTERM under `runInterruptibleMain`) or when a
-  // yielded effect fails. Skipping the release left the writer lease held and
-  // the run recorded as permanently `started`, so every cycle after a restart
-  // was skipped until the lease expired. Cleanup is registered per resource
-  // and run through `Effect.ensuring`, like the deployment tests.
-  return Effect.gen(function* () {
-    const store = openOperatorControlStore(controlPath);
-    const supervisor = createOperatorSupervisor({
-      leaseMilliseconds: Math.max(
-        configuration.intervalMilliseconds * 2,
-        60_000,
-      ),
-      now: () => Date.now(),
-      store,
-    });
-    const releaseAndClose = Effect.sync(() => {
-      try {
-        supervisor.release();
-      } finally {
-        store.close();
-      }
-    });
-    yield* Effect.gen(function* () {
-      const grant = supervisor.beginCycle();
-      if (grant === undefined) {
-        process.stdout.write(
-          "Base Sepolia operator watch: another supervisor holds the writer lease; skipping this cycle.\n",
-        );
-        return;
-      }
-      if (grant.authority === "skip") {
-        process.stdout.write(
-          "Base Sepolia operator watch: desired policy is stopped; no run started.\n",
-        );
-        return;
-      }
-      // The child inherits the granted authority rather than a startup flag.
-      const child = runManagedProcess("Base Sepolia operator", () =>
-        spawnRuntimeServiceProcess({
-          arguments: [join(repositoryRoot, "scripts/base-sepolia-operator.ts")],
-          command: process.execPath,
-          cwd: repositoryRoot,
-          environment: {
-            ...createOperatorWatchChildEnvironment(process.env),
-            OPERATOR_EXECUTE: grant.maySignNow() ? "true" : "false",
-          },
-          service: "operator",
-          stdio: "inherit",
-        }),
-      );
-      yield* child.pipe(
-        Effect.matchEffect({
-          onFailure: (cause) =>
-            Effect.sync(() => {
-              grant.finish({
-                outcome: "failed",
-                sanitizedFailure: operatorDiagnostic(cause),
-              });
+  supervisor?: OperatorSupervisor,
+) =>
+  supervisor === undefined
+    ? operatorProcess
+    : runSupervisedOperatorCycle({
+        supervisor,
+        leaseMilliseconds: Math.max(
+          configuration.intervalMilliseconds * 2,
+          60_000,
+        ),
+        runChild: (grant) =>
+          runManagedProcess("Base Sepolia operator", () =>
+            spawnRuntimeServiceProcess({
+              arguments: [
+                join(repositoryRoot, "scripts/base-sepolia-operator.ts"),
+              ],
+              command: process.execPath,
+              cwd: repositoryRoot,
+              service: "operator",
+              stdio: "inherit",
+              environment: {
+                ...createOperatorWatchChildEnvironment(process.env),
+                OPERATOR_CONTROL_DATABASE_PATH:
+                  configuration.controlDatabasePath,
+                OPERATOR_CONTROL_RUN_ID: grant.runId,
+                OPERATOR_EXECUTE:
+                  grant.authority === "execute" ? "true" : "false",
+              },
             }),
-          onSuccess: () =>
-            Effect.sync(() => grant.finish({ outcome: "completed" })),
-        }),
-      );
-    }).pipe(Effect.ensuring(releaseAndClose));
-  });
-};
+          ),
+      });
 
 /**
  * The loopback, token-authorized control surface the public API proxies to.
@@ -385,29 +378,56 @@ const runOperatorControlSurface = (
     );
   }) as Effect.Effect<never, Error>;
 
-export const baseSepoliaOperatorWatch = Effect.gen(function* () {
-  const configuration = yield* loadOperatorWatchEnvironment;
-  process.stdout.write(operatorWatchAnnouncement(configuration));
-  if (
-    configuration.controlSurface !== undefined &&
-    configuration.controlDatabasePath !== undefined
-  ) {
-    // The surface and the cycle loop run for the same lifetime; either one
-    // ending ends the process, and interruption releases both.
-    yield* Effect.raceFirst(
-      runOperatorControlSurface(
-        configuration.controlSurface,
-        configuration.controlDatabasePath,
-        configuration.intervalMilliseconds,
-      ),
-      runWatchLoop(configuration),
-    );
-    return;
-  }
-  yield* runWatchLoop(configuration);
-});
+export const baseSepoliaOperatorWatch = Effect.scoped(
+  Effect.gen(function* () {
+    const configuration = yield* loadOperatorWatchEnvironment;
+    let supervisor: OperatorSupervisor | undefined;
+    if (configuration.controlDatabasePath !== undefined) {
+      const path = configuration.controlDatabasePath;
+      const store = yield* Effect.acquireRelease(
+        Effect.try(() => openOperatorControlStore(path)),
+        (store) => Effect.sync(store.close),
+      );
+      supervisor = createOperatorSupervisor({
+        store,
+        now: () => Date.now(),
+        leaseMilliseconds: Math.max(
+          configuration.intervalMilliseconds * 2,
+          60_000,
+        ),
+      });
+      if (!supervisor.initialize())
+        return yield* Effect.fail(
+          new Error(
+            "Another operator supervisor holds the writer lease; startup refused",
+          ),
+        );
+    }
+    process.stdout.write(operatorWatchAnnouncement(configuration));
+    if (
+      configuration.controlSurface !== undefined &&
+      configuration.controlDatabasePath !== undefined
+    ) {
+      // The surface and the cycle loop run for the same lifetime; either one
+      // ending ends the process, and interruption releases both.
+      yield* Effect.raceFirst(
+        runOperatorControlSurface(
+          configuration.controlSurface,
+          configuration.controlDatabasePath,
+          configuration.intervalMilliseconds,
+        ),
+        runWatchLoop(configuration, supervisor),
+      );
+      return;
+    }
+    yield* runWatchLoop(configuration, supervisor);
+  }),
+);
 
-const runWatchLoop = (configuration: OperatorWatchEnvironment) =>
+const runWatchLoop = (
+  configuration: OperatorWatchEnvironment,
+  supervisor?: OperatorSupervisor,
+) =>
   runOperatorWatch({
     reportFailure: (message) =>
       Effect.sync(() => {
@@ -415,7 +435,7 @@ const runWatchLoop = (configuration: OperatorWatchEnvironment) =>
           `Base Sepolia operator watch: ${message}; retrying after the configured interval.\n`,
         );
       }),
-    runOnce: supervisedRun(configuration),
+    runOnce: supervisedRun(configuration, supervisor),
     waitForNextRun: Effect.sleep(configuration.intervalMilliseconds),
   });
 

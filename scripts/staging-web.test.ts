@@ -179,15 +179,6 @@ describe("staging web environment", () => {
     expect(webWorkspace.scripts.typecheck).toBe(
       "node ../../scripts/staging-web.ts typecheck",
     );
-    expect(webWorkspace.scripts["test:a11y"]).toBe(
-      "node ../../scripts/staging-web.ts a11y",
-    );
-    const accessibilityRuntime = readFileSync(
-      new URL("../apps/web/scripts/test-accessibility.ts", import.meta.url),
-      "utf8",
-    );
-    expect(accessibilityRuntime).toContain('nextRuntimeArguments("start"');
-    expect(accessibilityRuntime).not.toContain('["exec", "next", "start"');
   });
 
   it("forwards Base Sepolia reads without accepting operator lifecycle settings", () => {

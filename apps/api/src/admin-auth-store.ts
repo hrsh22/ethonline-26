@@ -2,12 +2,8 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { chmodSync, existsSync } from "node:fs";
 import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
 
+import { configureSqlite, verifySqliteIntegrity } from "@orbit/config/sqlite";
 import type { Address, Hex } from "viem";
-
-import {
-  configureAdminAuthSqlite,
-  verifyAdminAuthSqliteIntegrity,
-} from "./admin-auth-sqlite.js";
 
 const SCHEMA_VERSION = "1";
 const PRUNE_BATCH_SIZE = 256;
@@ -124,7 +120,7 @@ export const openAdminAuthStore = (
     }
   };
   const initialize = (): void => {
-    configureAdminAuthSqlite(database, { wal: path !== ":memory:" });
+    configureSqlite(database, "Admin auth", { wal: path !== ":memory:" });
     database.exec(`
     CREATE TABLE IF NOT EXISTS admin_auth_metadata (
       key TEXT PRIMARY KEY,
@@ -153,7 +149,7 @@ export const openAdminAuthStore = (
     CREATE INDEX IF NOT EXISTS admin_auth_sessions_expiry
       ON admin_auth_sessions (expires_at);
     `);
-    verifyAdminAuthSqliteIntegrity(database);
+    verifySqliteIntegrity(database, "Admin auth");
     secureDatabaseFiles();
     runTransaction(database, () => {
       const select = database.prepare(

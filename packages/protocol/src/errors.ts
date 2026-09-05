@@ -2,7 +2,13 @@ import {
   createIdentityProtocolCopy,
   type IdentityConfiguration,
 } from "@orbit/config/identity";
-import { decodeErrorResult, encodeErrorResult, parseAbi, type Hex } from "viem";
+import {
+  decodeErrorResult,
+  encodeErrorResult,
+  parseAbi,
+  UserRejectedRequestError,
+  type Hex,
+} from "viem";
 
 export interface DomainProtocolError {
   code: string;
@@ -385,6 +391,18 @@ const discoveryMutationLimitMessage = (
   return `${boundary} Reduce the ${liquidTokenName} amount and request a new quote.`;
 };
 
+const isWalletRequestRejected = (cause: unknown): boolean => {
+  for (
+    let depth = 0;
+    depth <= maximumErrorTraversalDepth && isRecord(cause);
+    depth += 1
+  ) {
+    if (cause.code === UserRejectedRequestError.code) return true;
+    cause = cause.cause;
+  }
+  return false;
+};
+
 export const normalizeProtocolError = (
   cause: unknown,
   identity: IdentityConfiguration,
@@ -416,6 +434,9 @@ export const normalizeProtocolError = (
     message: copy.rpcFailure,
   };
   try {
+    if (isWalletRequestRejected(cause)) {
+      return { code: "wallet-rejected", message: copy.walletRejected };
+    }
     const preserved = canonicalDomainErrorFromProtocolQuery(
       cause,
       domainErrors,

@@ -141,11 +141,17 @@ const maintenanceFunction = (action: DiscoveryMaintenanceAction) => {
 };
 
 export const maintainBaseSepoliaDiscovery = async ({
+  assertMaySign,
+  submitTransaction,
   execute,
   manifest,
   privateKey,
   rpcUrl,
 }: {
+  readonly assertMaySign?: () => void;
+  readonly submitTransaction?: (
+    request: WriteContractParameters,
+  ) => Promise<Hex>;
   readonly execute: boolean;
   readonly manifest: ProtocolDeploymentManifest;
   readonly privateKey: Hex | undefined;
@@ -160,8 +166,18 @@ export const maintainBaseSepoliaDiscovery = async ({
     timeout: 30_000,
   });
   const publicClient = createPublicClient({ chain: baseSepolia, transport });
-  const signer =
+  const unguardedSigner =
     privateKey === undefined ? undefined : privateKeyToAccount(privateKey);
+  const signer =
+    unguardedSigner === undefined
+      ? undefined
+      : {
+          ...unguardedSigner,
+          signTransaction: ((...parameters) => {
+            assertMaySign?.();
+            return unguardedSigner.signTransaction(...parameters);
+          }) as typeof unguardedSigner.signTransaction,
+        };
   const simulationAccount: Address =
     signer?.address ?? getAddress(manifest.roles.keeper);
   const walletClient =
@@ -268,7 +284,9 @@ export const maintainBaseSepoliaDiscovery = async ({
         if (walletClient === undefined || signer === undefined) {
           throw new Error("Discovery signing client is unavailable");
         }
-        const transactionHash = await walletClient.writeContract(
+        const transactionHash = await (
+          submitTransaction ?? walletClient.writeContract
+        )(
           // The public-client simulation is intentionally performed with an
           // address. Replace that address with the local account before the
           // write, otherwise viem delegates to eth_sendTransaction and a

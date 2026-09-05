@@ -326,89 +326,6 @@ describe("canonical indexed market history", () => {
     });
   });
 
-  it("uses official Uniswap OHLC while retaining exact hook fee accounting", () => {
-    const base = 1_699_999_200n;
-    const firstTransaction = hash("b");
-    const secondTransaction = hash("c");
-    const snapshot = deriveCanonicalMarketHistorySnapshot({
-      manifest,
-      identity,
-      index: serviceStatus(),
-      candleFeed: {
-        source: "uniswap-v4-subgraph",
-        state: "available",
-        interval: "1h",
-        indexedThroughBlock: 190n,
-        hasIndexingErrors: false,
-        candles: [
-          {
-            intervalStart: base,
-            intervalEnd: base + 3_600n,
-            openWethPerLiquidTokenX18: 5n,
-            highWethPerLiquidTokenX18: 8n,
-            lowWethPerLiquidTokenX18: 4n,
-            closeWethPerLiquidTokenX18: 7n,
-            swapCount: 1,
-          },
-          {
-            intervalStart: base + 7_200n,
-            intervalEnd: base + 10_800n,
-            openWethPerLiquidTokenX18: 7n,
-            highWethPerLiquidTokenX18: 9n,
-            lowWethPerLiquidTokenX18: 6n,
-            closeWethPerLiquidTokenX18: 8n,
-            swapCount: 2,
-          },
-        ],
-      },
-      fees: source([
-        fee({
-          timestamp: base + 10n,
-          transactionIndex: 0,
-          logIndex: 1,
-          transactionHash: firstTransaction,
-          wethVolume: 100n,
-          totalFee: 3n,
-        }),
-        fee({
-          timestamp: base + 7_210n,
-          transactionIndex: 1,
-          logIndex: 1,
-          transactionHash: secondTransaction,
-          wethVolume: 200n,
-          totalFee: 6n,
-        }),
-      ]),
-      liquidityCycles: source([]),
-    });
-
-    expect(snapshot.candleSource).toEqual({
-      kind: "uniswap-v4-subgraph",
-      state: "complete",
-      indexedThroughBlock: 190n,
-    });
-    expect(snapshot.status.indexedThroughBlock).toBe(190n);
-    expect(snapshot.candles).toHaveLength(2);
-    expect(snapshot.candles[0]).toMatchObject({
-      openWethPerLiquidTokenX18: 5n,
-      grossWethVolume: 100n,
-      protocolFeeWeth: 3n,
-      feeMatchState: "complete",
-    });
-    expect(snapshot.candles[1]).toMatchObject({
-      closeWethPerLiquidTokenX18: 8n,
-      grossWethVolume: 200n,
-      protocolFeeWeth: 6n,
-      feeMatchState: "partial",
-    });
-    expect(snapshot.feeMatching).toEqual({
-      state: "partial",
-      matchedSwapCount: 2,
-      unmatchedSwapCount: 1,
-      unmatchedFeeCount: 0,
-    });
-  });
-
   it("retains every liquidity-cycle field and exposes partial index coverage", () => {
     const cycle = item({
       eventName: "protocol-liquidity-added",
@@ -456,62 +373,165 @@ describe("canonical indexed market history", () => {
     ]);
   });
 
-  it("does not download indexed swap pages when the Uniswap feed is healthy", async () => {
-    let swapReads = 0;
-    const index = serviceStatus();
-    const emptyPage = async (
-      request: IndexedHistoryRequest,
-    ): Promise<IndexedHistoryPage> => ({
-      manifest: index.manifest,
-      snapshot: index.snapshot,
-      items: [],
-      page: { hasMore: false, nextCursor: undefined },
-      status: {
+  it.each([
+    { count: 999, externalBlock: 190n, volume: 99_900n, fees: 2_997n },
+    { count: 1_000, externalBlock: 200n, volume: 100_000n, fees: 3_000n },
+    { count: 1_001, externalBlock: 210n, volume: 100_100n, fees: 3_003n },
+    { count: 1_002, externalBlock: 210n, volume: 100_100n, fees: 3_003n },
+  ])(
+    "retains $count canonical swaps when an external feed is truncated at block $externalBlock",
+    async ({ count, externalBlock, volume, fees }) => {
+      const index = serviceStatus();
+      const timestamp = 1_699_999_200n;
+      const swaps = Object.freeze(
+        Array.from({ length: count }, (_, offset) =>
+          Object.freeze(
+            swap({
+              timestamp: timestamp + (offset === 1_001 ? 3_600n : 0n),
+              sqrtPriceX96: q96,
+              transactionIndex: 0,
+              logIndex: offset * 2 + 1,
+              transactionHash: hash("5"),
+            }),
+          ),
+        ),
+      );
+      const feeItems = Object.freeze(
+        Array.from({ length: count }, (_, offset) =>
+          Object.freeze(
+            fee({
+              timestamp: timestamp + (offset === 1_001 ? 3_600n : 0n),
+              transactionIndex: 0,
+              logIndex: offset * 2,
+              transactionHash: hash("5"),
+              wethVolume: 100n,
+              totalFee: 3n,
+            }),
+          ),
+        ),
+      );
+      const emptyPage = async (
+        request: IndexedHistoryRequest,
+      ): Promise<IndexedHistoryPage> => ({
+        manifest: index.manifest,
+        snapshot: index.snapshot,
+        items: [],
+        page: { hasMore: false, nextCursor: undefined },
+        status: {
+          state: "complete",
+          requested: { fromBlock: request.fromBlock, toBlock: request.toBlock },
+          coverage: index.status.coverage,
+          head: index.status.head,
+        },
+      });
+      const pageFor = async (
+        request: IndexedHistoryRequest,
+        items: readonly IndexedHistoryItem[],
+      ): Promise<IndexedHistoryPage> => {
+        const offset = Number(request.cursor ?? 0);
+        const nextOffset = offset + 100;
+        const hasMore = nextOffset < items.length;
+        return {
+          ...(await emptyPage(request)),
+          items: items.slice(offset, nextOffset),
+          page: {
+            hasMore,
+            nextCursor: hasMore ? String(nextOffset) : undefined,
+          },
+        };
+      };
+      const history: IndexedHistoryReaders = {
+        status: async () => index,
+        market: {
+          candles: async () => ({
+            source: "uniswap-v4-subgraph",
+            state: "available",
+            interval: "1h",
+            indexedThroughBlock: externalBlock,
+            hasIndexingErrors: false,
+            candles:
+              externalBlock === 200n
+                ? []
+                : [
+                    {
+                      intervalStart: timestamp,
+                      intervalEnd: timestamp + 3_600n,
+                      openWethPerLiquidTokenX18: 5n,
+                      highWethPerLiquidTokenX18: 8n,
+                      lowWethPerLiquidTokenX18: 4n,
+                      closeWethPerLiquidTokenX18: 7n,
+                      swapCount: 1,
+                    },
+                  ],
+          }),
+          swaps: async (request) => pageFor(request, swaps),
+          fees: async (request) => pageFor(request, feeItems),
+        },
+        protocol: {
+          permanentIdentityCandidates,
+          liquidityCycles: emptyPage,
+          operations: emptyPage,
+          recentOperationalEvents: async () => {
+            throw new Error("not used");
+          },
+          rewardHistory: async () => {
+            throw new Error("not used");
+          },
+        },
+      };
+
+      const snapshot = await createCanonicalMarketHistoryReader({
+        history,
+        manifest,
+        identity,
+      }).readLatest();
+
+      expect(snapshot.candleSource).toEqual({
+        kind: "indexed-history",
         state: "complete",
-        requested: { fromBlock: request.fromBlock, toBlock: request.toBlock },
-        coverage: index.status.coverage,
-        head: index.status.head,
-      },
-    });
-    const history: IndexedHistoryReaders = {
-      status: async () => index,
-      market: {
-        candles: async () => ({
-          source: "uniswap-v4-subgraph",
-          state: "available",
-          interval: "1h",
-          indexedThroughBlock: 200n,
-          hasIndexingErrors: false,
-          candles: [],
-        }),
-        swaps: async (request) => {
-          swapReads += 1;
-          return emptyPage(request);
+        indexedThroughBlock: 200n,
+      });
+      expect(snapshot.status).toMatchObject({
+        state: "complete",
+        indexedThroughBlock: 200n,
+        indexedThroughTime: 1_700_010_000n,
+        observedBlock: 205n,
+        lagBlocks: 5n,
+      });
+      expect(snapshot.candles).toEqual([
+        {
+          intervalStart: timestamp,
+          intervalEnd: timestamp + 60n,
+          openWethPerLiquidTokenX18: 10n ** 18n,
+          highWethPerLiquidTokenX18: 10n ** 18n,
+          lowWethPerLiquidTokenX18: 10n ** 18n,
+          closeWethPerLiquidTokenX18: 10n ** 18n,
+          grossWethVolume: volume,
+          protocolFeeWeth: fees,
+          swapCount: count === 1_002 ? 1_001 : count,
+          matchedFeeCount: count === 1_002 ? 1_001 : count,
+          feeMatchState: "complete",
         },
-        fees: emptyPage,
-      },
-      protocol: {
-        permanentIdentityCandidates,
-        liquidityCycles: emptyPage,
-        operations: emptyPage,
-        recentOperationalEvents: async () => {
-          throw new Error("not used");
-        },
-        rewardHistory: async () => {
-          throw new Error("not used");
-        },
-      },
-    };
-
-    const snapshot = await createCanonicalMarketHistoryReader({
-      history,
-      manifest,
-      identity,
-    }).readLatest();
-
-    expect(swapReads).toBe(0);
-    expect(snapshot.candleSource.kind).toBe("uniswap-v4-subgraph");
-  });
+        ...(count === 1_002
+          ? [
+              {
+                intervalStart: timestamp + 3_600n,
+                intervalEnd: timestamp + 3_660n,
+                openWethPerLiquidTokenX18: 10n ** 18n,
+                highWethPerLiquidTokenX18: 10n ** 18n,
+                lowWethPerLiquidTokenX18: 10n ** 18n,
+                closeWethPerLiquidTokenX18: 10n ** 18n,
+                grossWethVolume: 100n,
+                protocolFeeWeth: 3n,
+                swapCount: 1,
+                matchedFeeCount: 1,
+                feeMatchState: "complete",
+              },
+            ]
+          : []),
+      ]);
+    },
+  );
 
   it("refreshes only the bounded mutable tail and merges new cycles without duplicates", async () => {
     const requests: IndexedHistoryRequest[] = [];

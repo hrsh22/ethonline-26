@@ -3,12 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import {
-  configureAdminAuthSqlite,
-  verifyAdminAuthSqliteIntegrity,
-} from "../src/admin-auth-sqlite.js";
+import { configureSqlite, verifySqliteIntegrity } from "../src/sqlite.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -24,25 +21,26 @@ afterEach(() => {
   }
 });
 
-describe("admin authentication SQLite hardening", () => {
+describe("shared SQLite hardening", () => {
   it.each(["3.51.2", "3.51.vendor"])(
     "rejects unsafe or unparseable SQLite version %s",
     (version) => {
-      const database = {
-        exec: vi.fn(),
-        prepare: vi.fn(() => ({ get: () => ({ version }) })),
-      } as unknown as DatabaseSync;
-
-      expect(() => configureAdminAuthSqlite(database, { wal: false })).toThrow(
-        `Admin auth SQLite ${version} is unsafe for WAL; version 3.51.3 or newer is required`,
-      );
+      const database = new DatabaseSync(":memory:");
+      try {
+        database.function("sqlite_version", () => version);
+        expect(() => configureSqlite(database, "Test", { wal: false })).toThrow(
+          `Test SQLite ${version} is unsafe for WAL; version 3.51.3 or newer is required`,
+        );
+      } finally {
+        database.close();
+      }
     },
   );
 
   it("configures a safe engine for durable WAL storage", () => {
     const database = new DatabaseSync(databaseFile());
     try {
-      configureAdminAuthSqlite(database, { wal: true });
+      configureSqlite(database, "Test");
 
       expect(database.prepare("PRAGMA journal_mode").get()).toMatchObject({
         journal_mode: "wal",
@@ -53,7 +51,7 @@ describe("admin authentication SQLite hardening", () => {
       expect(database.prepare("PRAGMA synchronous").get()).toMatchObject({
         synchronous: 2,
       });
-      expect(() => verifyAdminAuthSqliteIntegrity(database)).not.toThrow();
+      expect(() => verifySqliteIntegrity(database, "Test")).not.toThrow();
     } finally {
       database.close();
     }
@@ -72,8 +70,8 @@ describe("admin authentication SQLite hardening", () => {
         PRAGMA foreign_keys = ON;
       `);
 
-      expect(() => verifyAdminAuthSqliteIntegrity(database)).toThrow(
-        "Admin auth SQLite foreign-key check failed",
+      expect(() => verifySqliteIntegrity(database, "Test")).toThrow(
+        "Test SQLite foreign-key check failed",
       );
     } finally {
       database.close();

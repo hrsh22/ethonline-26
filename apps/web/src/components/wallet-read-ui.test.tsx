@@ -161,6 +161,7 @@ describe("wallet read states", () => {
   });
 
   it("offers an explicit retry after a failed wallet read", async () => {
+    testState.protocol = { ...failedProtocol(), walletSynchronizing: true };
     await act(async () => root.render(<AccessNotice />));
 
     const retry = [...container.querySelectorAll("button")].find(

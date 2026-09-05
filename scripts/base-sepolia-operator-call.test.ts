@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createWalletClient, custom, parseAbi } from "viem";
+import { createWalletClient, custom, keccak256, parseAbi } from "viem";
 import type { Address, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
@@ -14,7 +14,23 @@ import {
 const ACTOR = "0x0000000000000000000000000000000000000001" as Address;
 const LIQUIDITY_EXECUTOR =
   "0x0000000000000000000000000000000000000002" as Address;
-const HASH = `${"0x"}${"ab".repeat(32)}` as Hex;
+const RAW_TRANSACTION = "0x0102";
+const HASH = keccak256(RAW_TRANSACTION);
+const simulatedRequest = (account = ACTOR) => ({
+  account,
+  address: ACTOR,
+  abi: parseAbi(["function addLiquidityCycle()"]),
+  functionName: "addLiquidityCycle",
+  args: [],
+});
+const wallet = (sign: () => void = () => undefined) => ({
+  prepareTransactionRequest: async () => ({}),
+  signTransaction: async () => {
+    sign();
+    return RAW_TRANSACTION;
+  },
+  sendRawTransaction: async () => HASH,
+});
 const LIQUIDITY_EXECUTOR_KEY = `0x${"44".repeat(32)}` as Hex;
 const PLANNING_BLOCK: OperatorBlockIdentity = {
   number: 10n,
@@ -75,7 +91,7 @@ describe("Base Sepolia operator contract preflight", () => {
         }) => {
           events.push("simulate");
           expect(request.blockNumber).toBe(PREFLIGHT_BLOCK.number);
-          return { result: 25n, request: { account: ACTOR } };
+          return { result: 25n, request: simulatedRequest() };
         },
         waitForTransactionReceipt: async () => {
           events.push("confirm");
@@ -86,12 +102,9 @@ describe("Base Sepolia operator contract preflight", () => {
         keeper: { account: undefined, walletClient: undefined },
         "liquidity-executor": {
           account: { address: ACTOR },
-          walletClient: {
-            writeContract: async () => {
-              events.push("sign");
-              return HASH;
-            },
-          },
+          walletClient: wallet(() => {
+            events.push("sign");
+          }),
         },
       },
     } as unknown as Parameters<typeof attemptOperatorCall>[0];
@@ -135,7 +148,7 @@ describe("Base Sepolia operator contract preflight", () => {
         ...canonicalPublicClient,
         simulateContract: async ({ account }: { account: Address }) => {
           events.push(`simulate:${account}`);
-          return { result: 25n, request: { account } };
+          return { result: 25n, request: simulatedRequest(account) };
         },
         waitForTransactionReceipt: async () => ({
           status: "success",
@@ -145,21 +158,15 @@ describe("Base Sepolia operator contract preflight", () => {
       roles: {
         keeper: {
           account: { address: ACTOR },
-          walletClient: {
-            writeContract: async () => {
-              events.push("sign:keeper");
-              return HASH;
-            },
-          },
+          walletClient: wallet(() => {
+            events.push("sign:keeper");
+          }),
         },
         "liquidity-executor": {
           account: { address: LIQUIDITY_EXECUTOR },
-          walletClient: {
-            writeContract: async () => {
-              events.push("sign:liquidity-executor");
-              return HASH;
-            },
-          },
+          walletClient: wallet(() => {
+            events.push("sign:liquidity-executor");
+          }),
         },
       },
     } as unknown as Parameters<typeof attemptOperatorCall>[0];
@@ -189,14 +196,14 @@ describe("Base Sepolia operator contract preflight", () => {
       account,
       chain: baseSepolia,
       transport: custom({
-        request: ({ method }) => {
+        request: ({ method, params }) => {
           rpcMethods.push(method);
           if (method === "eth_chainId") return Promise.resolve("0x14a34");
           if (
             method === "eth_sendRawTransaction" ||
             method === "eth_sendTransaction"
           ) {
-            return Promise.resolve(HASH);
+            return Promise.resolve(keccak256((params as readonly Hex[])[0]!));
           }
           return Promise.reject(new Error(`Unexpected RPC method ${method}`));
         },
@@ -331,14 +338,14 @@ describe("Base Sepolia operator contract preflight", () => {
     expect(evidence.reason).not.toContain(secret);
   });
 
-  it("aborts the run after broadcast when the durable hash journal is unavailable", async () => {
+  it("aborts before broadcast when the durable hash journal is unavailable", async () => {
     const events: string[] = [];
     const clients = {
       publicClient: {
         ...canonicalPublicClient,
         simulateContract: async () => ({
           result: 25n,
-          request: { account: ACTOR },
+          request: simulatedRequest(),
         }),
         waitForTransactionReceipt: async () => {
           events.push("confirm");
@@ -350,7 +357,8 @@ describe("Base Sepolia operator contract preflight", () => {
         "liquidity-executor": {
           account: { address: ACTOR },
           walletClient: {
-            writeContract: async () => {
+            ...wallet(),
+            sendRawTransaction: async () => {
               events.push("broadcast");
               return HASH;
             },
@@ -374,7 +382,7 @@ describe("Base Sepolia operator contract preflight", () => {
         },
       ),
     ).rejects.toThrow("could not be durably journaled");
-    expect(events).toEqual(["broadcast", "journal-failed"]);
+    expect(events).toEqual(["journal-failed"]);
   });
 
   const receiptAttempt = async (receipt: unknown) =>
@@ -384,7 +392,7 @@ describe("Base Sepolia operator contract preflight", () => {
           ...canonicalPublicClient,
           simulateContract: async () => ({
             result: 25n,
-            request: { account: ACTOR },
+            request: simulatedRequest(),
           }),
           waitForTransactionReceipt: async () => receipt,
         },
@@ -392,7 +400,7 @@ describe("Base Sepolia operator contract preflight", () => {
           keeper: { account: undefined, walletClient: undefined },
           "liquidity-executor": {
             account: { address: ACTOR },
-            walletClient: { writeContract: async () => HASH },
+            walletClient: wallet(),
           },
         },
       } as unknown as Parameters<typeof attemptOperatorCall>[0],

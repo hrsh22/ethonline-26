@@ -60,8 +60,8 @@ stock-token reward with `claim`; the owner pays that claim's gas.
    WETH consumption is dust, over budget, or differs at all from the audited calculation. Refresh
    the pinned state snapshot after a confirmed cycle.
 7. Persist `preparing`, safe preflight failure, and completed-cycle milestones through the
-   authenticated history-worker journal. Immediately after broadcast, write the returned
-   transaction hash to a local SQLite outbox before remote delivery. The history worker independently
+   authenticated history-worker journal. Prepare and sign locally, then persist the signed
+   transaction and its deterministic hash to a local SQLite outbox before any broadcast. The history worker independently
    reconciles submitted hashes to canonical success, revert, pending, reorg, and recovery states.
 8. Take one final pinned state snapshot before recording run completion or assembling evidence. Its
    observed block must be at least the block of every confirmed receipt in the run. Then write a
@@ -121,14 +121,22 @@ Start `pnpm history:worker` before invoking the operator. The operator fails clo
 when its initial journal milestone cannot be authenticated or persisted. Submitted hashes are sent
 immediately with bounded at-least-once retries; repeated lifecycle deliveries are idempotent. A
 journal acknowledgement marks only delivery, not a canonical transaction outcome. The local row
-therefore remains an unresolved signing gate after acknowledgement. If delivery fails after
-broadcast, the bounded run aborts without recording completion. Before a later process can observe
+therefore remains an unresolved signing gate after acknowledgement. If journal delivery fails,
+broadcast is not attempted and the bounded run aborts without recording completion. Before a later process can observe
 eligibility or sign, it replays undelivered rows and reconciles every unresolved hash against an
 exact receipt, its canonical block header, and the two-confirmation floor. Pending, missing,
 malformed, reorged, or otherwise uncertain outcomes keep the whole run gated; only canonical
 success or revert releases the exact row, after which eligibility is observed afresh. The outbox is
-bound to the deployment fingerprint and stores only public transaction/action facts, never a
-private key, signed transaction, RPC credential, provider object, or raw revert payload.
+bound to the deployment fingerprint. Version 4 also retains signed transaction bytes, including
+their nonce, in the owner-only `0600` database. Keep this file private: a signed transaction can be
+broadcast by anyone holding it. No private key, RPC credential, provider object, or raw revert
+payload is stored. With current live authority, recovery may rebroadcast these exact bytes when
+the receipt is unavailable; it never creates a replacement transaction. Dry-run and stopped policy
+do not rebroadcast. Old hash-only rows remain gated until canonical resolution.
+
+Discovery maintenance uses the same local signing and recovery gate. Its signed transactions stay
+local and do not invent new public Keeper action kinds. An uncertain discovery submission blocks
+later Reward Epoch, Reward Track, and Protocol-Owned Liquidity signing too.
 
 The default liquidity policy waits until at least `0.005 WETH` is available, aims to consume
 `0.025 WETH` per cycle, and never selects more than `0.05 WETH`. These are public operating-policy
@@ -170,6 +178,9 @@ ignored root `.env` only when an explicitly invoked one-shot or watch process sh
 Base Sepolia transactions. Each signer must have Base Sepolia ETH for gas. With split identities,
 each signer must match its corresponding current onchain role; with a shared identity, that one
 account must currently hold both roles.
+When `OPERATOR_CONTROL_DATABASE_PATH` is configured, start the watch and use an authorized control
+command instead. A direct execute-mode child without a supervisor-issued grant is refused, and
+every watch restart begins stopped. See [Operator control plane](operator-control-plane.md).
 
 For the explicitly self-funded staging profile, `pnpm backend` reuses `DEPLOYER_PRIVATE_KEY` only
 when execute mode is live and no operator-specific key is configured. That fallback is projected

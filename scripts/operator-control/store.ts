@@ -1,4 +1,5 @@
 import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
+import { configureSqlite, verifySqliteIntegrity } from "@orbit/config/sqlite";
 
 import type {
   OperatorCommandName,
@@ -6,7 +7,12 @@ import type {
   OperatorOneShot,
 } from "@orbit/config/operator-control";
 
-import { CLOSED_POLICY, type OperatorExecutionPolicy } from "./policy.ts";
+import {
+  CLOSED_POLICY,
+  cycleAuthority,
+  type CycleAuthority,
+  type OperatorExecutionPolicy,
+} from "./policy.ts";
 
 type SqliteRow = Readonly<Record<string, SQLOutputValue>>;
 
@@ -47,11 +53,21 @@ export interface OperatorRunRecord {
 
 export interface OperatorPolicyRevision {
   readonly policy: OperatorExecutionPolicy;
-  /** Monotonic marker of the last policy write, used to detect a later stop. */
+  readonly revision: number;
+  readonly stopRevision: number;
   readonly updatedAt: number;
 }
 
 export interface OperatorControlStore {
+  readonly claimRun: (input: {
+    readonly runId: string;
+    readonly supervisor: string;
+    readonly at: number;
+  }) => {
+    readonly policy: OperatorExecutionPolicy;
+    readonly authority: CycleAuthority;
+  };
+  readonly maySign: (runId: string, now: number) => boolean;
   readonly readPolicy: () => OperatorExecutionPolicy;
   readonly readPolicyRevision: () => OperatorPolicyRevision;
   /** Records a policy change and its audit row in one transaction. */
@@ -97,15 +113,17 @@ export interface OperatorControlStore {
     readonly leaseMilliseconds: number;
   }) => boolean;
   readonly releaseWriterLease: (holder: string) => void;
+  readonly renewWriterLease: (input: {
+    readonly holder: string;
+    readonly now: number;
+    readonly leaseMilliseconds: number;
+  }) => boolean;
   readonly readWriterLease: () =>
     { readonly expiresAt: number; readonly holder: string } | undefined;
   readonly close: () => void;
 }
 
 const SCHEMA = `
-  PRAGMA foreign_keys = ON;
-  PRAGMA busy_timeout = 5000;
-  PRAGMA synchronous = FULL;
   CREATE TABLE IF NOT EXISTS operator_policy (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     mode TEXT NOT NULL CHECK (mode IN ('stopped', 'dry-run', 'live')),
@@ -172,28 +190,59 @@ export const openOperatorControlStore = (
   path: string,
 ): OperatorControlStore => {
   const database = new DatabaseSync(path);
-  database.exec(SCHEMA);
-  if (path !== ":memory:") {
-    const row = database.prepare("PRAGMA journal_mode = WAL").get();
-    if (text(row?.journal_mode).toLowerCase() !== "wal") {
-      throw new Error("Operator control database did not enter WAL mode");
+  try {
+    configureSqlite(database, "Operator control", { wal: path !== ":memory:" });
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      database.exec(SCHEMA);
+      const policyColumns = database
+        .prepare("PRAGMA table_info(operator_policy)")
+        .all();
+      if (!policyColumns.some((column) => column.name === "revision")) {
+        database.exec(`ALTER TABLE operator_policy ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+          ALTER TABLE operator_policy ADD COLUMN stop_revision INTEGER NOT NULL DEFAULT 0;`);
+      }
+      const runColumns = database
+        .prepare("PRAGMA table_info(operator_runs)")
+        .all();
+      if (!runColumns.some((column) => column.name === "supervisor")) {
+        database.exec(`ALTER TABLE operator_runs ADD COLUMN supervisor TEXT;
+          ALTER TABLE operator_runs ADD COLUMN policy_revision INTEGER;`);
+      }
+      verifySqliteIntegrity(database, "Operator control");
+      database.exec("COMMIT");
+    } catch (cause) {
+      database.exec("ROLLBACK");
+      throw cause;
     }
+  } catch (cause) {
+    database.close();
+    throw cause;
   }
 
   const writePolicy = (
     policy: OperatorExecutionPolicy,
     updatedAt: number,
+    revoke = false,
   ): void => {
     database
       .prepare(
-        `INSERT INTO operator_policy (singleton, mode, one_shot, updated_at)
-         VALUES (1, ?, ?, ?)
+        `INSERT INTO operator_policy (singleton, mode, one_shot, updated_at, revision, stop_revision)
+         VALUES (1, ?, ?, ?, 1, ?)
          ON CONFLICT(singleton) DO UPDATE SET
            mode = excluded.mode,
            one_shot = excluded.one_shot,
-           updated_at = excluded.updated_at`,
+           updated_at = excluded.updated_at,
+           revision = operator_policy.revision + 1,
+           stop_revision = CASE WHEN ? THEN operator_policy.revision + 1 ELSE operator_policy.stop_revision END`,
       )
-      .run(policy.mode, policy.oneShot, updatedAt);
+      .run(
+        policy.mode,
+        policy.oneShot,
+        updatedAt,
+        Number(revoke),
+        Number(revoke),
+      );
   };
 
   const readPolicy = (): OperatorExecutionPolicy => {
@@ -210,21 +259,68 @@ export const openOperatorControlStore = (
 
   const readPolicyRevision = (): OperatorPolicyRevision => {
     const row = database
-      .prepare(
-        "SELECT mode, one_shot, updated_at FROM operator_policy WHERE singleton = 1",
-      )
+      .prepare("SELECT * FROM operator_policy WHERE singleton = 1")
       .get();
-    if (row === undefined) return { policy: CLOSED_POLICY, updatedAt: 0 };
+    if (row === undefined)
+      return {
+        policy: CLOSED_POLICY,
+        revision: 0,
+        stopRevision: 0,
+        updatedAt: 0,
+      };
     return {
       policy: {
         mode: text(row.mode) as OperatorExecutionMode,
         oneShot: text(row.one_shot) as OperatorOneShot,
       },
       updatedAt: numeric(row.updated_at),
+      revision: numeric(row.revision),
+      stopRevision: numeric(row.stop_revision),
     };
   };
 
-  return {
+  const store: OperatorControlStore = {
+    claimRun: ({ runId, supervisor, at }) => {
+      database.exec("BEGIN IMMEDIATE");
+      try {
+        const lease = store.readWriterLease();
+        if (lease?.holder !== supervisor || lease.expiresAt <= at)
+          throw new Error("Operator writer lease is unavailable");
+        const policy = readPolicy();
+        const authority = cycleAuthority(policy);
+        store.consumeOneShot(at);
+        if (authority !== "skip")
+          database
+            .prepare(
+              `INSERT INTO operator_runs
+          (run_id, authority, outcome, started_at, supervisor, policy_revision)
+          VALUES (?, ?, 'running', ?, ?, ?)`,
+            )
+            .run(
+              runId,
+              authority,
+              at,
+              supervisor,
+              readPolicyRevision().revision,
+            );
+        store.recordHeartbeat({ at, observedMode: policy.mode, supervisor });
+        database.exec("COMMIT");
+        return { policy, authority };
+      } catch (cause) {
+        database.exec("ROLLBACK");
+        throw cause;
+      }
+    },
+    maySign: (runId, now) =>
+      database
+        .prepare(
+          `SELECT 1 FROM operator_runs AS run
+      JOIN operator_writer_lease AS lease ON lease.holder = run.supervisor AND lease.singleton = 1
+      JOIN operator_policy AS policy ON policy.singleton = 1
+      WHERE run.run_id = ? AND run.authority = 'execute' AND run.outcome = 'running'
+        AND lease.expires_at > ? AND policy.stop_revision <= run.policy_revision`,
+        )
+        .get(runId, now) !== undefined,
     readPolicy,
     readPolicyRevision,
     applyCommand: (record) => {
@@ -251,10 +347,11 @@ export const openOperatorControlStore = (
             record.transactionHash ?? null,
             record.appliedAt,
           );
-        if (record.result === "applied") {
+        if (record.result === "applied" || record.command === "stop") {
           writePolicy(
             { mode: record.nextMode, oneShot: record.nextOneShot },
             record.appliedAt,
+            record.command === "stop" || record.command === "enable-dry-run",
           );
         }
         database.exec("COMMIT");
@@ -402,6 +499,13 @@ export const openOperatorControlStore = (
         )
         .run(holder);
     },
+    renewWriterLease: ({ holder, leaseMilliseconds, now }) =>
+      database
+        .prepare(
+          `UPDATE operator_writer_lease SET expires_at = ?
+        WHERE singleton = 1 AND holder = ? AND expires_at > ?`,
+        )
+        .run(now + leaseMilliseconds, holder, now).changes === 1,
     readWriterLease: () => {
       const row = database
         .prepare(
@@ -414,4 +518,5 @@ export const openOperatorControlStore = (
     },
     close: () => database.close(),
   };
+  return store;
 };

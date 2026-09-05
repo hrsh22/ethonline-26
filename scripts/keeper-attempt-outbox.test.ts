@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { keccak256 } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 import type { KeeperAttemptRecorder } from "./keeper-attempt-client.ts";
 import {
@@ -62,6 +64,60 @@ const recorder = (
 });
 
 describe("keeper-attempt durable outbox", () => {
+  it("recovers the exact signed transaction after a crash before broadcast", async () => {
+    const path = temporaryDatabasePath();
+    const rawTransaction = await privateKeyToAccount(
+      `0x${"44".repeat(32)}`,
+    ).signTransaction({
+      chainId: 84532,
+      nonce: 7,
+      to: "0x0000000000000000000000000000000000000001",
+      gas: 21_000n,
+      gasPrice: 1n,
+      value: 0n,
+    });
+    const prepared = {
+      ...delivery,
+      rawTransaction,
+      attempt: { ...milestone, transactionHash: keccak256(rawTransaction) },
+    };
+    const first = openKeeperAttemptOutbox(path, identity);
+    first.enqueue(prepared, 10n);
+    first.close();
+    const restarted = openKeeperAttemptOutbox(path, identity);
+    try {
+      expect(restarted.unresolved()).toEqual([prepared]);
+    } finally {
+      restarted.close();
+    }
+  });
+
+  it("retains discovery transactions in the same signing gate without publishing Keeper milestones", async () => {
+    const path = temporaryDatabasePath();
+    const raw = await privateKeyToAccount(
+      `0x${"44".repeat(32)}`,
+    ).signTransaction({
+      chainId: 84532,
+      nonce: 8,
+      to: "0x0000000000000000000000000000000000000001",
+      gas: 21_000n,
+      gasPrice: 1n,
+    });
+    const first = openKeeperAttemptOutbox(path, identity);
+    first.enqueueLocalSubmission(raw);
+    first.close();
+    const restarted = openKeeperAttemptOutbox(path, identity);
+    try {
+      expect(restarted.localSubmissions()).toEqual([
+        { transactionHash: keccak256(raw), rawTransaction: raw },
+      ]);
+      expect(restarted.pendingDeliveries()).toEqual([]);
+      restarted.resolveLocalSubmission(keccak256(raw));
+      expect(restarted.localSubmissions()).toEqual([]);
+    } finally {
+      restarted.close();
+    }
+  });
   it("persists an unacknowledged hash across restart and replays it idempotently", async () => {
     const path = temporaryDatabasePath();
     let outbox = openKeeperAttemptOutbox(path, identity);

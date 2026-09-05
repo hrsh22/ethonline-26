@@ -31,6 +31,7 @@ export interface RouteCase {
   /** Where the browser is expected to end up, when it differs from `path`. */
   readonly finalPath?: string;
   readonly screenshot?: boolean;
+  readonly status?: number;
 }
 
 /** Every public route, both craft-detail outcomes, and both 404 shapes. */
@@ -42,13 +43,29 @@ export const ROUTE_CASES: readonly RouteCase[] = [
   { axe: true, label: "market", path: "/market", screenshot: true },
   { axe: true, label: "fleet", path: "/fleet", screenshot: true },
   { axe: true, label: "craft-detail", path: "/fleet/42" },
-  { axe: true, label: "craft-detail-invalid", path: "/fleet/4445" },
-  { axe: true, label: "craft-detail-malformed", path: "/fleet/4e2" },
+  {
+    axe: true,
+    label: "craft-detail-invalid",
+    path: "/fleet/4445",
+    status: 404,
+  },
+  {
+    axe: true,
+    label: "craft-detail-malformed",
+    path: "/fleet/4e2",
+    status: 404,
+  },
+  {
+    axe: true,
+    label: "craft-detail-leading-zero",
+    path: "/fleet/0042",
+    status: 404,
+  },
   { axe: true, label: "rewards", path: "/rewards", screenshot: true },
   { axe: true, label: "relics", path: "/relics" },
   { axe: true, label: "status", path: "/status", screenshot: true },
   { axe: true, label: "learn", path: "/learn", screenshot: true },
-  { axe: true, label: "global-404", path: "/does-not-exist" },
+  { axe: true, label: "global-404", path: "/does-not-exist", status: 404 },
   {
     axe: true,
     label: "admin-sign-in",
@@ -60,19 +77,22 @@ export const ROUTE_CASES: readonly RouteCase[] = [
     finalPath: "/admin/sign-in?next=%2Fadmin",
     label: "admin-protected",
     path: "/admin",
+    status: 307,
   },
   {
     axe: true,
     finalPath: "/admin/sign-in?next=%2Fadmin%2Fdiagnostics",
     label: "admin-diagnostics-protected",
     path: "/admin/diagnostics",
+    status: 307,
   },
 ];
 
 export interface StateCase {
   readonly data: DataFixture;
   readonly label: string;
-  readonly paths: readonly string[];
+  readonly path: string;
+  readonly heading?: string;
   readonly wallet: WalletFixture;
 }
 
@@ -82,69 +102,77 @@ export interface StateCase {
  */
 export const STATE_CASES: readonly StateCase[] = [
   {
+    data: "cached-stale",
+    label: "cached-stale",
+    path: "/status",
+    wallet: "disconnected",
+  },
+  {
+    data: "market",
+    label: "market-history",
+    path: "/market",
+    wallet: "disconnected",
+  },
+  {
     data: "stubbed",
     label: "disconnected",
-    paths: ["/", "/faucet", "/exchange", "/fleet", "/rewards"],
+    path: "/faucet",
+    heading: "Connect a wallet to check eligibility",
     wallet: "disconnected",
   },
   {
     data: "stubbed",
     label: "connecting",
-    paths: ["/faucet", "/exchange"],
+    path: "/faucet",
     wallet: "connecting",
   },
   {
     data: "stubbed",
     label: "wrong-network",
-    paths: ["/faucet", "/exchange", "/fleet"],
+    path: "/faucet",
+    heading: "Switch to Base Sepolia",
     wallet: "wrong-network",
   },
   {
     data: "stubbed",
     label: "ordinary-wallet",
-    paths: ["/start", "/faucet", "/exchange", "/fleet", "/rewards"],
+    path: "/faucet",
+    heading: "Wallet is eligible",
     wallet: "ordinary",
   },
   {
     data: "loading",
     label: "loading",
-    paths: ["/", "/faucet", "/market", "/status"],
+    path: "/faucet",
+    heading: "Checking this wallet",
     wallet: "ordinary",
   },
   {
     data: "empty",
     label: "empty",
-    paths: ["/faucet", "/fleet", "/market"],
+    path: "/faucet",
+    heading: "Faucet inventory is empty",
     wallet: "ordinary",
   },
   {
     data: "failed",
     label: "failed",
-    paths: ["/faucet", "/market", "/status", "/rewards"],
-    wallet: "ordinary",
-  },
-  {
-    data: "stale",
-    label: "stale",
-    paths: ["/market", "/status"],
+    path: "/faucet",
+    heading: "Faucet temporarily unavailable",
     wallet: "ordinary",
   },
   {
     data: "funded",
     label: "funded",
-    paths: ["/faucet", "/start"],
+    path: "/faucet",
+    heading: "Wallet funded for the test journey",
     wallet: "ordinary",
   },
   {
     data: "cooldown",
     label: "cooldown",
-    paths: ["/faucet"],
-    wallet: "ordinary",
-  },
-  {
-    data: "budget-disabled",
-    label: "budget-disabled",
-    paths: ["/faucet"],
+    path: "/faucet",
+    heading: "Wallet is in cooldown",
     wallet: "ordinary",
   },
 ];

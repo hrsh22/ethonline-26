@@ -23,9 +23,10 @@ const versionSupportsSafeWal = (version: string): boolean => {
   return true;
 };
 
-export const configureAdminAuthSqlite = (
+export const configureSqlite = (
   database: DatabaseSync,
-  { wal }: { readonly wal: boolean },
+  label: string,
+  { wal = true }: { readonly wal?: boolean } = {},
 ): void => {
   database.exec("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
   const version = text(
@@ -34,7 +35,7 @@ export const configureAdminAuthSqlite = (
   );
   if (!versionSupportsSafeWal(version)) {
     throw new Error(
-      `Admin auth SQLite ${version} is unsafe for WAL; version 3.51.3 or newer is required`,
+      `${label} SQLite ${version} is unsafe for WAL; version 3.51.3 or newer is required`,
     );
   }
   if (wal) {
@@ -43,25 +44,24 @@ export const configureAdminAuthSqlite = (
       "journal_mode",
     );
     if (journal.toLowerCase() !== "wal") {
-      throw new Error("Admin auth SQLite did not enter WAL journal mode");
+      throw new Error(`${label} SQLite did not enter WAL journal mode`);
     }
   }
   database.exec("PRAGMA synchronous = FULL;");
 };
 
-export const verifyAdminAuthSqliteIntegrity = (
+export const verifySqliteIntegrity = (
   database: DatabaseSync,
+  label: string,
 ): void => {
   const checks = database
     .prepare("PRAGMA quick_check")
     .all()
     .map((value) => text(value?.quick_check, "quick_check"));
   if (checks.length !== 1 || checks[0] !== "ok") {
-    throw new Error(
-      `Admin auth SQLite quick_check failed: ${checks.join(", ")}`,
-    );
+    throw new Error(`${label} SQLite quick_check failed: ${checks.join(", ")}`);
   }
   if (database.prepare("PRAGMA foreign_key_check").all().length > 0) {
-    throw new Error("Admin auth SQLite foreign-key check failed");
+    throw new Error(`${label} SQLite foreign-key check failed`);
   }
 };

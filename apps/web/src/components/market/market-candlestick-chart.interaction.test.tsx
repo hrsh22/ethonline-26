@@ -1,11 +1,61 @@
 /** @vitest-environment jsdom */
 
 import type { MarketCandle } from "@orbit/protocol/market-history";
+import type { DataSeries } from "@tradecanvas/chart";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MarketCandlestickChart } from "./market-candlestick-chart";
+
+// The external canvas widget cannot render in JSDOM. Its data API scrolls to
+// the end, so model that behavior instead of assuming setData preserves a view.
+vi.mock("@tradecanvas/chart/widget", () => ({
+  ChartWidget: class {
+    data: DataSeries = [];
+    view = document.createElement("input");
+    value = document.createElement("output");
+    listener:
+      ((event: { payload: { from: number; to: number } }) => void) | undefined;
+    constructor(container: HTMLElement) {
+      this.view.setAttribute("aria-label", "Chart first visible timestamp");
+      this.view.addEventListener("change", () => {
+        const from = this.data.findIndex(
+          (bar) => bar.time === Number(this.view.value),
+        );
+        this.listener?.({ payload: { from, to: from + 1 } });
+      });
+      container.append(this.view, this.value);
+    }
+    setData(data: DataSeries) {
+      this.data = data;
+      this.value.textContent = String(data.at(-1)?.close);
+      this.view.value = String(data.at(-1)?.time);
+      this.listener?.({
+        payload: { from: Math.max(0, data.length - 1), to: data.length },
+      });
+    }
+    getChart() {
+      return {
+        getData: () => this.data,
+        setMarket: () => undefined,
+        fitContent: () => {
+          this.view.value = String(this.data[0]?.time);
+        },
+        scrollTo: (timestamp: number) => {
+          this.view.value = String(timestamp);
+        },
+        on: (_type: string, listener: typeof this.listener) => {
+          this.listener = listener;
+        },
+      };
+    }
+    destroy() {
+      this.view.remove();
+      this.value.remove();
+    }
+  },
+}));
 
 const x18 = 10n ** 18n;
 const candle = (intervalStart: bigint): MarketCandle => ({
@@ -62,6 +112,55 @@ describe("hydrated market chart accessibility", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("keeps the chosen chart view while refreshed candles update", async () => {
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+    vi.stubGlobal("ResizeObserver", vi.fn());
+    const render = async (lastClose: bigint) => {
+      await act(async () =>
+        root.render(
+          <MarketCandlestickChart
+            candles={[
+              candle(3_600n),
+              candle(7_200n),
+              {
+                ...candle(10_800n),
+                highWethPerLiquidTokenX18: 4n * x18,
+                closeWethPerLiquidTokenX18: lastClose,
+              },
+            ]}
+            feeMatchingState="complete"
+            interval="1h"
+            range="all"
+          />,
+        ),
+      );
+    };
+    await render(x18);
+    const toggle = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Open advanced chart",
+    );
+    await act(async () => toggle?.click());
+    const view = container.querySelector<HTMLInputElement>(
+      "input[aria-label='Chart first visible timestamp']",
+    );
+    expect(view).not.toBeNull();
+    view!.value = "7200000";
+    view!.dispatchEvent(new Event("change"));
+
+    await render(3n * x18);
+
+    expect(
+      container.querySelector<HTMLInputElement>(
+        "input[aria-label='Chart first visible timestamp']",
+      )?.value,
+    ).toBe("7200000");
+    expect(container.querySelector("output")?.textContent).toBe("3");
+    await act(async () => toggle?.click());
+    expect(view!.isConnected).toBe(false);
   });
 
   it("focuses the chart once and reveals its exact table from the keyboard control", async () => {

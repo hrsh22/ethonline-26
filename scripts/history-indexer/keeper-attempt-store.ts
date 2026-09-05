@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
 
+import { configureSqlite, verifySqliteIntegrity } from "@orbit/config/sqlite";
 import { Effect, Scope } from "effect";
 import type { Hex } from "viem";
 
 import { HistoryPersistenceError } from "./errors.ts";
-import { configureSqliteForWal, verifySqliteIntegrity } from "./sqlite-wal.ts";
 
 const SCHEMA_VERSION = "2";
 const TRACKS = [1, 2, 3, 4] as const;
@@ -350,7 +350,7 @@ const attemptDatabaseValues = (input: KeeperAttemptInput) => ({
 });
 
 const initializeDatabase = (database: DatabaseSync): void => {
-  configureSqliteForWal(database, "Keeper attempt journal");
+  configureSqlite(database, "Keeper attempt journal");
   database.exec(`
     CREATE TABLE IF NOT EXISTS keeper_metadata (
       key TEXT PRIMARY KEY,

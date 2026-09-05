@@ -161,45 +161,91 @@ describe("admin operations access", () => {
     expect(html).not.toContain("Unavailable because");
   });
 
-  it("reports the operator service exactly as the control plane does", () => {
-    /* The attention board used to hardcode an offline service because a
+  it.each([
+    [0n, "No previous Reward Epoch"],
+    [undefined, "Not observed yet"],
+    [1_735_689_600n, "2025-01-01 00:00:00"],
+  ])(
+    "distinguishes the last epoch at %s from next-epoch readiness",
+    (at, label) => {
+      const protocol = ordinaryWalletProtocol();
+      protocolState.protocol = {
+        ...protocol,
+        health: {
+          ...protocol.health,
+          capabilities: { ...protocol.health.capabilities, keeper: true },
+          operations: { ...protocol.health.operations, lastRewardEpochAt: at },
+        },
+      };
+
+      const html = renderToStaticMarkup(<OperationsPanel />);
+
+      expect(
+        /Last Reward Epoch<\/dt><dd[^>]*>([^<]*)<\/dd>/u.exec(html)?.[1],
+      ).toBe(label);
+      expect(html).toMatch(/Next Reward Epoch<\/dt><dd[^>]*>Ready now<\/dd>/u);
+    },
+  );
+
+  it.each(["live", "stopped"] as const)(
+    "separates the online service from %s policy and reward-track work",
+    (mode) => {
+      /* The attention board used to hardcode an offline service because a
        protocol read cannot observe a process, so it reported CRITICAL /
        Offline beside an automation panel that said Online for the same
        deployment at the same moment. */
-    const protocol = ordinaryWalletProtocol();
-    protocolState.protocol = {
-      ...protocol,
-      health: {
-        ...protocol.health,
-        capabilities: { ...protocol.health.capabilities, keeper: true },
-      },
-    };
-    controlState.reading = {
-      state: {
-        audit: [],
-        desired: { mode: "live", oneShot: "none" },
-        heartbeat: {
-          at: Date.UTC(2026, 8, 5, 8, 4, 0),
-          observedMode: "live",
-          supervisor: "launchd",
+      const protocol = ordinaryWalletProtocol();
+      protocolState.protocol = {
+        ...protocol,
+        health: {
+          ...protocol.health,
+          capabilities: { ...protocol.health.capabilities, keeper: true },
+          collection: { pendingDiscoveryCount: 1 },
+          pauses: {
+            liquidToken: false,
+            rewards: false,
+            converter: false,
+            liquidity: false,
+          },
         },
-        nextRunAt: Date.UTC(2026, 8, 5, 8, 9, 0),
-        service: "online",
-      },
-      unreachable: false,
-    };
+      };
+      controlState.reading = {
+        state: {
+          audit: [],
+          desired: { mode, oneShot: "none" },
+          heartbeat: {
+            at: Date.UTC(2026, 8, 5, 8, 4, 0),
+            observedMode: mode,
+            supervisor: "launchd",
+          },
+          nextRunAt: Date.UTC(2026, 8, 5, 8, 9, 0),
+          service: "online",
+        },
+        unreachable: false,
+      };
 
-    const html = renderToStaticMarkup(<OperationsPanel />);
+      const html = renderToStaticMarkup(<OperationsPanel />);
 
-    expect(html).toContain("Online");
-    expect(html).not.toContain("Offline");
-    expect(html).not.toContain(
-      "Check the supervisor process before changing automation policy",
-    );
-    expect(html).not.toContain("Something is broken and needs an operator now");
+      expect(html).toContain("Online");
+      if (mode === "stopped") {
+        expect(html).toContain("Stopped");
+        expect(html).toContain("Automation policy");
+        expect(html).not.toContain("Everything is running");
+      }
+      expect(html).toContain("Reward-track queues");
+      expect(html).toContain("No reward-track funds queued");
+      expect(html).not.toContain("No work queued");
+      expect(html).not.toContain("Offline");
+      expect(html).not.toContain(
+        "Check the supervisor process before changing automation policy",
+      );
+      expect(html).not.toContain(
+        "Something is broken and needs an operator now",
+      );
 
-    controlState.reading = { state: undefined, unreachable: false };
-  });
+      controlState.reading = { state: undefined, unreachable: false };
+    },
+  );
 
   it("does not call the operator service offline before the control plane is read", () => {
     const protocol = ordinaryWalletProtocol();

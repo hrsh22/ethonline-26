@@ -24,12 +24,18 @@ inputs. Shared Canonical Market and protocol history instead enters through `Mar
 and `ProtocolHistoryReader`. The public application uses the manifest-bound indexed HTTP adapter,
 whose pages expose requested coverage, indexed-through block/time, head lag, stable cursors, and
 complete/partial/error state. Browser memory and a public DEX website are not durable stores.
-The viem history scanner remains only as a non-browser diagnostic fallback while tooling migrates;
-it is not the public source of truth. Failed transaction attempts emit no canonical event, so the
-operator continues to obtain that bounded safety state directly; the browser does not promote
+The viem transport has no history scanner or implicit fallback. Missing indexed history remains
+unavailable; current-state reads still work. Failed transaction attempts emit no canonical event,
+so keeper outcomes come from the authenticated attempt journal; the browser does not promote
 successful indexed events into failed-attempt evidence. Multicalls, bytecode reads, and market
 state continue to pin current domain snapshots to one observed block and preserve secondary
 failures explicitly.
+
+The full fork smoke workflow supplies an explicit, partial diagnostic for only its own retained
+Reward Track transaction receipts. It verifies a deliberately reverted track and its successful
+retry without scanning blocks or requiring a second indexer for the disposable fork. This
+diagnostic does not provide reward history or claim complete launch-to-tip coverage. The bounded
+live Discovery smoke does not use it.
 
 Prepared transactions include their manifest-selected target and ABI. Preparation fails before a wallet prompt for wrong-chain state, expired quotes/deadlines, invalid collectible ownership or claim eligibility, missing onchain roles, invalid operator inputs, and setup mutations rejected by launch sealing.
 

@@ -263,17 +263,17 @@ const pauseStatus = (input: CockpitInput): CockpitStatus => ({
 });
 
 const workStatus = (input: CockpitInput): CockpitStatus => ({
-  // "No work" and "cannot tell" are different answers and must not share copy.
+  // This input covers reward-track queues, not Discovery or liquidity work.
   freshness: input.work === "unknown" ? "unknown" : "fresh",
   id: "work-eligibility",
   impact:
     input.work === "ready"
-      ? "There is protocol work the operator could perform now."
+      ? "Reward-track funds are queued for conversion."
       : input.work === "blocked"
-        ? "Work exists but a precondition prevents it."
+        ? "A reward track has a retryable conversion."
         : input.work === "idle"
-          ? "There is no protocol work to perform."
-          : "Whether work exists could not be determined.",
+          ? "No WETH is queued in reward tracks. Discovery and liquidity work are not included."
+          : "Reward-track queue state could not be determined.",
   nextStep:
     input.work === "blocked"
       ? "Resolve the blocking precondition shown in the queue."

@@ -496,7 +496,9 @@ function FleetReadContent({
   const { collectibles, observedAt } = walletRead.snapshot;
   const allCraft: readonly FleetCraft[] = [
     ...collectibles.transient.map(enrichCraft(false, observedAt)),
-    ...collectibles.permanent.map(enrichCraft(true, observedAt)),
+    ...collectibles.permanent.map(
+      enrichCraft(true, collectibles.permanentObservedAt ?? observedAt),
+    ),
   ];
   return (
     <LoadedCollection

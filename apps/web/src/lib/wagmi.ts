@@ -5,6 +5,7 @@ import { base, baseSepolia, foundry } from "viem/chains";
 import { createConfig } from "wagmi";
 import { getConnection } from "wagmi/actions";
 import { injected } from "wagmi/connectors/injected";
+import { bindReadSignal } from "@orbit/protocol/read-lifetime";
 
 import { deploymentEnvironment } from "@/lib/deployment";
 import {
@@ -55,16 +56,20 @@ const configuredRpcUrl =
   (deploymentEnvironment.name === "staging"
     ? process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
     : undefined);
-const protocolReadTransport = createWebReadRpcTransport(configuredRpcUrl);
 const protocolTransactionTransport =
   createWebTransactionRpcTransport(configuredRpcUrl);
 
 // Public protocol reads must remain available before a wallet is connected and
 // must not depend on the connector adapter creating a Wagmi public client.
-export const protocolReadClient = createPublicClient({
-  chain: protocolChain,
-  transport: protocolReadTransport,
-});
+export const createProtocolReadClient = (signal?: AbortSignal) =>
+  createPublicClient({
+    chain: protocolChain,
+    transport: createWebReadRpcTransport(
+      configuredRpcUrl,
+      signal === undefined ? fetch : bindReadSignal(fetch, signal),
+    ),
+  });
+export const protocolReadClient = createProtocolReadClient();
 
 // Transaction preflight and confirmation intentionally use a separate client:
 // after wallet submission, an aggressive UI-read timeout could otherwise make

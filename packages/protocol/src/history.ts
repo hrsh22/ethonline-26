@@ -7,6 +7,7 @@ import {
   type IdentityConfiguration,
 } from "@orbit/config/identity";
 import type { Address, Hex } from "viem";
+import * as Schema from "effect/Schema";
 
 import { retainOperationalSummaryEvents } from "./events.js";
 import {
@@ -24,41 +25,75 @@ import type {
   RewardTrack,
 } from "./reader.js";
 
-export type IndexedHistoryState = "complete" | "partial";
+const UnsignedDecimal = Schema.String.pipe(
+  Schema.pattern(/^(0|[1-9][0-9]*)$/u),
+  Schema.compose(Schema.BigInt),
+);
+const NonnegativeInteger = Schema.Number.pipe(
+  Schema.filter((value) => Number.isSafeInteger(value) && value >= 0),
+);
+const HexString = Schema.TemplateLiteral("0x", Schema.String);
+const Bytes32 = HexString.pipe(Schema.pattern(/^0x[0-9a-fA-F]{64}$/u));
+const EvmAddress = HexString.pipe(Schema.pattern(/^0x[0-9a-fA-F]{40}$/u));
+const OptionalBlock = Schema.UndefinedOr(UnsignedDecimal);
+const NullableSnapshotBlock = Schema.transform(
+  Schema.NullOr(OptionalBlock),
+  Schema.UndefinedOr(Schema.NonNegativeBigIntFromSelf),
+  {
+    strict: true,
+    decode: (value) => value ?? undefined,
+    encode: (value) => value,
+  },
+);
+const NullableSnapshotHash = Schema.transform(
+  Schema.NullOr(Schema.UndefinedOr(Bytes32)),
+  Schema.UndefinedOr(Bytes32),
+  {
+    strict: true,
+    decode: (value) => value ?? undefined,
+    encode: (value) => value,
+  },
+);
+const HistoryState = Schema.Literal("complete", "partial");
+export type IndexedHistoryState = typeof HistoryState.Type;
 
-export interface IndexedHistoryPosition {
-  readonly state: IndexedHistoryState;
-  readonly coverage: {
-    readonly fromBlock: bigint;
-    readonly indexedThroughBlock: bigint | undefined;
-    readonly indexedThroughTime: bigint | undefined;
-  };
-  readonly head: {
-    readonly observedBlock: bigint | undefined;
-    readonly lagBlocks: bigint | undefined;
-  };
-}
+const HistoryCoverage = Schema.Struct({
+  fromBlock: UnsignedDecimal,
+  indexedThroughBlock: OptionalBlock,
+  indexedThroughTime: OptionalBlock,
+});
+const HistoryHead = Schema.Struct({
+  observedBlock: OptionalBlock,
+  lagBlocks: OptionalBlock,
+});
+const HistoryPosition = Schema.Struct({
+  state: HistoryState,
+  coverage: HistoryCoverage,
+  head: HistoryHead,
+});
+export type IndexedHistoryPosition = typeof HistoryPosition.Type;
 
-export interface IndexedHistoryManifest {
-  readonly chainId: number;
-  readonly network: string;
-  readonly fingerprint: Hex;
-  readonly commitment: Hex;
-  readonly launchBlock: bigint;
-  readonly canonicalPool: {
-    readonly poolId: Hex;
-    readonly currency0: Address;
-    readonly currency1: Address;
-  };
-  readonly sources: {
-    readonly poolManager: Address;
-    readonly canonicalFeeHook: Address;
-    readonly protocolLiquidityVault: Address;
-    readonly epochConverter: Address;
-    readonly fuelCore: Address;
-    readonly rewardLedger: Address;
-  };
-}
+const HistoryManifest = Schema.Struct({
+  chainId: NonnegativeInteger,
+  network: Schema.String,
+  fingerprint: Bytes32,
+  commitment: Bytes32,
+  launchBlock: UnsignedDecimal,
+  canonicalPool: Schema.Struct({
+    poolId: Bytes32,
+    currency0: EvmAddress,
+    currency1: EvmAddress,
+  }),
+  sources: Schema.Struct({
+    poolManager: EvmAddress,
+    canonicalFeeHook: EvmAddress,
+    protocolLiquidityVault: EvmAddress,
+    epochConverter: EvmAddress,
+    fuelCore: EvmAddress,
+    rewardLedger: EvmAddress,
+  }),
+});
+export type IndexedHistoryManifest = typeof HistoryManifest.Type;
 
 export interface IndexedHistoryRequest {
   readonly fromBlock: bigint;
@@ -82,44 +117,56 @@ export interface IndexedHistoryItem {
   readonly removed: boolean;
 }
 
-export interface IndexedHistorySnapshot {
-  readonly generation: string;
-  readonly canonicalRevision: number;
-  readonly blockNumber: bigint | undefined;
-  readonly blockHash: Hex | undefined;
-}
+const HistorySnapshot = Schema.Struct({
+  generation: Schema.String.pipe(
+    Schema.filter((value) => value.trim().length > 0),
+  ),
+  canonicalRevision: NonnegativeInteger,
+  blockNumber: NullableSnapshotBlock,
+  blockHash: NullableSnapshotHash,
+}).pipe(
+  Schema.filter(
+    (value) =>
+      (value.blockNumber === undefined) === (value.blockHash === undefined),
+    {
+      message: () =>
+        "history snapshot blockNumber and blockHash must be observed together",
+    },
+  ),
+);
+export type IndexedHistorySnapshot = typeof HistorySnapshot.Type;
 
-export interface IndexedHistoryPage {
-  readonly manifest: IndexedHistoryManifest;
-  readonly snapshot: IndexedHistorySnapshot;
+const HistoryPageStatus = Schema.Struct({
+  ...HistoryPosition.fields,
+  requested: Schema.Struct({
+    fromBlock: UnsignedDecimal,
+    toBlock: UnsignedDecimal,
+  }),
+});
+const HistoryPage = Schema.Struct({
+  manifest: HistoryManifest,
+  snapshot: HistorySnapshot,
+  items: Schema.Array(Schema.Unknown),
+  page: Schema.Struct({
+    hasMore: Schema.Boolean,
+    nextCursor: Schema.UndefinedOr(Schema.String),
+  }).pipe(
+    Schema.filter((page) => !page.hasMore || page.nextCursor !== undefined, {
+      message: () => "history page with more items requires nextCursor",
+    }),
+  ),
+  status: HistoryPageStatus,
+});
+export type IndexedHistoryPage = Omit<typeof HistoryPage.Type, "items"> & {
   readonly items: readonly IndexedHistoryItem[];
-  readonly page: {
-    readonly hasMore: boolean;
-    readonly nextCursor: string | undefined;
-  };
-  readonly status: {
-    readonly state: IndexedHistoryState;
-    readonly requested: {
-      readonly fromBlock: bigint;
-      readonly toBlock: bigint;
-    };
-    readonly coverage: {
-      readonly fromBlock: bigint;
-      readonly indexedThroughBlock: bigint | undefined;
-      readonly indexedThroughTime: bigint | undefined;
-    };
-    readonly head: {
-      readonly observedBlock: bigint | undefined;
-      readonly lagBlocks: bigint | undefined;
-    };
-  };
-}
+};
 
-export interface IndexedHistoryServiceStatus {
-  readonly manifest: IndexedHistoryManifest;
-  readonly snapshot: IndexedHistorySnapshot;
-  readonly status: IndexedHistoryPosition;
-}
+const HistoryServiceStatus = Schema.Struct({
+  manifest: HistoryManifest,
+  snapshot: HistorySnapshot,
+  status: HistoryPosition,
+});
+export type IndexedHistoryServiceStatus = typeof HistoryServiceStatus.Type;
 
 export interface CanonicalMarketCandleObservation {
   readonly intervalStart: bigint;
@@ -293,39 +340,7 @@ const nullableHex = (
 const addressValue = (value: unknown, label: string): Address =>
   hexValue(value, label, 40) as Address;
 
-const snapshotFrom = (value: unknown): IndexedHistorySnapshot => {
-  const snapshot = record(value, "history index snapshot");
-  const generation = stringValue(
-    snapshot.generation,
-    "history index generation",
-  );
-  if (generation.trim().length === 0) {
-    throw new TypeError("history index generation must not be empty");
-  }
-  const blockNumber = nullableBigint(
-    snapshot.blockNumber,
-    "history snapshot blockNumber",
-  );
-  const blockHash = nullableHex(
-    snapshot.blockHash,
-    "history snapshot blockHash",
-    64,
-  );
-  if ((blockNumber === undefined) !== (blockHash === undefined)) {
-    throw new TypeError(
-      "history snapshot blockNumber and blockHash must be observed together",
-    );
-  }
-  return {
-    generation,
-    canonicalRevision: nonnegativeNumberValue(
-      snapshot.canonicalRevision,
-      "history canonical revision",
-    ),
-    blockNumber,
-    blockHash,
-  };
-};
+const snapshotFrom = Schema.decodeUnknownSync(HistorySnapshot);
 
 export const indexedHistoryLineageKey = (
   snapshot: IndexedHistorySnapshot,
@@ -407,51 +422,7 @@ export const assertIndexedHistorySnapshotsCoherent = (
   });
 };
 
-const manifestFrom = (value: unknown): IndexedHistoryManifest => {
-  const manifest = record(value, "history manifest");
-  const canonicalPool = record(
-    manifest.canonicalPool,
-    "history canonical pool",
-  );
-  const sources = record(manifest.sources, "history sources");
-  return {
-    chainId: nonnegativeNumberValue(manifest.chainId, "history chainId"),
-    network: stringValue(manifest.network, "history network"),
-    fingerprint: hexValue(
-      manifest.fingerprint,
-      "history manifest fingerprint",
-      64,
-    ),
-    commitment: hexValue(
-      manifest.commitment,
-      "history manifest commitment",
-      64,
-    ),
-    launchBlock: bigintValue(manifest.launchBlock, "history launchBlock"),
-    canonicalPool: {
-      poolId: hexValue(canonicalPool.poolId, "history poolId", 64),
-      currency0: addressValue(canonicalPool.currency0, "history currency0"),
-      currency1: addressValue(canonicalPool.currency1, "history currency1"),
-    },
-    sources: {
-      poolManager: addressValue(sources.poolManager, "history PoolManager"),
-      canonicalFeeHook: addressValue(
-        sources.canonicalFeeHook,
-        "history Canonical Fee Hook",
-      ),
-      protocolLiquidityVault: addressValue(
-        sources.protocolLiquidityVault,
-        "history Protocol Liquidity Vault",
-      ),
-      epochConverter: addressValue(
-        sources.epochConverter,
-        "history Epoch Converter",
-      ),
-      fuelCore: addressValue(sources.fuelCore, "history Fuel Core"),
-      rewardLedger: addressValue(sources.rewardLedger, "history Reward Ledger"),
-    },
-  };
-};
+const manifestFrom = Schema.decodeUnknownSync(HistoryManifest);
 
 const requiredContract = (
   manifest: ProtocolDeploymentManifest,
@@ -579,58 +550,13 @@ const itemFrom = (value: unknown): IndexedHistoryItem => {
   };
 };
 
-const positionFrom = (value: unknown): IndexedHistoryPosition => {
-  const status = record(value, "history service status");
-  const coverage = record(status.coverage, "indexed coverage");
-  const head = record(status.head, "history head");
-  const state = stringValue(status.state, "history state");
-  if (state !== "complete" && state !== "partial") {
-    throw new TypeError(`Unsupported history state ${state}`);
-  }
-  return {
-    state,
-    coverage: {
-      fromBlock: bigintValue(coverage.fromBlock, "coverage fromBlock"),
-      indexedThroughBlock: optionalBigint(
-        coverage.indexedThroughBlock,
-        "indexedThroughBlock",
-      ),
-      indexedThroughTime: optionalBigint(
-        coverage.indexedThroughTime,
-        "indexedThroughTime",
-      ),
-    },
-    head: {
-      observedBlock: optionalBigint(head.observedBlock, "observedBlock"),
-      lagBlocks: optionalBigint(head.lagBlocks, "lagBlocks"),
-    },
-  };
-};
-
-const statusFrom = (value: unknown): IndexedHistoryPage["status"] => {
-  const status = record(value, "history status");
-  const requested = record(status.requested, "requested coverage");
-  return {
-    ...positionFrom(status),
-    requested: {
-      fromBlock: bigintValue(requested.fromBlock, "requested fromBlock"),
-      toBlock: bigintValue(requested.toBlock, "requested toBlock"),
-    },
-  };
-};
-
 const serviceStatusFrom = (
   value: unknown,
   expectedManifest: IndexedHistoryManifest,
 ): IndexedHistoryServiceStatus => {
-  const body = record(value, "history service response");
-  const manifest = manifestFrom(body.manifest);
-  assertManifestIdentity(manifest, expectedManifest);
-  return {
-    manifest,
-    snapshot: snapshotFrom(body.snapshot),
-    status: positionFrom(body.status),
-  };
+  const result = Schema.decodeUnknownSync(HistoryServiceStatus)(value);
+  assertManifestIdentity(result.manifest, expectedManifest);
+  return result;
 };
 
 const candlePricesAreConsistent = (prices: {
@@ -743,32 +669,9 @@ const pageFrom = (
   request: IndexedHistoryRequest,
   expectedManifest: IndexedHistoryManifest,
 ): IndexedHistoryPage => {
-  const body = record(value, "history response");
-  const page = record(body.page, "history page");
-  const manifest = manifestFrom(body.manifest);
-  assertManifestIdentity(manifest, expectedManifest);
-  if (!Array.isArray(body.items))
-    throw new TypeError("history items must be an array");
-  if (typeof page.hasMore !== "boolean") {
-    throw new TypeError("history page hasMore must be a boolean");
-  }
-  const nextCursor =
-    page.nextCursor === undefined
-      ? undefined
-      : stringValue(page.nextCursor, "nextCursor");
-  if (page.hasMore && nextCursor === undefined) {
-    throw new TypeError("history page with more items requires nextCursor");
-  }
-  const result = {
-    manifest,
-    snapshot: snapshotFrom(body.snapshot),
-    items: body.items.map(itemFrom),
-    page: {
-      hasMore: page.hasMore,
-      nextCursor,
-    },
-    status: statusFrom(body.status),
-  };
+  const envelope = Schema.decodeUnknownSync(HistoryPage)(value);
+  assertManifestIdentity(envelope.manifest, expectedManifest);
+  const result = { ...envelope, items: envelope.items.map(itemFrom) };
   if (
     result.status.requested.fromBlock !== request.fromBlock ||
     result.status.requested.toBlock !== request.toBlock

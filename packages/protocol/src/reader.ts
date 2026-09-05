@@ -44,10 +44,7 @@ import {
   summarizeTrackOutcomes,
 } from "./events.js";
 import { deriveProtocolHealth, type ProtocolHealthInput } from "./health.js";
-import type {
-  PermanentIdentityCandidateWindow,
-  ProtocolHistoryReader,
-} from "./history.js";
+import type { ProtocolHistoryReader } from "./history.js";
 import {
   DEFAULT_MINIMUM_OUTPUT_BPS,
   MINIMUM_REWARD_EPOCH_INTERVAL,
@@ -411,6 +408,34 @@ const rewardHistoryProvesComplete = (
   );
 };
 
+const rewardHistoryStatusFrom = (
+  history: {
+    readonly available: boolean;
+    readonly incomplete: boolean;
+    readonly events: readonly RewardHistoryEvent[];
+  },
+  epochCount: bigint | undefined,
+  balances: readonly (bigint | undefined)[],
+  queues: readonly (bigint | undefined)[],
+) => {
+  if (!history.available) return "unknown" as const;
+  const observedEpochCount = BigInt(
+    new Set(
+      history.events.flatMap((event) =>
+        event.type === "reward-epoch"
+          ? [event.epoch.epochNumber.toString()]
+          : [],
+      ),
+    ).size,
+  );
+  if (epochCount !== undefined && observedEpochCount !== epochCount)
+    return "partial" as const;
+  return history.incomplete &&
+    !rewardHistoryProvesComplete(history.events, epochCount, balances, queues)
+    ? ("partial" as const)
+    : ("complete" as const);
+};
+
 export interface ProtocolReadTransport {
   getChainId(): Promise<number>;
   getBlock(blockNumber?: bigint): Promise<{
@@ -431,10 +456,6 @@ export interface ProtocolReadTransport {
     candidates: readonly number[],
     blockNumber: bigint,
   ): Promise<readonly number[]>;
-  permanentIdentityCandidates?(
-    fromBlock: bigint,
-    toBlock: bigint,
-  ): Promise<PermanentIdentityCandidateWindow>;
   quoteExactInput(
     liquidTokenForWeth: boolean,
     amountIn: bigint,
@@ -462,15 +483,6 @@ export interface ProtocolReadTransport {
     lpFee: number;
     activeLiquidity: bigint;
   }>;
-  recentOperationalEvents(
-    fromBlock: bigint,
-    toBlock: bigint,
-    limit: number,
-  ): Promise<OperationalEventWindow>;
-  rewardHistory(
-    fromBlock: bigint,
-    toBlock: bigint,
-  ): Promise<RewardHistoryWindow>;
 }
 
 export interface RewardTrackQuote {
@@ -641,34 +653,24 @@ export const createProtocolReader = ({
   recentEventLimit = 100,
 }: ProtocolReaderOptions) => {
   const copy = createIdentityProtocolCopy(identity);
-  const operationalHistoryReader = (
+  const operationalHistoryReader = async (
     fromBlock: bigint,
     toBlock: bigint,
     limit: number,
-  ) =>
-    history?.recentOperationalEvents === undefined
-      ? transport.recentOperationalEvents(fromBlock, toBlock, limit)
-      : history.recentOperationalEvents(fromBlock, toBlock, limit);
-  const rewardHistoryReader = (fromBlock: bigint, toBlock: bigint) =>
-    history?.rewardHistory === undefined
-      ? transport.rewardHistory(fromBlock, toBlock)
-      : history.rewardHistory(fromBlock, toBlock);
-  const indexedPermanentIdentityCandidates =
-    history?.permanentIdentityCandidates;
-  const transportPermanentIdentityCandidateMethod =
-    transport.permanentIdentityCandidates;
+  ) => {
+    if (history?.recentOperationalEvents === undefined) {
+      throw new Error("Indexed operational history is unavailable");
+    }
+    return history.recentOperationalEvents(fromBlock, toBlock, limit);
+  };
+  const rewardHistoryReader = async (fromBlock: bigint, toBlock: bigint) => {
+    if (history?.rewardHistory === undefined) {
+      throw new Error("Indexed reward history is unavailable");
+    }
+    return history.rewardHistory(fromBlock, toBlock);
+  };
   const permanentIdentityCandidateReader =
-    indexedPermanentIdentityCandidates !== undefined
-      ? (fromBlock: bigint, toBlock: bigint) =>
-          indexedPermanentIdentityCandidates.call(history, fromBlock, toBlock)
-      : transportPermanentIdentityCandidateMethod === undefined
-        ? undefined
-        : (fromBlock: bigint, toBlock: bigint) =>
-            transportPermanentIdentityCandidateMethod.call(
-              transport,
-              fromBlock,
-              toBlock,
-            );
+    history?.permanentIdentityCandidates?.bind(history);
   const contracts = createProtocolContracts(manifest);
   const prepareTransaction = createProtocolTransactionPreparer({
     manifest,
@@ -781,41 +783,42 @@ export const createProtocolReader = ({
       identity,
     );
     const launchBlock = BigInt(manifest.launch.blockNumber);
-    const candidateWindow = await readWithRetry(async () => {
-      if (permanentIdentityCandidateReader === undefined) {
-        throw new Error("Indexed permanent identity history is unavailable");
-      }
-      const window = await permanentIdentityCandidateReader(
-        launchBlock,
-        latestBlock.number,
-      );
-      if (
-        window.fromBlock !== launchBlock ||
-        window.throughBlock < launchBlock ||
-        window.throughBlock > latestBlock.number ||
-        window.indexedThroughTime === undefined
-      ) {
-        throw new Error("Indexed permanent identity coverage is invalid");
-      }
-      return {
-        ...window,
-        indexedThroughTime: window.indexedThroughTime,
-      };
-    }).then(
-      (window) => ({ status: "complete" as const, window }),
-      (cause: unknown) => ({
-        failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
-        status: "unavailable" as const,
-      }),
-    );
-    const block =
-      candidateWindow.status === "complete"
-        ? {
-            number: candidateWindow.window.throughBlock,
-            timestamp: candidateWindow.window.indexedThroughTime,
-          }
-        : latestBlock;
-    const [base, claimGateAllows] = await Promise.all([
+    const [candidateWindow, base] = await Promise.all([
+      readWithRetry(async () => {
+        if (permanentIdentityCandidateReader === undefined) {
+          throw new Error("Indexed permanent identity history is unavailable");
+        }
+        const window = await permanentIdentityCandidateReader(
+          launchBlock,
+          latestBlock.number,
+        );
+        if (
+          window.fromBlock !== launchBlock ||
+          window.throughBlock < launchBlock ||
+          window.throughBlock > latestBlock.number ||
+          window.indexedThroughTime === undefined
+        ) {
+          throw new Error("Indexed permanent identity coverage is invalid");
+        }
+        return {
+          ...window,
+          indexedThroughTime: window.indexedThroughTime,
+        };
+      }).then(
+        (window) => ({
+          status: "complete" as const,
+          window,
+          permanentObservation: {
+            permanentObservedBlock: window.throughBlock,
+            permanentObservedAt: Number(window.indexedThroughTime),
+          },
+        }),
+        (cause: unknown) => ({
+          failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
+          status: "unavailable" as const,
+          permanentObservation: {},
+        }),
+      ),
       executeRead(
         copy.reader.walletSummary,
         () =>
@@ -838,12 +841,19 @@ export const createProtocolReader = ({
                 args: [owner],
               },
             ],
-            block.number,
+            latestBlock.number,
           ),
         identity,
       ),
-      readClaimAllowed(owner, block.number),
     ]);
+    const block = latestBlock;
+    const permanentBlock =
+      candidateWindow.status === "complete"
+        ? {
+            number: candidateWindow.window.throughBlock,
+            timestamp: candidateWindow.window.indexedThroughTime,
+          }
+        : latestBlock;
     const liquidBalanceWei = successful<bigint>(
       base[0],
       identity.liquidToken.displayName,
@@ -989,11 +999,38 @@ export const createProtocolReader = ({
           args: [owner, BigInt(index)],
         }) as const satisfies ContractReadRequest,
     );
-    const transientResults = await executeRead(
-      copy.reader.walletCollectibles,
-      () => transport.readMany(transientReads, block.number),
-      identity,
-    );
+    const [transientResults, permanentHoldings, claimGateAllows] =
+      await Promise.all([
+        executeRead(
+          copy.reader.walletCollectibles,
+          () => transport.readMany(transientReads, block.number),
+          identity,
+        ),
+        candidateWindow.status === "unavailable"
+          ? {
+              failure: candidateWindow.failure,
+              identityIds: [] as number[],
+              status: "unavailable" as const,
+            }
+          : readWithRetry(() =>
+              transport.permanentIdentityIds(
+                owner,
+                candidateWindow.window.identityIds,
+                permanentBlock.number,
+              ),
+            ).then(
+              (identityIds) => ({
+                identityIds: [...identityIds],
+                status: "complete" as const,
+              }),
+              (cause: unknown) => ({
+                failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
+                identityIds: [] as number[],
+                status: "unavailable" as const,
+              }),
+            ),
+        readClaimAllowed(owner, permanentBlock.number),
+      ]);
     const transientIdentityIds = transientResults.map((result, index) =>
       Number(
         successful<bigint>(
@@ -1003,30 +1040,6 @@ export const createProtocolReader = ({
         ),
       ),
     );
-    const permanentHoldings =
-      candidateWindow.status === "unavailable"
-        ? {
-            failure: candidateWindow.failure,
-            identityIds: [] as number[],
-            status: "unavailable" as const,
-          }
-        : await readWithRetry(() =>
-            transport.permanentIdentityIds(
-              owner,
-              candidateWindow.window.identityIds,
-              block.number,
-            ),
-          ).then(
-            (identityIds) => ({
-              identityIds: [...identityIds],
-              status: "complete" as const,
-            }),
-            (cause: unknown) => ({
-              failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
-              identityIds: [] as number[],
-              status: "unavailable" as const,
-            }),
-          );
     const permanentIdentityIds = permanentHoldings.identityIds;
     const allIdentityIds = [...transientIdentityIds, ...permanentIdentityIds];
     const detailReads = allIdentityIds.flatMap(
@@ -1048,11 +1061,26 @@ export const createProtocolReader = ({
         },
       ],
     );
-    const detailResults = await executeRead(
-      copy.reader.walletCollectibleDetails,
-      () => transport.readMany(detailReads, block.number),
-      identity,
-    );
+    const detailResults = (
+      await Promise.all(
+        [
+          {
+            reads: detailReads.slice(0, transientIdentityIds.length * 3),
+            blockNumber: block.number,
+          },
+          {
+            reads: detailReads.slice(transientIdentityIds.length * 3),
+            blockNumber: permanentBlock.number,
+          },
+        ].map(({ reads, blockNumber }) =>
+          executeRead(
+            copy.reader.walletCollectibleDetails,
+            () => transport.readMany(reads, blockNumber),
+            identity,
+          ),
+        ),
+      )
+    ).flat();
     const attributesByIdentity: Record<number, IdentityAttributes> = {};
     const pendingRewardsByIdentity: WalletSnapshotInput["pendingRewardsByIdentity"] =
       {};
@@ -1132,6 +1160,10 @@ export const createProtocolReader = ({
     );
     return {
       ...snapshot,
+      collectibles: {
+        ...snapshot.collectibles,
+        ...candidateWindow.permanentObservation,
+      },
       observedBlock: block.number,
       observedAt: Number(block.timestamp),
       partialFailures,
@@ -2262,7 +2294,7 @@ export const createProtocolReader = ({
   >;
 
   const decodeHealthResults = (
-    definitions: HealthReadPlan,
+    definitions: readonly Definition[],
     results: readonly ContractReadResult[],
   ) => {
     const rpcFailures: string[] = [];
@@ -2284,7 +2316,7 @@ export const createProtocolReader = ({
     const value = <Key extends HealthValueKey>(key: Key): HealthValue<Key> =>
       values.get(key) as HealthValue<Key>;
     const available = (...keys: HealthValueKey[]) =>
-      keys.every((key) => !failedKeys.has(key));
+      keys.every((key) => values.has(key) && !failedKeys.has(key));
     const observed = <Key extends HealthValueKey>(
       key: Key,
     ): HealthValue<Key> | undefined =>
@@ -2373,6 +2405,140 @@ export const createProtocolReader = ({
     }
   };
 
+  const readCanonicalMarket = async (blockNumber: bigint) => {
+    const failures: string[] = [];
+    let state:
+      | Awaited<ReturnType<ProtocolReadTransport["canonicalMarketState"]>>
+      | undefined;
+    try {
+      state = await transport.canonicalMarketState(
+        manifest.canonicalPool.poolId as `0x${string}`,
+        blockNumber,
+      );
+    } catch (cause) {
+      failures.push(
+        `${copy.labels.market} state: ${normalizeProtocolError(cause, identity).message}`,
+      );
+    }
+    if (state === undefined) return { failures, price: undefined, state };
+    try {
+      const price = deriveCanonicalMarketPrice({
+        sqrtPriceX96: state.sqrtPriceX96,
+        currency0: manifest.canonicalPool.currency0 as Address,
+        currency1: manifest.canonicalPool.currency1 as Address,
+        liquidToken: contracts.fuelCore.address,
+        identity,
+        liquidTokenDecimals: CANONICAL_MARKET_TOKEN_DECIMALS.liquidToken,
+        settlementTokenDecimals:
+          CANONICAL_MARKET_TOKEN_DECIMALS.settlementToken,
+      });
+      return { failures, price, state };
+    } catch (cause) {
+      failures.push(
+        `${copy.labels.market} price: ${cause instanceof Error ? cause.message : copy.health.rpcFailure}`,
+      );
+      return { failures, price: undefined, state };
+    }
+  };
+  const publicOperationalChecks = (
+    decoded: ReturnType<typeof decodeHealthResults>,
+    canonicalMarketState:
+      | Awaited<ReturnType<ProtocolReadTransport["canonicalMarketState"]>>
+      | undefined,
+  ) => {
+    const { available, value } = decoded;
+    type OperationalCheck = NonNullable<
+      ProtocolHealthInput["operationalChecks"]
+    >[number];
+    const queueKeys = ["queue1", "queue2", "queue3", "queue4"] as const;
+    const totalTrackQueue = queueKeys.reduce(
+      (total, key) => total + value(key),
+      0n,
+    );
+    const feePotTotal =
+      value("rewardPot") + value("liquidityPot") + value("creatorPot");
+    const baseOperationalChecks = (): readonly OperationalCheck[] => [
+      {
+        id: "market:active-liquidity",
+        available: canonicalMarketState !== undefined,
+        status: checkStatus(
+          canonicalMarketState !== undefined &&
+            canonicalMarketState.activeLiquidity > 0n,
+        ),
+        severity: "critical",
+        expected: copy.health.positiveLiquidity,
+        observed:
+          canonicalMarketState === undefined
+            ? copy.health.unavailable
+            : canonicalMarketState.activeLiquidity.toString(),
+        explanation: copy.health.marketLiquidity,
+      },
+      {
+        id: "accounting:fee-pot-backing",
+        available: available(
+          "rewardPot",
+          "liquidityPot",
+          "creatorPot",
+          "hookWethBalance",
+        ),
+        status: checkStatus(value("hookWethBalance") >= feePotTotal),
+        severity: "critical",
+        expected: copy.health.backingExpected(feePotTotal),
+        observed: copy.health.backingObserved(
+          feePotTotal,
+          value("hookWethBalance"),
+        ),
+        explanation: copy.health.feePotReconciliation,
+      },
+      {
+        id: "accounting:reward-queue-backing",
+        available: available(...queueKeys, "converterWethBalance"),
+        status: checkStatus(value("converterWethBalance") >= totalTrackQueue),
+        severity: "critical",
+        expected: copy.health.backingExpected(totalTrackQueue),
+        observed: copy.health.backingObserved(
+          totalTrackQueue,
+          value("converterWethBalance"),
+        ),
+        explanation: copy.health.rewardQueueReconciliation,
+      },
+      {
+        id: "accounting:liquidity-queue-backing",
+        available: available("queuedWeth", "liquidityWethBalance"),
+        status: checkStatus(
+          value("liquidityWethBalance") >= value("queuedWeth"),
+        ),
+        severity: "critical",
+        expected: copy.health.backingExpected(value("queuedWeth")),
+        observed: copy.health.backingObserved(
+          value("queuedWeth"),
+          value("liquidityWethBalance"),
+        ),
+        explanation: copy.health.liquidityQueueReconciliation,
+      },
+    ];
+    const pauseChecks = () =>
+      (
+        [
+          ["liquidToken", "fuelPaused", identity.liquidToken.displayName],
+          ["rewards", "rewardsPaused", copy.labels.rewardLedger],
+          ["converter", "converterPaused", copy.labels.rewardEpoch],
+          ["liquidity", "liquidityPaused", copy.labels.protocolOwnedLiquidity],
+        ] as const
+      ).map(([module, key, label]): OperationalCheck => {
+        const paused = value(key);
+        return {
+          id: `pause:${module}`,
+          available: available(key),
+          status: checkStatus(!paused),
+          severity: "warning",
+          expected: copy.health.activeState,
+          observed: paused ? copy.health.pausedState : copy.health.activeState,
+          explanation: copy.health.modulePause(label),
+        };
+      });
+    return { accounting: baseOperationalChecks(), pauses: pauseChecks() };
+  };
   const assembleHealthSnapshot = async ({
     block,
     connectedWallet,
@@ -2981,115 +3147,13 @@ export const createProtocolReader = ({
         },
       ];
     });
-    const readCanonicalMarket = async () => {
-      const failures: string[] = [];
-      let state:
-        | Awaited<ReturnType<ProtocolReadTransport["canonicalMarketState"]>>
-        | undefined;
-      try {
-        state = await transport.canonicalMarketState(
-          manifest.canonicalPool.poolId as `0x${string}`,
-          block.number,
-        );
-      } catch (cause) {
-        failures.push(
-          `${copy.labels.market} state: ${normalizeProtocolError(cause, identity).message}`,
-        );
-      }
-      if (state === undefined) return { failures, price: undefined, state };
-      try {
-        const price = deriveCanonicalMarketPrice({
-          sqrtPriceX96: state.sqrtPriceX96,
-          currency0: manifest.canonicalPool.currency0 as Address,
-          currency1: manifest.canonicalPool.currency1 as Address,
-          liquidToken: contracts.fuelCore.address,
-          identity,
-          liquidTokenDecimals: CANONICAL_MARKET_TOKEN_DECIMALS.liquidToken,
-          settlementTokenDecimals:
-            CANONICAL_MARKET_TOKEN_DECIMALS.settlementToken,
-        });
-        return { failures, price, state };
-      } catch (cause) {
-        failures.push(
-          `${copy.labels.market} price: ${cause instanceof Error ? cause.message : copy.health.rpcFailure}`,
-        );
-        return { failures, price: undefined, state };
-      }
-    };
-    const canonicalMarket = await readCanonicalMarket();
+    const canonicalMarket = await readCanonicalMarket(block.number);
     rpcFailures.push(...canonicalMarket.failures);
     const canonicalMarketState = canonicalMarket.state;
     const canonicalMarketPrice = canonicalMarket.price;
     type OperationalCheck = NonNullable<
       ProtocolHealthInput["operationalChecks"]
     >[number];
-    const queueKeys = ["queue1", "queue2", "queue3", "queue4"] as const;
-    const totalTrackQueue = queueKeys.reduce(
-      (total, key) => total + value(key),
-      0n,
-    );
-    const feePotTotal =
-      value("rewardPot") + value("liquidityPot") + value("creatorPot");
-    const baseOperationalChecks = (): readonly OperationalCheck[] => [
-      {
-        id: "market:active-liquidity",
-        available: canonicalMarketState !== undefined,
-        status: checkStatus(
-          canonicalMarketState !== undefined &&
-            canonicalMarketState.activeLiquidity > 0n,
-        ),
-        severity: "critical",
-        expected: copy.health.positiveLiquidity,
-        observed:
-          canonicalMarketState === undefined
-            ? copy.health.unavailable
-            : canonicalMarketState.activeLiquidity.toString(),
-        explanation: copy.health.marketLiquidity,
-      },
-      {
-        id: "accounting:fee-pot-backing",
-        available: available(
-          "rewardPot",
-          "liquidityPot",
-          "creatorPot",
-          "hookWethBalance",
-        ),
-        status: checkStatus(value("hookWethBalance") >= feePotTotal),
-        severity: "critical",
-        expected: copy.health.backingExpected(feePotTotal),
-        observed: copy.health.backingObserved(
-          feePotTotal,
-          value("hookWethBalance"),
-        ),
-        explanation: copy.health.feePotReconciliation,
-      },
-      {
-        id: "accounting:reward-queue-backing",
-        available: available(...queueKeys, "converterWethBalance"),
-        status: checkStatus(value("converterWethBalance") >= totalTrackQueue),
-        severity: "critical",
-        expected: copy.health.backingExpected(totalTrackQueue),
-        observed: copy.health.backingObserved(
-          totalTrackQueue,
-          value("converterWethBalance"),
-        ),
-        explanation: copy.health.rewardQueueReconciliation,
-      },
-      {
-        id: "accounting:liquidity-queue-backing",
-        available: available("queuedWeth", "liquidityWethBalance"),
-        status: checkStatus(
-          value("liquidityWethBalance") >= value("queuedWeth"),
-        ),
-        severity: "critical",
-        expected: copy.health.backingExpected(value("queuedWeth")),
-        observed: copy.health.backingObserved(
-          value("queuedWeth"),
-          value("liquidityWethBalance"),
-        ),
-        explanation: copy.health.liquidityQueueReconciliation,
-      },
-    ];
     const rewardAccountingChecks = () =>
       trackNames.map((track, index): OperationalCheck => {
         const trackId = (index + 1) as HealthTrack;
@@ -3139,26 +3203,6 @@ export const createProtocolReader = ({
         explanation: copy.health.lockedLiquidity,
       };
     };
-    const pauseChecks = () =>
-      (
-        [
-          ["liquidToken", "fuelPaused", identity.liquidToken.displayName],
-          ["rewards", "rewardsPaused", copy.labels.rewardLedger],
-          ["converter", "converterPaused", copy.labels.rewardEpoch],
-          ["liquidity", "liquidityPaused", copy.labels.protocolOwnedLiquidity],
-        ] as const
-      ).map(([module, key, label]): OperationalCheck => {
-        const paused = value(key);
-        return {
-          id: `pause:${module}`,
-          available: available(key),
-          status: checkStatus(!paused),
-          severity: "warning",
-          expected: copy.health.activeState,
-          observed: paused ? copy.health.pausedState : copy.health.activeState,
-          explanation: copy.health.modulePause(label),
-        };
-      });
     const trackProgressObservation = (
       queueClear: boolean,
       retryable: boolean,
@@ -3279,13 +3323,14 @@ export const createProtocolReader = ({
               : copy.health.venueReachableObserved,
         explanation: copy.health.blockedVenue(venue.label, venue.codehash),
       }));
+    const publicChecks = publicOperationalChecks(decoded, canonicalMarketState);
     const operationalChecks: NonNullable<
       ProtocolHealthInput["operationalChecks"]
     > = [
-      ...baseOperationalChecks(),
+      ...publicChecks.accounting,
       ...rewardAccountingChecks(),
       lockedLiquidityCheck(),
-      ...pauseChecks(),
+      ...publicChecks.pauses,
       ...trackProgressChecks(),
       ...connectedWalletFreezeChecks(),
       ...claimPolicyChecks(),
@@ -3602,36 +3647,13 @@ export const createProtocolReader = ({
         ? ("observed" as const)
         : ("partial" as const);
     };
-    const rewardHistoryStatus = () => {
-      if (!rewardHistory.available) return "unknown" as const;
-      const observedEpochCount = BigInt(
-        new Set(
-          rewardHistoryEvents.flatMap((event) =>
-            event.type === "reward-epoch"
-              ? [event.epoch.epochNumber.toString()]
-              : [],
-          ),
-        ).size,
+    const rewardHistoryStatus = () =>
+      rewardHistoryStatusFrom(
+        rewardHistory,
+        epochCount,
+        rewards.tracks.map((track) => track.rawTokenBalance),
+        ([1, 2, 3, 4] as const).map((track) => observed(`queue${track}`)),
       );
-      if (epochCount !== undefined && observedEpochCount !== epochCount) {
-        return "partial" as const;
-      }
-      const pointReadBalances = rewards.tracks.map(
-        (track) => track.rawTokenBalance,
-      );
-      const pointReadQueues = ([1, 2, 3, 4] as const).map((track) =>
-        whenAvailable(available(`queue${track}`), value(`queue${track}`)),
-      );
-      return rewardHistory.incomplete &&
-        !rewardHistoryProvesComplete(
-          rewardHistoryEvents,
-          epochCount,
-          pointReadBalances,
-          pointReadQueues,
-        )
-        ? ("partial" as const)
-        : ("complete" as const);
-    };
     const nextRewardEpochAt = () => {
       if (epochCount === undefined) return undefined;
       if (epochCount === 0n) return 0n;
@@ -3755,6 +3777,217 @@ export const createProtocolReader = ({
         connectedWallet !== undefined,
         observed("connectedWalletFrozen"),
       ),
+    };
+  };
+
+  const publicHealthKeys = new Set<HealthValueKey>([
+    "liquidSupply",
+    "permanentCount",
+    "transientCount",
+    "pendingCount",
+    "availableCount",
+    "manifestHash",
+    "fuelPaused",
+    "rewardsPaused",
+    "converterPaused",
+    "liquidityPaused",
+    "launched",
+    "feeBps",
+    "rewardPot",
+    "liquidityPot",
+    "creatorPot",
+    "epochCount",
+    "queuedWeth",
+    "lockedWeth",
+    "hookWethBalance",
+    "converterWethBalance",
+    "liquidityWethBalance",
+    ...([1, 2, 3, 4] as const).flatMap(
+      (track) =>
+        [
+          `queue${track}`,
+          `liability${track}`,
+          `balance${track}`,
+          `ledgerToken${track}`,
+        ] as const,
+    ),
+  ]);
+
+  /** Public accounting and market observations. This does not authorize transactions or attest deployment/role configuration. */
+  const readPublicStatus = async (
+    currentTime = Math.floor(Date.now() / 1_000),
+    maximumAgeSeconds = 30,
+    options: Pick<ProtocolHealthReadOptions, "includeRewardHistory"> = {},
+  ) => {
+    const observedChainId = await verifyChain();
+    const block = await executeRead(
+      copy.reader.healthBlock,
+      () => transport.getBlock(),
+      identity,
+    );
+    const definitions = createHealthReadPlan(undefined).filter((definition) =>
+      publicHealthKeys.has(definition.key),
+    );
+    const [results, rewardHistory, market] = await Promise.all([
+      executeRead(
+        copy.reader.protocolHealth,
+        () =>
+          transport.readMany(
+            definitions.map((definition) => definition.request),
+            block.number,
+          ),
+        identity,
+      ),
+      options.includeRewardHistory === false
+        ? Promise.resolve(unavailableRewardHistory())
+        : readHealthRewardHistory(block),
+      readCanonicalMarket(block.number),
+    ]);
+    await executeRead(
+      copy.reader.healthBlock,
+      async () => {
+        const canonical = await transport.getBlock(block.number);
+        if (
+          canonical.number !== block.number ||
+          canonical.timestamp !== block.timestamp ||
+          canonical.hash.toLowerCase() !== block.hash.toLowerCase()
+        ) {
+          throw new Error(
+            "Public protocol observation changed during the read",
+          );
+        }
+      },
+      identity,
+    );
+    const decoded = decodeHealthResults(definitions, results);
+    const { available, observed, value, rpcFailures } = decoded;
+    rpcFailures.push(...market.failures);
+    if (rewardHistory.failure !== undefined)
+      rpcFailures.push(rewardHistory.failure);
+    const tracks = stockContracts.map(([contract, trackId]) => ({
+      contract,
+      trackId,
+      track: identity.rewardTrackLabels[trackId],
+      available: available(
+        `balance${trackId}`,
+        `liability${trackId}`,
+        `ledgerToken${trackId}`,
+      ),
+    }));
+    const publicChecks = publicOperationalChecks(decoded, market.state);
+    const health = deriveProtocolHealth(
+      {
+        observedBlock: block.number,
+        observedAt: Number(block.timestamp),
+        currentTime,
+        maximumAgeSeconds,
+        liquidSupplyWei: value("liquidSupply"),
+        permanentCount: Number(value("permanentCount")),
+        transientCount: Number(value("transientCount")),
+        pendingDiscoveryCount: Number(value("pendingCount")),
+        availableIdentityCount: Number(value("availableCount")),
+        expectedManifestCommitment: manifest.identity.manifestHash as Hex,
+        observedManifestCommitment: value("manifestHash"),
+        availability: {
+          supplyInvariant: available("liquidSupply", "permanentCount"),
+          collectionPartition: available(
+            "permanentCount",
+            "transientCount",
+            "availableCount",
+          ),
+          identityManifest: available("manifestHash"),
+        },
+        bindings: tracks.map(({ contract, trackId }) => ({
+          id: `ledger.track${trackId}`,
+          expected: contracts[contract].address,
+          observed: value(`ledgerToken${trackId}`),
+          available: available(`ledgerToken${trackId}`),
+          explanation: copy.health.ledgerTrack,
+        })),
+        values: [
+          {
+            id: "chainId",
+            expected: String(manifest.chainId),
+            observed: String(observedChainId),
+            explanation: copy.health.chain,
+          },
+          {
+            id: "launched",
+            expected: "true",
+            observed: String(value("launched")),
+            available: available("launched"),
+            explanation: copy.health.launched,
+          },
+          {
+            id: "feeBps",
+            expected: "300",
+            observed: String(value("feeBps")),
+            available: available("feeBps"),
+            explanation: copy.health.marketFee,
+          },
+        ],
+        bytecode: [],
+        seals: [],
+        rewardTracks: tracks.map(({ track, trackId }) => ({
+          track,
+          tokenBalance: value(`balance${trackId}`),
+          liability: value(`liability${trackId}`),
+          available: available(`balance${trackId}`, `liability${trackId}`),
+        })),
+        operationalChecks: [...publicChecks.accounting, ...publicChecks.pauses],
+        rpcFailures,
+      },
+      identity,
+    );
+    return {
+      health,
+      deployment: {
+        network: manifest.network,
+        observedAt: Number(block.timestamp),
+        observedBlock: block.number,
+      },
+      collection: {
+        permanentCount: observed("permanentCount"),
+        transientCount: observed("transientCount"),
+        pendingDiscoveryCount: mapOptional(observed("pendingCount"), Number),
+        availableIdentityCount: observed("availableCount"),
+      },
+      market: {
+        creatorPotWeth: observed("creatorPot"),
+        liquidityPotWeth: observed("liquidityPot"),
+        rewardPotWeth: observed("rewardPot"),
+        price: market.price,
+      },
+      operations: {
+        rewardEpochCount: observed("epochCount"),
+        rewardHistory: rewardHistory.events,
+        rewardHistoryStatus: rewardHistoryStatusFrom(
+          rewardHistory,
+          observed("epochCount"),
+          tracks.map(({ trackId, available: isAvailable }) =>
+            whenAvailable(isAvailable, value(`balance${trackId}`)),
+          ),
+          tracks.map(({ trackId }) => observed(`queue${trackId}`)),
+        ),
+        protocolOwnedLiquidity: {
+          permanentlyLockedWeth: observed("lockedWeth"),
+          queuedWeth: observed("queuedWeth"),
+        },
+        trackQueues: tracks.map(({ track, trackId }) => ({
+          track,
+          trackId,
+          weth: observed(`queue${trackId}`),
+        })),
+      },
+      rewards: {
+        tracks: tracks.map(({ track, trackId, available: isAvailable }) => ({
+          track,
+          rawLiability: whenAvailable(
+            isAvailable,
+            value(`liability${trackId}`),
+          ),
+        })),
+      },
     };
   };
 
@@ -3904,6 +4137,7 @@ export const createProtocolReader = ({
     readRecentOperations,
     readOperationalStatus,
     readHealth,
+    readPublicStatus,
     prepareTransaction,
   } as const;
 };

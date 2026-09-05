@@ -100,13 +100,19 @@ const testState = vi.hoisted(() => {
     },
     health,
     manifestHash,
-    readHealth: vi.fn(async () => health),
+    readPublicStatus: vi.fn(async () => health),
     readWallet: vi.fn(),
+    getBlockNumber: vi.fn(async () => 201n),
+    getBalance: vi
+      .fn<(request: { blockNumber?: bigint }) => Promise<bigint>>()
+      .mockResolvedValue(0n),
+    readSignals: [] as AbortSignal[],
+    pathname: "/status",
   };
 });
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/status",
+  usePathname: () => testState.pathname,
 }));
 
 vi.mock("wagmi", () => ({
@@ -116,7 +122,8 @@ vi.mock("wagmi", () => ({
 
 vi.mock("@orbit/protocol/reader", () => ({
   createProtocolReader: () => ({
-    readHealth: testState.readHealth,
+    readPublicStatus: testState.readPublicStatus,
+    readHealth: testState.readPublicStatus,
     readWallet: testState.readWallet,
   }),
 }));
@@ -143,6 +150,13 @@ vi.mock("@/lib/deployment", () => ({
 vi.mock("@/lib/wagmi", () => ({
   protocolChain: { id: 84_532 },
   protocolReadClient: {},
+  createProtocolReadClient: (signal: AbortSignal) => {
+    testState.readSignals.push(signal);
+    return {
+      getBlockNumber: testState.getBlockNumber,
+      getBalance: testState.getBalance,
+    };
+  },
   protocolTransactionClient: {},
 }));
 
@@ -175,8 +189,12 @@ describe("public status query boundary", () => {
         IS_REACT_ACT_ENVIRONMENT?: boolean;
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
-    testState.readHealth.mockReset().mockResolvedValue(testState.health);
+    testState.readPublicStatus.mockReset().mockResolvedValue(testState.health);
     testState.readWallet.mockReset();
+    testState.getBlockNumber.mockReset().mockResolvedValue(201n);
+    testState.getBalance.mockReset().mockResolvedValue(0n);
+    testState.readSignals.length = 0;
+    testState.pathname = "/status";
     testState.connection = {
       address: "0x0000000000000000000000000000000000000001",
       chainId: 84_532,
@@ -252,6 +270,8 @@ describe("public status query boundary", () => {
       },
       funds: {
         creatorWeth: 3n * 10n ** 18n,
+        rewardPotWeth: 1n * 10n ** 18n,
+        liquidityQueuedWeth: 5n * 10n ** 18n,
         liquidityLockedWeth: 6n * 10n ** 18n,
         liquidityWaitingWeth: 7n * 10n ** 18n,
         rewardWethWaiting: 5n * 10n ** 18n,
@@ -282,16 +302,8 @@ describe("public status query boundary", () => {
       ]),
     ).toEqual(expected);
     expect(currentProtocol.health).toBeUndefined();
-    expect(testState.readHealth).toHaveBeenCalledOnce();
-    expect(testState.readHealth).toHaveBeenCalledWith(
-      undefined,
-      undefined,
-      undefined,
-      {
-        includeOperationalHistory: false,
-        includeRewardHistory: true,
-      },
-    );
+    expect(testState.readPublicStatus).toHaveBeenCalledOnce();
+    expect(testState.readPublicStatus).toHaveBeenCalledWith();
     expect(
       queryClient
         .getQueryCache()
@@ -311,9 +323,121 @@ describe("public status query boundary", () => {
     expect(testState.readWallet).not.toHaveBeenCalled();
   });
 
+  it.each(["/exchange", "/fleet", "/rewards", "/faucet"])(
+    "anonymous %s uses public evidence without loading authorization diagnostics",
+    async (pathname) => {
+      testState.pathname = pathname;
+      testState.connection.status = "disconnected";
+      await act(async () => {
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <ProtocolClientProvider>
+              <ProtocolCapture />
+            </ProtocolClientProvider>
+          </QueryClientProvider>,
+        );
+      });
+      await vi.waitFor(() =>
+        expect(currentProtocol.publicStatus?.collection.permanent).toBe(800),
+      );
+      expect(currentProtocol.health).toBeUndefined();
+      expect(testState.readWallet).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reports native ETH at its actual block and waits for it to catch up with confirmed wallet changes", async () => {
+    testState.pathname = "/faucet";
+    testState.readWallet.mockResolvedValue({
+      observedBlock: 300n,
+      collectibles: {
+        permanent: [],
+        transient: [],
+        permanentHoldingsStatus: "complete",
+        permanentObservedBlock: 300n,
+      },
+    });
+    testState.getBalance.mockImplementation(async ({ blockNumber }) =>
+      blockNumber === 201n ? 10_000_000_000_000_000n : 1_000_000_000_000_000n,
+    );
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>
+        </QueryClientProvider>,
+      );
+    });
+    await vi.waitFor(() =>
+      expect(currentProtocol.nativeBalanceRead).toMatchObject({
+        status: "loaded",
+        balance: { observedBlock: 201n, formatted: "0.01" },
+      }),
+    );
+
+    await act(async () => currentProtocol.refreshWallet(300n));
+    expect(currentProtocol.walletSynchronizing).toBe(true);
+    expect(currentProtocol.nativeBalanceRead).toMatchObject({
+      status: "loaded",
+      balance: { observedBlock: 201n, formatted: "0.01" },
+    });
+    expect(
+      currentProtocol.getActionState({
+        type: "commit-collectible",
+        identityId: 1,
+      }).enabled,
+    ).toBe(false);
+
+    testState.getBalance.mockRejectedValue(new Error("Native RPC unavailable"));
+    await act(async () => currentProtocol.refreshWallet());
+    await vi.waitFor(() =>
+      expect(currentProtocol.nativeBalanceRead).toMatchObject({
+        status: "failed",
+      }),
+    );
+    expect(currentProtocol.walletSynchronizing).toBe(true);
+
+    testState.getBlockNumber.mockResolvedValue(300n);
+    testState.getBalance.mockResolvedValue(1_000_000_000_000_000n);
+    await act(async () => currentProtocol.refreshWallet());
+    await vi.waitFor(() =>
+      expect(currentProtocol.nativeBalanceRead).toMatchObject({
+        status: "loaded",
+        balance: { observedBlock: 300n, formatted: "0.001" },
+      }),
+    );
+    expect(currentProtocol.walletSynchronizing).toBe(false);
+  });
+
+  it("query cancellation interrupts the read lifetime without publishing a late result", async () => {
+    let resolveRead: ((value: typeof testState.health) => void) | undefined;
+    testState.readPublicStatus.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRead = resolve;
+        }),
+    );
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>
+        </QueryClientProvider>,
+      );
+    });
+    await vi.waitFor(() => expect(testState.readSignals).toHaveLength(1));
+    await act(async () => {
+      await queryClient.cancelQueries({ queryKey: ["public-protocol-status"] });
+    });
+    expect(testState.readSignals[0]?.aborted).toBe(true);
+    await act(async () => resolveRead?.(testState.health));
+    expect(currentProtocol.publicStatus).toBeUndefined();
+  });
+
   it("shows saved public evidence while a live refresh remains in flight", async () => {
     let resolveRead: ((value: typeof testState.health) => void) | undefined;
-    testState.readHealth.mockImplementation(
+    testState.readPublicStatus.mockImplementation(
       () =>
         new Promise((resolve) => {
           resolveRead = resolve;
@@ -353,7 +477,7 @@ describe("public status query boundary", () => {
   });
 
   it("rejects cached evidence whose specialized reward event has the wrong variant", async () => {
-    testState.readHealth.mockImplementation(
+    testState.readPublicStatus.mockImplementation(
       () => new Promise<never>(() => undefined),
     );
     const cached = derivePublicStatusModel(testState.health);
@@ -370,13 +494,25 @@ describe("public status query boundary", () => {
         remainingQueue: 0n,
       },
     };
-    writePublicEvidenceCache(window.localStorage, testState.manifestHash, {
-      ...cached,
-      rewardActivity: {
-        ...cached.rewardActivity,
-        latestOpening: conversion,
-      },
-    });
+    window.localStorage.setItem(
+      `orbit:public-evidence:v1:${testState.manifestHash}`,
+      JSON.stringify(
+        {
+          model: {
+            ...cached,
+            rewardActivity: {
+              ...cached.rewardActivity,
+              latestOpening: conversion,
+            },
+          },
+          savedAt: Date.now(),
+        },
+        (_key, value) =>
+          typeof value === "bigint"
+            ? { __orbitPublicBigInt: value.toString() }
+            : value,
+      ),
+    );
 
     await act(async () => {
       root.render(
@@ -398,7 +534,7 @@ describe("public status query boundary", () => {
   });
 
   it("retries a failed public status read without activating private queries", async () => {
-    testState.readHealth
+    testState.readPublicStatus
       .mockRejectedValueOnce(new Error("private RPC failed"))
       .mockResolvedValue(testState.health);
 
@@ -430,7 +566,7 @@ describe("public status query boundary", () => {
     });
 
     expect(currentProtocol.publicStatusError).toBeNull();
-    expect(testState.readHealth).toHaveBeenCalledTimes(2);
+    expect(testState.readPublicStatus).toHaveBeenCalledTimes(2);
     expect(testState.readWallet).not.toHaveBeenCalled();
     expect(
       queryClient.getQueryState([

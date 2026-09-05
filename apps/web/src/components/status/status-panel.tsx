@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useSyncExternalStore } from "react";
+
 import { ProtocolOverview } from "@/components/status/protocol-overview";
 import { StateFeedback } from "@/components/state-feedback";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ import {
 } from "@/lib/deployment";
 import { applicationCopy } from "@/lib/identity";
 import type { PublicStatusModel } from "@/lib/protocol-status-model";
+import { WEB_QUERY_STALE_TIME_MILLISECONDS } from "@/lib/query-client";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
 
 type ProtocolClient = ReturnType<typeof useProtocolClient>;
@@ -54,6 +57,24 @@ const launchBlock = () => {
  * freshness, and its observation point are one board.
  */
 function HealthBoard({ model }: { readonly model: PublicStatusModel }) {
+  const expiresAt =
+    model.observedAt * 1_000 + WEB_QUERY_STALE_TIME_MILLISECONDS;
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      const remaining = expiresAt - Date.now() + 1;
+      if (remaining <= 0) return () => undefined;
+      const timer = setTimeout(notify, remaining);
+      return () => clearTimeout(timer);
+    },
+    [expiresAt],
+  );
+  const expired = useSyncExternalStore(
+    subscribe,
+    () => Date.now() > expiresAt,
+    () => false,
+  );
+  const freshness =
+    model.freshness === "fresh" && expired ? "stale" : model.freshness;
   return (
     <div className="mt-5">
       <MetricGroup columns={5} label={applicationCopy.publicStatus.healthLabel}>
@@ -67,7 +88,7 @@ function HealthBoard({ model }: { readonly model: PublicStatusModel }) {
           }
         />
         <Metric
-          hint={applicationCopy.publicStatus.freshness[model.freshness]}
+          hint={applicationCopy.publicStatus.freshness[freshness]}
           label={applicationCopy.publicStatus.observedBlock}
           tone="live"
           value={<Count value={model.observedBlock} />}
