@@ -7,6 +7,8 @@ import {
   encodeErrorResult,
   parseAbi,
   RawContractError,
+  TransactionExecutionError,
+  UserRejectedRequestError,
   toFunctionSelector,
   type Hex,
 } from "viem";
@@ -25,6 +27,24 @@ const nestCause = (cause: unknown, depth: number): unknown => {
 };
 
 describe("protocol error normalization", () => {
+  it.each([
+    { code: 4001, message: "provider secret" },
+    new UserRejectedRequestError(new Error("provider secret")),
+    new TransactionExecutionError(
+      new UserRejectedRequestError(new Error("provider secret")),
+      { account: null },
+    ),
+  ])(
+    "recognizes a wallet cancellation without exposing its raw message %#",
+    (cause) => {
+      expect(normalizeProtocolError(cause, identity)).toEqual({
+        code: "wallet-rejected",
+        message:
+          "The wallet cancelled this request. No transaction was submitted. You can try again.",
+      });
+    },
+  );
+
   it.each([
     ["TradingLocked", "Trading is not available before ORBIT 4444 launches."],
     [
@@ -428,6 +448,12 @@ describe("protocol error normalization", () => {
     ).toBe("discovery-mutation-limit");
     expect(
       normalizeProtocolError(nestCause({ data: encoded }, 9), identity).code,
+    ).toBe("rpc-failure");
+    expect(
+      normalizeProtocolError(nestCause({ code: 4001 }, 8), identity).code,
+    ).toBe("wallet-rejected");
+    expect(
+      normalizeProtocolError(nestCause({ code: 4001 }, 9), identity).code,
     ).toBe("rpc-failure");
     expect(
       normalizeProtocolError(

@@ -7,6 +7,7 @@ import type { WalletKitTypes } from "@reown/walletkit";
 import { Core } from "@walletconnect/core";
 import { buildApprovedNamespaces, getSdkError } from "@walletconnect/utils";
 import { decodeProtocolDeploymentManifest } from "@orbit/config/deployment-manifest";
+import { verifyFundingProofFields } from "@orbit/config/funding-proof";
 import { Effect, Schema } from "effect";
 import {
   createWalletClient,
@@ -47,6 +48,10 @@ const WalletEnvironmentSchema = Schema.Struct({
     { default: () => false },
   ),
   SMOKE_WALLET_ALLOW_ADMIN_SIGN_IN: Schema.optionalWith(
+    Schema.BooleanFromString,
+    { default: () => false },
+  ),
+  SMOKE_WALLET_ALLOW_FUNDING_PROOF: Schema.optionalWith(
     Schema.BooleanFromString,
     { default: () => false },
   ),
@@ -99,6 +104,7 @@ runMain(
     const emittedChainId = parseOptionalNumber(emittedChainIdText);
     const allowTransactions = environment.SMOKE_WALLET_ALLOW_TRANSACTIONS;
     const allowAdminSignIn = environment.SMOKE_WALLET_ALLOW_ADMIN_SIGN_IN;
+    const allowFundingProof = environment.SMOKE_WALLET_ALLOW_FUNDING_PROOF;
     const postSignAccountSwitch =
       environment.SMOKE_WALLET_POST_SIGN_ACCOUNT_SWITCH;
     const postSignChainId = parseOptionalNumber(
@@ -282,6 +288,19 @@ runMain(
       } catch {
         return false;
       }
+    };
+    const isExpectedFundingMessage = (message: string): boolean => {
+      const domain = new URL(allowedDappUrl).host;
+      return (
+        chainId === baseSepolia.id &&
+        verifyFundingProofFields(message, {
+          chainId: baseSepolia.id,
+          domain,
+          nowMilliseconds: Date.now(),
+          recipient: account.address,
+        }).ok &&
+        parseSiweMessage(message).uri === `https://${domain}/faucet`
+      );
     };
     interface SmokeTransaction {
       readonly from: string;
@@ -736,12 +755,15 @@ runMain(
         return result;
       };
 
-      const signAdminMessage = async (params: unknown) => {
-        if (!allowAdminSignIn) return undefined;
+      const signAllowedMessage = async (params: unknown) => {
+        if (!allowAdminSignIn && !allowFundingProof) return undefined;
         const { message, messageInput } = decodePersonalSignParams(params);
-        if (!isExpectedAdminMessage(message)) {
+        if (
+          !(allowAdminSignIn && isExpectedAdminMessage(message)) &&
+          !(allowFundingProof && isExpectedFundingMessage(message))
+        ) {
           throw new Error(
-            "personal_sign message is not the expected deployment-bound admin challenge",
+            "personal_sign message is not an enabled, deployment-bound challenge",
           );
         }
         return account.signMessage({
@@ -768,7 +790,7 @@ runMain(
           } else if (method === "eth_sendTransaction") {
             result = await sendSmokeTransaction(event.params.chainId, params);
           } else if (method === "personal_sign") {
-            result = await signAdminMessage(params);
+            result = await signAllowedMessage(params);
           }
         } catch (error) {
           console.error(

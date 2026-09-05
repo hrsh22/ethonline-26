@@ -287,16 +287,15 @@ type ProtocolClientContextValue = {
   readonly publicStatusError: Error | null;
   readonly marketHistory: IndexedMarketHistoryRead;
   readonly exchangeQuoteRevision: number;
-  /** A confirmed transaction is ahead of the indexed wallet snapshot. */
+  /** A confirmed transaction is ahead of a wallet balance or holdings read. */
   readonly walletSynchronizing: boolean;
   readonly walletRead: ProtocolWalletRead;
   readonly nativeBalanceRead: ProtocolNativeBalanceRead;
   readonly transaction: TransactionState;
   /**
-   * A bare refresh reads once. The wallet read is taken at the indexed block,
-   * which trails the chain, so a caller that knows a balance changed at or
-   * before some block passes it and the read retries a bounded number of times
-   * until it has caught up.
+   * A bare refresh reads once. A caller that knows a balance or holding changed
+   * passes its block so direct balances and indexed holdings retry together,
+   * a bounded number of times, until every observation has caught up.
    */
   readonly refresh: (minimumWalletBlock?: bigint) => Promise<void>;
   /** Refreshes wallet-scoped balances and holdings without rereading protocol health. */
@@ -393,12 +392,14 @@ export const deriveWalletRead = ({
   accessState,
   error,
   fetching,
+  minimumBlock,
   pending,
   snapshot,
 }: {
   readonly accessState: CollectorAccessState;
   readonly error: unknown;
   readonly fetching: boolean;
+  readonly minimumBlock?: bigint | undefined;
   readonly pending: boolean;
   readonly snapshot: WalletSnapshot | undefined;
 }): ProtocolWalletRead => {
@@ -408,6 +409,23 @@ export const deriveWalletRead = ({
   const walletError = getError(error);
   if (walletError !== null) return { status: "failed", error: walletError };
   if (snapshot !== undefined) {
+    if (
+      walletSnapshotIsSynchronizing(
+        minimumBlock,
+        snapshot.collectibles.permanentObservedBlock,
+      )
+    ) {
+      return {
+        status: "loaded",
+        snapshot: {
+          ...snapshot,
+          collectibles: {
+            ...snapshot.collectibles,
+            permanentHoldingsStatus: "unavailable",
+          },
+        },
+      };
+    }
     return { status: "loaded", snapshot };
   }
   if (pending || fetching) return { status: "loading" };
@@ -464,6 +482,26 @@ export const walletSnapshotIsSynchronizing = (
 ): boolean =>
   minimumBlock !== undefined &&
   (observedBlock === undefined || observedBlock < minimumBlock);
+
+const walletObservation = (
+  snapshot: WalletSnapshot | undefined,
+  nativeBalance: { readonly observedBlock: bigint } | undefined,
+) => {
+  const permanentBlock = snapshot?.collectibles.permanentObservedBlock;
+  if (
+    snapshot === undefined ||
+    permanentBlock === undefined ||
+    nativeBalance === undefined
+  )
+    return;
+  return {
+    observedBlock: [
+      snapshot.observedBlock,
+      permanentBlock,
+      nativeBalance.observedBlock,
+    ].reduce((oldest, block) => (block < oldest ? block : oldest)),
+  };
+};
 
 type WalletClient = ViemWalletClient;
 type PreparedTransaction = ReturnType<ProtocolReader["prepareTransaction"]>;
@@ -571,6 +609,7 @@ class TransactionScopeChangedError extends Error {
 }
 
 const retriableTransactionFailureCodes = new Set([
+  "wallet-rejected",
   "stale-quote",
   "deadline-expired",
   "rpc-failure",
@@ -1523,19 +1562,18 @@ export function ProtocolClientProvider({
       if (address === undefined) {
         throw new Error("Native wallet balance reader unavailable");
       }
-      const rawWei = await runPublicRead(
-        (readSignal) =>
-          createProtocolReadClient(readSignal).getBalance({ address }),
+      return runPublicRead(
+        async (readSignal) => {
+          const client = createProtocolReadClient(readSignal);
+          const observedBlock = await client.getBlockNumber({ cacheTime: 0 });
+          const rawWei = await client.getBalance({
+            address,
+            blockNumber: observedBlock,
+          });
+          return { formatted: formatUnits(rawWei, 18), observedBlock, rawWei };
+        },
         { signal },
       );
-      return {
-        formatted: formatUnits(rawWei, 18),
-        observedBlock:
-          walletQuery.data?.observedBlock ??
-          currentHealth?.deployment.observedBlock ??
-          0n,
-        rawWei,
-      };
     },
     enabled: canLoadWallet(reader, connection, publicStatusEnabled),
     refetchInterval: false,
@@ -1574,6 +1612,7 @@ export function ProtocolClientProvider({
     accessState,
     error: walletQuery.error,
     fetching: walletQuery.isFetching,
+    minimumBlock: minimumWalletBlock,
     pending: walletQuery.isPending,
     snapshot: walletQuery.data,
   });
@@ -1586,16 +1625,23 @@ export function ProtocolClientProvider({
   });
   const walletSynchronizing = walletSnapshotIsSynchronizing(
     minimumWalletBlock,
-    walletQuery.data?.observedBlock,
+    walletObservation(walletQuery.data, nativeBalanceQuery.data)?.observedBlock,
   );
 
   const refreshWallet = useCallback(
     async (requiredWalletBlock?: bigint) => {
       if (accessState !== "ready") return;
       const targetWalletBlock = requiredWalletBlock ?? minimumWalletBlock;
+      const refetchBalances = async () => {
+        const [wallet, native] = await Promise.all([
+          walletQuery.refetch(),
+          nativeBalanceQuery.refetch(),
+        ]);
+        return walletObservation(wallet.data, native.data);
+      };
       const refetchWallet = async () => {
         if (targetWalletBlock === undefined) {
-          await walletQuery.refetch();
+          await refetchBalances();
           return;
         }
         if (requiredWalletBlock !== undefined) {
@@ -1607,7 +1653,7 @@ export function ProtocolClientProvider({
         }
         const result = await refetchUntilObservedBlock({
           minimumBlock: targetWalletBlock,
-          refetch: async () => (await walletQuery.refetch()).data,
+          refetch: refetchBalances,
         });
         if (result.status === "caught-up") {
           setMinimumWalletBlock((current) =>
@@ -1619,7 +1665,6 @@ export function ProtocolClientProvider({
       };
       await Promise.all([
         refetchWallet(),
-        nativeBalanceQuery.refetch(),
         queryClient.refetchQueries({
           queryKey: ["protocol-collectible"],
           type: "active",

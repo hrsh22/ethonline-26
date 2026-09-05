@@ -804,13 +804,22 @@ export const createProtocolReader = ({
         indexedThroughTime: window.indexedThroughTime,
       };
     }).then(
-      (window) => ({ status: "complete" as const, window }),
+      (window) => ({
+        status: "complete" as const,
+        window,
+        permanentObservation: {
+          permanentObservedBlock: window.throughBlock,
+          permanentObservedAt: Number(window.indexedThroughTime),
+        },
+      }),
       (cause: unknown) => ({
         failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
         status: "unavailable" as const,
+        permanentObservation: {},
       }),
     );
-    const block =
+    const block = latestBlock;
+    const permanentBlock =
       candidateWindow.status === "complete"
         ? {
             number: candidateWindow.window.throughBlock,
@@ -844,7 +853,7 @@ export const createProtocolReader = ({
           ),
         identity,
       ),
-      readClaimAllowed(owner, block.number),
+      readClaimAllowed(owner, permanentBlock.number),
     ]);
     const liquidBalanceWei = successful<bigint>(
       base[0],
@@ -1016,7 +1025,7 @@ export const createProtocolReader = ({
             transport.permanentIdentityIds(
               owner,
               candidateWindow.window.identityIds,
-              block.number,
+              permanentBlock.number,
             ),
           ).then(
             (identityIds) => ({
@@ -1050,11 +1059,26 @@ export const createProtocolReader = ({
         },
       ],
     );
-    const detailResults = await executeRead(
-      copy.reader.walletCollectibleDetails,
-      () => transport.readMany(detailReads, block.number),
-      identity,
-    );
+    const detailResults = (
+      await Promise.all(
+        [
+          {
+            reads: detailReads.slice(0, transientIdentityIds.length * 3),
+            blockNumber: block.number,
+          },
+          {
+            reads: detailReads.slice(transientIdentityIds.length * 3),
+            blockNumber: permanentBlock.number,
+          },
+        ].map(({ reads, blockNumber }) =>
+          executeRead(
+            copy.reader.walletCollectibleDetails,
+            () => transport.readMany(reads, blockNumber),
+            identity,
+          ),
+        ),
+      )
+    ).flat();
     const attributesByIdentity: Record<number, IdentityAttributes> = {};
     const pendingRewardsByIdentity: WalletSnapshotInput["pendingRewardsByIdentity"] =
       {};
@@ -1134,6 +1158,10 @@ export const createProtocolReader = ({
     );
     return {
       ...snapshot,
+      collectibles: {
+        ...snapshot.collectibles,
+        ...candidateWindow.permanentObservation,
+      },
       observedBlock: block.number,
       observedAt: Number(block.timestamp),
       partialFailures,

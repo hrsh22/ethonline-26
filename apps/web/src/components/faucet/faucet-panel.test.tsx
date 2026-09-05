@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { Address } from "viem";
+import { UserRejectedRequestError, type Address } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const testState = vi.hoisted(() => ({
@@ -172,6 +172,7 @@ describe("collector testnet faucet", () => {
           recipient: {
             address,
             state: "already-funded",
+            nextEligibleAt: null,
             balances: {
               ethWei: "10000000000000000",
               wethWei: "100000000000000000",
@@ -185,9 +186,7 @@ describe("collector testnet faucet", () => {
     await renderPanel();
     await flushPanel();
 
-    // The service reports `nextEligibleAt` only while a cooldown runs, so its
-    // absence on a successful read is a fact, not an unobserved value. This
-    // wallet showed "—" for a cooldown it had never started.
+    // Explicit null means the service verified no active cooldown.
     const metric = [...container.querySelectorAll("div")].find((node) =>
       node.textContent?.startsWith(applicationCopy.faucet.nextEligible),
     );
@@ -231,7 +230,11 @@ describe("collector testnet faucet", () => {
         Response.json({
           apiVersion: 1,
           request: { id: "request-1", state: "funded" },
-          recipient: { address, state: "funded" },
+          recipient: {
+            address,
+            state: "funded",
+            nextEligibleAt: 1_700_086_400_000,
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -241,6 +244,7 @@ describe("collector testnet faucet", () => {
           recipient: {
             address,
             state: "already-funded",
+            nextEligibleAt: 1_700_086_400_000,
             balances: {
               ethWei: "10000000000000000",
               wethWei: "100000000000000000",
@@ -258,6 +262,10 @@ describe("collector testnet faucet", () => {
     expect(container.textContent).toContain("0.009 ETH remaining");
     expect(container.textContent).toContain("0.025 WETH");
     expect(container.textContent).toContain("0.075 WETH remaining");
+    const eligibleAgain = [...container.querySelectorAll("dt")].find(
+      (term) => term.textContent === "Eligible again",
+    )?.nextElementSibling;
+    expect(eligibleAgain?.textContent).toBe("Now");
     const fund = [...container.querySelectorAll("button")].find(
       (button) => button.textContent === "Top up this wallet",
     );
@@ -279,6 +287,9 @@ describe("collector testnet faucet", () => {
     expect(container.textContent).toContain("0 ETH remaining");
     expect(container.textContent).toContain("0.1 WETH");
     expect(container.textContent).toContain("0 WETH remaining");
+    expect(container.querySelector("time")?.dateTime).toBe(
+      "2023-11-15T22:13:20.000Z",
+    );
     // The protocol wallet read is taken at the indexed block, which trails the
     // chain. Refreshing without a floor read the balance from before the
     // transfer and never polled again, so a funded collector saw 0 WETH on
@@ -292,6 +303,79 @@ describe("collector testnet faucet", () => {
     ).toHaveBeenCalledWith(testState.fundedThroughBlock);
   });
 
+  it.each([
+    new UserRejectedRequestError(new Error("User rejected the request")),
+    { code: 4001, message: "User rejected the request" },
+  ])(
+    "sends no funding request after a rejected proof and lets the wallet try again %#",
+    async (rejection) => {
+      testState.protocol = protocol("ready");
+      testState.signMessage.mockRejectedValueOnce(rejection);
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(
+          Response.json({
+            apiVersion: 1,
+            service: { chainId: 84_532, state: "ready" },
+            recipient: { address, state: "eligible" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          Response.json({ challenge: { message: "first funding proof" } }),
+        )
+        .mockResolvedValueOnce(
+          Response.json({ challenge: { message: "fresh funding proof" } }),
+        )
+        .mockResolvedValue(
+          Response.json({
+            apiVersion: 1,
+            request: { id: "request-after-rejection", state: "funded" },
+            recipient: { address, state: "funded" },
+          }),
+        );
+      vi.stubGlobal("fetch", fetcher);
+
+      await renderPanel();
+      await flushPanel();
+      const fund = [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Top up this wallet",
+      );
+      await flushPanel(() => fund?.click());
+
+      const cancelled = container.querySelector("[role='status'][aria-live]");
+      expect(cancelled?.textContent).toContain("Wallet signing cancelled");
+      expect(cancelled?.textContent).toContain(
+        "This attempt did not request a top-up or send assets.",
+      );
+      expect(container.textContent).not.toContain("Top-up needs a safe retry");
+      expect(
+        fetcher.mock.calls.some(([, init]) => init?.method === "POST"),
+      ).toBe(false);
+
+      const retry = [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Retry top-up",
+      );
+      expect(retry).toBeDefined();
+      await flushPanel(() => retry?.click());
+
+      expect(fetcher).toHaveBeenCalledWith(
+        "http://127.0.0.1:8800/v1/funding/fund",
+        expect.objectContaining({
+          body: expect.stringContaining("fresh funding proof"),
+          method: "POST",
+        }),
+      );
+      expect(container.textContent).toContain(
+        "Wallet funded for the test journey",
+      );
+      const eligibleAgain = [...container.querySelectorAll("dt")].find(
+        (term) => term.textContent === "Eligible again",
+      )?.nextElementSibling;
+      expect(eligibleAgain?.textContent).not.toContain("Now");
+      expect(eligibleAgain?.querySelector("[aria-label]")).not.toBeNull();
+    },
+  );
+
   it("offers a safe top-up retry when the POST transport fails", async () => {
     testState.protocol = protocol("ready");
     const fetcher = vi
@@ -302,6 +386,9 @@ describe("collector testnet faucet", () => {
           service: { chainId: 84_532, state: "ready" },
           recipient: { address, state: "eligible" },
         }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({ challenge: { message: "orbit funding proof" } }),
       )
       .mockRejectedValueOnce(new Error("funding transport offline"));
     vi.stubGlobal("fetch", fetcher);

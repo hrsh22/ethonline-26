@@ -14,9 +14,10 @@ import { WalletControl } from "@/components/wallet-control";
 import { useTestnetFunding } from "@/hooks/use-testnet-funding";
 import { formatTokenAmount } from "@/lib/format";
 import { applicationCopy } from "@/lib/identity";
-import type {
-  TestnetFundingView,
-  TestnetFundingViewState,
+import {
+  isTestnetFundingComplete,
+  type TestnetFundingView,
+  type TestnetFundingViewState,
 } from "@/lib/testnet-funding-view";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
 import { cn } from "@/lib/utils";
@@ -216,12 +217,8 @@ const cooldownHint = (
 };
 
 /**
- * What "eligible again" means when the service reported no deadline.
- *
- * `nextEligibleAt` is only sent while a cooldown is running, so a successful
- * status read that omits it means no cooldown is in force. Treating that as an
- * unobserved value printed "—" for every wallet that had simply never
- * requested a top-up — a dash for a fact the read had actually established.
+ * After funding, an omitted deadline is unknown. Explicit null means the
+ * service verified that no cooldown remains.
  */
 function EligibleAgainWithoutDeadline({
   response,
@@ -237,9 +234,11 @@ function EligibleAgainWithoutDeadline({
       </span>
     );
   }
-  if (view.state === "cooldown") {
-    // A cooldown without its deadline is the one case the value was expected
-    // and could not be read.
+  if (
+    view.state === "cooldown" ||
+    (isTestnetFundingComplete(response) &&
+      response.recipient?.nextEligibleAt !== null)
+  ) {
     return <Unavailable reason={applicationCopy.common.notObserved} />;
   }
   if (view.state === "lifetime-exhausted") {

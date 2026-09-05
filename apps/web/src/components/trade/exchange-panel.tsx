@@ -95,6 +95,7 @@ const accessNoticeVisible = (
   protocol: ProtocolClient,
   intentStatus: ExchangeIntent["status"],
 ): boolean => {
+  if (protocol.walletSynchronizing) return true;
   if (balanceReadPending(intentStatus)) return false;
   const { walletRead } = protocol;
   return !(
@@ -146,6 +147,7 @@ const spendableBalanceWei = (
  * state.
  */
 interface BalanceRead {
+  readonly observedBlock?: bigint | undefined;
   readonly reason: string;
   readonly wei: bigint | undefined;
 }
@@ -162,7 +164,11 @@ const walletBalanceValues = (protocol: ProtocolClient): WalletBalances => {
   const native = protocol.nativeBalanceRead;
   const nativeEth: BalanceRead =
     native?.status === "loaded"
-      ? { reason: "", wei: native.balance.rawWei }
+      ? {
+          reason: "",
+          wei: native.balance.rawWei,
+          observedBlock: native.balance.observedBlock,
+        }
       : {
           reason:
             native?.status === "failed"

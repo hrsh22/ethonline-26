@@ -8,6 +8,7 @@ export type TestnetFundingViewState =
   | "eligible"
   | "submitting"
   | "pending"
+  | "signature-rejected"
   | "retryable"
   | "funded"
   | "funded-not-retained"
@@ -37,7 +38,7 @@ export interface TestnetFundingView {
 interface TestnetFundingViewInput {
   readonly accessState: CollectorAccessState;
   readonly hasMutationResponse?: boolean | undefined;
-  readonly mutationFailed?: boolean | undefined;
+  readonly mutationFailure?: "signature-rejected" | "retryable" | undefined;
   readonly mutationPending?: boolean | undefined;
   readonly queryFailed?: boolean | undefined;
   readonly queryPending?: boolean | undefined;
@@ -75,12 +76,13 @@ export const isTestnetFundingComplete = (
 
 const resolveTransportView = (
   mutationPending: boolean,
-  mutationFailed: boolean,
+  mutationFailure: TestnetFundingViewInput["mutationFailure"],
   queryFailed: boolean,
   hasMutationResponse: boolean,
 ): ResolvedView => {
   if (mutationPending) return view("submitting", "none");
-  if (mutationFailed) return view("retryable", "retry-funding");
+  if (mutationFailure !== undefined)
+    return view(mutationFailure, "retry-funding");
   if (queryFailed && !hasMutationResponse) {
     return view("unavailable", "retry-status");
   }
@@ -214,7 +216,7 @@ const resolveLoadingView = (
 export const createTestnetFundingView = ({
   accessState,
   hasMutationResponse = false,
-  mutationFailed = false,
+  mutationFailure,
   mutationPending = false,
   queryFailed = false,
   queryPending = false,
@@ -224,7 +226,7 @@ export const createTestnetFundingView = ({
     resolveAccessView(accessState),
     resolveTransportView(
       mutationPending,
-      mutationFailed,
+      mutationFailure,
       queryFailed,
       hasMutationResponse,
     ),

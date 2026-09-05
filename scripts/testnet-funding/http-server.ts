@@ -351,10 +351,12 @@ const publicTransactions = (transfers: readonly StoredFundingTransfer[]) =>
 const alreadyFundedResponse = (
   recipient: Address,
   inspection: TestnetFundingChainInspection,
+  nextEligibleAt: number | null,
 ) => ({
   recipient: {
     address: recipient,
     state: "already-funded",
+    nextEligibleAt,
     balances: {
       wethWei: inspection.recipientBalance.wethWei.toString(),
       ethWei: inspection.recipientBalance.ethWei.toString(),
@@ -512,6 +514,7 @@ const fundedResponse = (
   transfers: readonly StoredFundingTransfer[],
   inspection: TestnetFundingChainInspection,
   retainedTargets: boolean,
+  nextEligibleAt: number | null,
 ) => ({
   request: {
     id,
@@ -522,6 +525,7 @@ const fundedResponse = (
     address: recipient,
     state: "funded",
     retainedTargets,
+    nextEligibleAt,
     balances: {
       wethWei: inspection.recipientBalance.wethWei.toString(),
       ethWei: inspection.recipientBalance.ethWei.toString(),
@@ -753,6 +757,17 @@ const executeFundingRequest = async (
     options.log?.(
       `Funded ${request.recipient}${retainedTargets ? "" : " (the wallet did not retain it)"}`,
     );
+    const { nextEligibleAt } = evaluateTestnetFundingPolicy(
+      options.configuration.policy,
+      {
+        activeRecipient: undefined,
+        nowMilliseconds: options.nowMilliseconds(),
+        recipient: request.recipient,
+        recipientBalance: funded.recipientBalance,
+        recipientHistory: store.readRecipientPolicy(request.recipient),
+        signerBalance: funded.signerBalance,
+      },
+    );
     json(
       response,
       200,
@@ -762,6 +777,7 @@ const executeFundingRequest = async (
         completed.transfers,
         funded,
         retainedTargets,
+        nextEligibleAt,
       ),
     );
   } catch (cause) {
@@ -815,7 +831,11 @@ const respondToRecipientState = (
   log: ((message: string) => void) | undefined,
 ): boolean => {
   if (evaluation.recipientState === "already-funded") {
-    json(response, 200, alreadyFundedResponse(recipient, inspection));
+    json(
+      response,
+      200,
+      alreadyFundedResponse(recipient, inspection, evaluation.nextEligibleAt),
+    );
     return true;
   }
   if (evaluation.recipientState === "rate-limited") {

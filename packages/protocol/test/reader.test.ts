@@ -242,7 +242,10 @@ class FakeTransport implements ProtocolReadTransport {
       this.omitSecondaryDetailResults &&
       requests.some((request) => request.functionName === "attributeOf")
         ? results.map((result, index) =>
-            index === 4 || index === 5 ? undefined : result,
+            requests[index]?.args?.[0] === 4441 &&
+            requests[index]?.functionName !== "attributeOf"
+              ? undefined
+              : result,
           )
         : results
     ) as ContractReadResults<Requests>;
@@ -864,8 +867,30 @@ describe("deep protocol reader", () => {
     expect(wallet.collectibles.permanent[0]?.claimEligible).toBe(true);
   });
 
-  it("pins wallet state to durable commitment coverage before verifying current ownership", async () => {
+  it("keeps balances current while retaining permanent holdings at their verified checkpoint", async () => {
     const transport = new FakeTransport();
+    transport.pendingDiscoveryCount = 0n;
+    const readMany = transport.readMany.bind(transport);
+    transport.readMany = async (requests, blockNumber) =>
+      (await readMany(requests, blockNumber)).map((result, index) => {
+        const request = requests[index];
+        const current = blockNumber === 100_500n;
+        if (request?.functionName === "transientCount") {
+          return { status: "success", value: current ? 1n : 0n };
+        }
+        if (request?.functionName !== "balanceOf") return result;
+        return {
+          status: "success",
+          value:
+            request.contract === "weth"
+              ? current
+                ? 93_000_000_000_000_000n
+                : 100_000_000_000_000_000n
+              : current
+                ? 1_173_097_920_514_834_959n
+                : 0n,
+        };
+      }) as ContractReadResults<typeof requests>;
     const history: Pick<ProtocolHistoryReader, "permanentIdentityCandidates"> =
       {
         permanentIdentityCandidates: async (fromBlock, toBlock) => ({
@@ -887,9 +912,18 @@ describe("deep protocol reader", () => {
 
     expect(transport.permanentCandidates).toEqual([1493]);
     expect(transport.permanentBlock).toBe(100_498n);
-    expect(new Set(transport.readBlocks)).toEqual(new Set([100_498n]));
-    expect(wallet.observedBlock).toBe(100_498n);
-    expect(wallet.observedAt).toBe(998);
+    expect(wallet.observedBlock).toBe(100_500n);
+    expect(wallet.observedAt).toBe(1_000);
+    expect(wallet.liquidToken.rawWei).toBe(1_173_097_920_514_834_959n);
+    expect(wallet.settlementToken.rawWei).toBe(93_000_000_000_000_000n);
+    expect(new Set(transport.readBlocks)).toEqual(
+      new Set([100_498n, 100_500n]),
+    );
+    expect(wallet.collectibles).toMatchObject({
+      permanentHoldingsStatus: "complete",
+      permanentObservedBlock: 100_498n,
+      permanentObservedAt: 998,
+    });
     expect(wallet.collectibles.permanent[0]?.identityId).toBe(1493);
   });
 

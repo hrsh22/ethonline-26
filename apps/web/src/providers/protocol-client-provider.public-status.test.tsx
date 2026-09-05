@@ -102,6 +102,10 @@ const testState = vi.hoisted(() => {
     manifestHash,
     readPublicStatus: vi.fn(async () => health),
     readWallet: vi.fn(),
+    getBlockNumber: vi.fn(async () => 201n),
+    getBalance: vi
+      .fn<(request: { blockNumber?: bigint }) => Promise<bigint>>()
+      .mockResolvedValue(0n),
     readSignals: [] as AbortSignal[],
     pathname: "/status",
   };
@@ -119,6 +123,7 @@ vi.mock("wagmi", () => ({
 vi.mock("@orbit/protocol/reader", () => ({
   createProtocolReader: () => ({
     readPublicStatus: testState.readPublicStatus,
+    readHealth: testState.readPublicStatus,
     readWallet: testState.readWallet,
   }),
 }));
@@ -147,7 +152,10 @@ vi.mock("@/lib/wagmi", () => ({
   protocolReadClient: {},
   createProtocolReadClient: (signal: AbortSignal) => {
     testState.readSignals.push(signal);
-    return {};
+    return {
+      getBlockNumber: testState.getBlockNumber,
+      getBalance: testState.getBalance,
+    };
   },
   protocolTransactionClient: {},
 }));
@@ -183,6 +191,8 @@ describe("public status query boundary", () => {
     ).IS_REACT_ACT_ENVIRONMENT = true;
     testState.readPublicStatus.mockReset().mockResolvedValue(testState.health);
     testState.readWallet.mockReset();
+    testState.getBlockNumber.mockReset().mockResolvedValue(201n);
+    testState.getBalance.mockReset().mockResolvedValue(0n);
     testState.readSignals.length = 0;
     testState.pathname = "/status";
     testState.connection = {
@@ -334,6 +344,70 @@ describe("public status query boundary", () => {
       expect(testState.readWallet).not.toHaveBeenCalled();
     },
   );
+
+  it("reports native ETH at its actual block and waits for it to catch up with confirmed wallet changes", async () => {
+    testState.pathname = "/faucet";
+    testState.readWallet.mockResolvedValue({
+      observedBlock: 300n,
+      collectibles: {
+        permanent: [],
+        transient: [],
+        permanentHoldingsStatus: "complete",
+        permanentObservedBlock: 300n,
+      },
+    });
+    testState.getBalance.mockImplementation(async ({ blockNumber }) =>
+      blockNumber === 201n ? 10_000_000_000_000_000n : 1_000_000_000_000_000n,
+    );
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>
+        </QueryClientProvider>,
+      );
+    });
+    await vi.waitFor(() =>
+      expect(currentProtocol.nativeBalanceRead).toMatchObject({
+        status: "loaded",
+        balance: { observedBlock: 201n, formatted: "0.01" },
+      }),
+    );
+
+    await act(async () => currentProtocol.refreshWallet(300n));
+    expect(currentProtocol.walletSynchronizing).toBe(true);
+    expect(currentProtocol.nativeBalanceRead).toMatchObject({
+      status: "loaded",
+      balance: { observedBlock: 201n, formatted: "0.01" },
+    });
+    expect(
+      currentProtocol.getActionState({
+        type: "commit-collectible",
+        identityId: 1,
+      }).enabled,
+    ).toBe(false);
+
+    testState.getBalance.mockRejectedValue(new Error("Native RPC unavailable"));
+    await act(async () => currentProtocol.refreshWallet());
+    await vi.waitFor(() =>
+      expect(currentProtocol.nativeBalanceRead).toMatchObject({
+        status: "failed",
+      }),
+    );
+    expect(currentProtocol.walletSynchronizing).toBe(true);
+
+    testState.getBlockNumber.mockResolvedValue(300n);
+    testState.getBalance.mockResolvedValue(1_000_000_000_000_000n);
+    await act(async () => currentProtocol.refreshWallet());
+    await vi.waitFor(() =>
+      expect(currentProtocol.nativeBalanceRead).toMatchObject({
+        status: "loaded",
+        balance: { observedBlock: 300n, formatted: "0.001" },
+      }),
+    );
+    expect(currentProtocol.walletSynchronizing).toBe(false);
+  });
 
   it("query cancellation interrupts the read lifetime without publishing a late result", async () => {
     let resolveRead: ((value: typeof testState.health) => void) | undefined;

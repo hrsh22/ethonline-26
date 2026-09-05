@@ -776,18 +776,20 @@ describe("testnet funding HTTP interface", () => {
     ).rejects.toThrow(/startup validation/iu);
   });
 
-  it("funds exact deficits once and preserves idempotency evidence across a worker restart", async () => {
+  it("funds only current deficits and preserves cooldown across a worker restart", async () => {
     const chain = new FakeFundingChain();
     const databasePath = temporaryDatabasePath();
+    let now = 1_700_000_000_000;
+    let requestNumber = 0;
     const options = {
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
       databasePath,
       host: "127.0.0.1",
-      nowMilliseconds: () => 1_700_000_000_000,
+      nowMilliseconds: () => now,
       port: 0,
-      requestId: () => "request-funded",
+      requestId: () => `request-funded-${++requestNumber}`,
       nonce: nextTestNonce,
       verifySignature: async () => true,
     } as const;
@@ -801,7 +803,7 @@ describe("testnet funding HTTP interface", () => {
         expect(response.status).toBe(200);
         expect(yield* Effect.promise(() => response.json())).toMatchObject({
           request: {
-            id: "request-funded",
+            id: "request-funded-1",
             state: "funded",
             transactions: [
               { kind: "weth", hash: wethHash, state: "confirmed" },
@@ -811,6 +813,7 @@ describe("testnet funding HTTP interface", () => {
           recipient: {
             address: recipient,
             state: "funded",
+            nextEligibleAt: 1_700_086_400_000,
             balances: {
               wethWei: "100000000000000000",
               ethWei: "10000000000000000",
@@ -820,6 +823,7 @@ describe("testnet funding HTTP interface", () => {
       }),
     );
 
+    now += 60_000;
     await withFundingServer(options, (server) =>
       Effect.gen(function* () {
         const retry = yield* Effect.promise(() =>
@@ -831,6 +835,7 @@ describe("testnet funding HTTP interface", () => {
         expect(yield* Effect.promise(() => retry.json())).toMatchObject({
           recipient: {
             state: "already-funded",
+            nextEligibleAt: 1_700_086_400_000,
             balances: {
               wethWei: "100000000000000000",
               ethWei: "10000000000000000",
@@ -841,6 +846,7 @@ describe("testnet funding HTTP interface", () => {
           fetch(`${server.url}/v1/status?recipient=${recipient}`),
         );
         expect(yield* Effect.promise(() => status.json())).toMatchObject({
+          recipient: { nextEligibleAt: 1_700_086_400_000 },
           service: {
             metrics: {
               successful: 1,
@@ -850,9 +856,41 @@ describe("testnet funding HTTP interface", () => {
             },
           },
         });
+
+        now = 1_700_086_400_001;
+        chain.recipientWethWei = 105_000_000_000_000_000n;
+        const stillFunded = yield* Effect.promise(() =>
+          fundWithProof(server, recipient, {}),
+        );
+        expect(yield* Effect.promise(() => stillFunded.json())).toMatchObject({
+          recipient: { state: "already-funded", nextEligibleAt: null },
+        });
+        expect(chain.prepared.size).toBe(2);
+        expect(chain.broadcasted.size).toBe(2);
+
+        chain.recipientEthWei = 9_000_000_000_000_000n;
+        const gasOnly = yield* Effect.promise(() =>
+          fundWithProof(server, recipient, {}),
+        );
+        expect(yield* Effect.promise(() => gasOnly.json())).toMatchObject({
+          recipient: {
+            state: "funded",
+            nextEligibleAt: 1_700_172_800_001,
+            balances: {
+              ethWei: "10000000000000000",
+              wethWei: "105000000000000000",
+            },
+          },
+          request: { transactions: [{ kind: "eth", state: "confirmed" }] },
+        });
+        expect([...chain.prepared.values()].at(-1)).toMatchObject({
+          kind: "eth",
+          amountWei: 1_000_000_000_000_000n,
+        });
+        expect(chain.broadcasted.size).toBe(3);
       }),
     );
-    expect(chain.recipientWethWei).toBe(100_000_000_000_000_000n);
+    expect(chain.recipientWethWei).toBe(105_000_000_000_000_000n);
     expect(chain.recipientEthWei).toBe(10_000_000_000_000_000n);
   });
 

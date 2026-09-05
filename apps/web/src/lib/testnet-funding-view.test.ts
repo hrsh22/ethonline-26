@@ -148,7 +148,7 @@ describe("testnet faucet state", () => {
     expect(
       createTestnetFundingView({
         accessState: "ready",
-        mutationFailed: true,
+        mutationFailure: "retryable",
         response: response("eligible"),
       }),
     ).toMatchObject({ state: "retryable", action: "retry-funding" });

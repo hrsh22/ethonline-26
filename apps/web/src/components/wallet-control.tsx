@@ -201,12 +201,23 @@ function WrongNetworkWalletControl({
 function ConnectedWalletControl({
   adminSession,
   address,
+  disconnectStatus,
   onDisconnect,
+  surface,
 }: {
   readonly adminSession: AdminSession;
   readonly address: string;
+  readonly disconnectStatus: ReturnType<typeof useDisconnect>["status"];
   readonly onDisconnect: () => void;
+  readonly surface: FeedbackSurface;
 }) {
+  const disconnecting = disconnectStatus === "pending";
+  const failed = disconnectStatus === "error";
+  const label = disconnecting
+    ? applicationCopy.shell.disconnectingWallet
+    : failed
+      ? applicationCopy.shell.retryDisconnectWallet
+      : applicationCopy.shell.disconnectWallet;
   return (
     <WalletStateFrame state="connected">
       {/* Below the rail breakpoint this pair shares one 56px bar with the
@@ -225,18 +236,35 @@ function ConnectedWalletControl({
         {compactAddress(address)}
       </span>
       <Button
-        aria-label={applicationCopy.shell.disconnectWallet}
+        aria-busy={disconnecting || undefined}
+        aria-label={label}
         className="px-3 laptop:px-4"
+        disabled={disconnecting}
         onClick={onDisconnect}
         size="sm"
         type="button"
         variant="ghost"
       >
         <LogOut aria-hidden="true" className="size-4 laptop:hidden" />
-        <span className="hidden laptop:inline">
-          {applicationCopy.shell.disconnectWallet}
-        </span>
+        <span className="hidden laptop:inline">{label}</span>
       </Button>
+      {disconnecting || failed ? (
+        <StateFeedback
+          compact
+          description={
+            disconnecting
+              ? applicationCopy.shell.disconnectPending
+              : applicationCopy.shell.disconnectFailedDescription
+          }
+          surface={surface}
+          title={
+            disconnecting
+              ? applicationCopy.shell.disconnectingWallet
+              : applicationCopy.shell.disconnectFailedTitle
+          }
+          tone={disconnecting ? "loading" : "error"}
+        />
+      ) : null}
       <AdminSignOut session={adminSession} />
     </WalletStateFrame>
   );
@@ -306,7 +334,9 @@ export function WalletControl({
     <ConnectedWalletControl
       adminSession={adminSession}
       address={connection.address}
+      disconnectStatus={disconnect.status}
       onDisconnect={() => void disconnectWallet()}
+      surface={surface}
     />
   );
 }

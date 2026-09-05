@@ -71,10 +71,13 @@ const attachedRewardsValue = (craft: FleetCraft): React.ReactNode => {
 
 const consequence = (craft: FleetCraft): string => {
   if (!craft.permanent) return applicationCopy.craft.transientConsequence;
-  if (craft.claimEligible) return applicationCopy.craft.rewardsReady;
-  return craft.hasAttachedRewards
-    ? applicationCopy.craft.rewardsAttached
-    : applicationCopy.craft.rewardsNone;
+  if (craft.pendingRewardsStatus === "unavailable") {
+    return applicationCopy.rewards.readFailed;
+  }
+  if (!craft.hasAttachedRewards) return applicationCopy.craft.rewardsNone;
+  return craft.claimEligible
+    ? applicationCopy.craft.rewardsReady
+    : applicationCopy.craft.rewardsAttached;
 };
 
 /**

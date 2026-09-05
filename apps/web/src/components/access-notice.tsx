@@ -103,8 +103,19 @@ export function AccessNotice({
 }: {
   readonly compact?: boolean;
 }) {
-  const { refreshWallet, walletRead } = useProtocolClient();
-  const notice = noticeFor(walletRead);
+  const { refreshWallet, walletRead, walletSynchronizing } =
+    useProtocolClient();
+  const notice =
+    walletSynchronizing && walletRead.status === "loaded"
+      ? {
+          message: {
+            title: applicationCopy.access.walletLoadingTitle,
+            body: applicationCopy.transaction.synchronizing,
+          },
+          retriable: true,
+          tone: "loading" as const,
+        }
+      : noticeFor(walletRead);
   return (
     <StateFeedback
       action={

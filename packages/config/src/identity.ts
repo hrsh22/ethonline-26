@@ -314,6 +314,12 @@ export const createIdentityApplicationCopy = (
       connectWallet: "Connect wallet",
       connectingWallet: "Connecting",
       disconnectWallet: "Disconnect",
+      disconnectingWallet: "Disconnecting wallet",
+      retryDisconnectWallet: "Retry disconnect",
+      disconnectPending: "Waiting for the wallet session to close.",
+      disconnectFailedTitle: "Wallet disconnect did not finish",
+      disconnectFailedDescription:
+        "The wallet is still connected. Retry disconnecting.",
       signOut: "Sign out",
       switchNetwork: "Switch to Base Sepolia",
       connectedWallet: "Connected wallet",
@@ -379,6 +385,7 @@ export const createIdentityApplicationCopy = (
         eligible: "Eligible",
         submitting: "Submitting",
         pending: "Pending",
+        "signature-rejected": "Cancelled",
         retryable: "Retry",
         funded: "Funded",
         "funded-not-retained": "Not retained",
@@ -451,6 +458,10 @@ export const createIdentityApplicationCopy = (
         retryable: {
           title: "Top-up needs a safe retry",
           body: "The previous request did not complete; retrying resumes it without sending twice.",
+        },
+        "signature-rejected": {
+          title: "Wallet signing cancelled",
+          body: "This attempt did not request a top-up or send assets. Try again to sign a new wallet proof.",
         },
         funded: {
           title: "Wallet funded for the test journey",
@@ -1286,7 +1297,7 @@ export const createIdentityApplicationCopy = (
       headline: {
         critical: "Something is broken and needs an operator now",
         warning: "Something needs attention before work runs",
-        notice: "Everything is running; one setting is worth reviewing",
+        notice: "A setting or observation is worth reviewing",
         ok: "Every observed service, policy, and check is healthy",
       },
       service: {
@@ -1309,10 +1320,10 @@ export const createIdentityApplicationCopy = (
         paused: "Paused",
       },
       work: {
-        ready: "Work is ready",
-        blocked: "Work is blocked",
-        idle: "No work queued",
-        unknown: "Cannot determine",
+        ready: "Reward-track funds queued",
+        blocked: "Reward-track retry needed",
+        idle: "No reward-track funds queued",
+        unknown: "Reward-track queues unread",
       },
       dependencies: {
         ready: "Inputs readable",
@@ -1367,7 +1378,7 @@ export const createIdentityApplicationCopy = (
         dependencies: "Dependency readiness",
         automation: "Automation policy",
         pauses: "Protocol pause state",
-        work: "Work eligibility",
+        work: "Reward-track queues",
       },
     },
     operations: {
@@ -1564,6 +1575,7 @@ export const createIdentityApplicationCopy = (
       epoch: identity.terms.rewardEpoch,
       epochCount: `${identity.terms.rewardEpoch} count`,
       lastEpoch: `Last ${identity.terms.rewardEpoch}`,
+      noPreviousEpoch: `No previous ${identity.terms.rewardEpoch}`,
       nextEpoch: `Next ${identity.terms.rewardEpoch}`,
       readyNow: "Ready now",
       queue: "Queued WETH",
@@ -1773,6 +1785,8 @@ export const createIdentityProtocolCopy = (identity: IdentityConfiguration) => {
       epochPending: `The next ${terms.rewardEpoch} interval has not elapsed.`,
       rewardPotBelowMinimum: `The reward pot has not reached the minimum ${terms.rewardEpoch} size.`,
       deadlineExpired: "Refresh this operation before trying again.",
+      walletRejected:
+        "The wallet cancelled this request. No transaction was submitted. You can try again.",
       rpcFailure: "The latest protocol read could not be completed.",
     },
     events: {
