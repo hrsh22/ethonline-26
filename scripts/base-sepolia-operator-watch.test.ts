@@ -1,6 +1,9 @@
 import { spawn } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { Effect, Exit, Fiber } from "effect";
+import { Deferred, Effect, Exit, Fiber, TestClock, TestContext } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -9,10 +12,72 @@ import {
   resolveOperatorWatchEnvironment,
   runOperatorWatch,
   runOperatorWatchCycle,
+  runSupervisedOperatorCycle,
 } from "./base-sepolia-operator-watch.ts";
+import { createOperatorSupervisor } from "./operator-control/runtime.ts";
+import { openOperatorControlStore } from "./operator-control/store.ts";
 import { runManagedProcess } from "./effect-runtime.ts";
 
 describe("Base Sepolia operator watch", () => {
+  it("renews through a long child run and releases the lease on interruption", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "operator-watch-lease-"));
+    const store = openOperatorControlStore(join(directory, "control.sqlite"));
+    let now = 1_800_000_000_000;
+    const supervisor = createOperatorSupervisor({
+      store,
+      now: () => now,
+      leaseMilliseconds: 60_000,
+    });
+    const competing = createOperatorSupervisor({
+      store,
+      now: () => now,
+      leaseMilliseconds: 60_000,
+    });
+    store.applyCommand({
+      actor: "0x1",
+      appliedAt: now,
+      command: "enable-live",
+      commandId: "live",
+      previousMode: "stopped",
+      previousOneShot: "none",
+      nextMode: "live",
+      nextOneShot: "none",
+      result: "applied",
+      role: "keeper",
+      transactionHash: undefined,
+    });
+    try {
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const started = yield* Deferred.make<void>();
+          const fiber = yield* Effect.fork(
+            runSupervisedOperatorCycle({
+              supervisor,
+              leaseMilliseconds: 60_000,
+              runChild: () =>
+                Deferred.succeed(started, undefined).pipe(
+                  Effect.andThen(Effect.never),
+                ),
+            }),
+          );
+          yield* Deferred.await(started);
+          now += 40_000;
+          yield* TestClock.adjust(40_000);
+          now += 40_000;
+          yield* TestClock.adjust(40_000);
+          expect(competing.beginCycle()).toBeUndefined();
+          yield* Fiber.interrupt(fiber);
+          expect(store.readLatestRun()?.outcome).toBe("failed");
+          expect(store.readWriterLease()).toBeUndefined();
+          yield* TestClock.adjust(60_000);
+          expect(store.readWriterLease()).toBeUndefined();
+        }).pipe(Effect.provide(TestContext.TestContext)),
+      );
+    } finally {
+      store.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
   it("starts each bounded run without unrelated or deployment secrets", () => {
     expect(
       createOperatorWatchChildEnvironment({
@@ -22,6 +87,7 @@ describe("Base Sepolia operator watch", () => {
         HISTORY_READ_API_TOKEN: "history-read-token",
         NODE_OPTIONS: "--require=/sentinel/forbidden.cjs",
         OPERATOR_EXECUTE: "true",
+        OPERATOR_CONTROL_RUN_ID: "11111111-1111-4111-8111-111111111111",
         OPERATOR_KEEPER_PRIVATE_KEY: "keeper-secret",
         OPERATOR_LIQUIDITY_EXECUTOR_PRIVATE_KEY: "executor-secret",
         OPERATOR_PRIVATE_KEY: "operator-secret",
@@ -30,6 +96,7 @@ describe("Base Sepolia operator watch", () => {
     ).toEqual({
       HISTORY_INGEST_API_TOKEN: "history-ingest-token",
       OPERATOR_EXECUTE: "true",
+      OPERATOR_CONTROL_RUN_ID: "11111111-1111-4111-8111-111111111111",
       OPERATOR_KEEPER_PRIVATE_KEY: "keeper-secret",
       OPERATOR_LIQUIDITY_EXECUTOR_PRIVATE_KEY: "executor-secret",
       OPERATOR_PRIVATE_KEY: "operator-secret",

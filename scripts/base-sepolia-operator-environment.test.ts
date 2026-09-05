@@ -23,6 +23,29 @@ const KEEPER_OPERATOR_KEY = `0x${"22".repeat(32)}` as const;
 const LIQUIDITY_EXECUTOR_OPERATOR_KEY = `0x${"33".repeat(32)}` as const;
 
 describe("Base Sepolia operator environment", () => {
+  it("refuses controlled execution without the watch's durable run grant", () => {
+    const environment = {
+      BASE_SEPOLIA_RPC_URL: "https://base-sepolia.example",
+      OPERATOR_EXECUTE: "true",
+      OPERATOR_PRIVATE_KEY: SHARED_OPERATOR_KEY,
+      OPERATOR_CONTROL_DATABASE_PATH: ".data/control.sqlite",
+    };
+    expect(() =>
+      resolveOperatorEnvironment(environment, "/repository"),
+    ).toThrow("supervisor-issued run grant");
+    expect(
+      resolveOperatorEnvironment(
+        {
+          ...environment,
+          OPERATOR_CONTROL_RUN_ID: "11111111-1111-4111-8111-111111111111",
+        },
+        "/repository",
+      ).controlGrant,
+    ).toEqual({
+      databasePath: "/repository/.data/control.sqlite",
+      runId: "11111111-1111-4111-8111-111111111111",
+    });
+  });
   it("rejects a missing ingestion credential even in dry-run mode", () => {
     expect(() =>
       resolveOperatorEnvironmentRaw(

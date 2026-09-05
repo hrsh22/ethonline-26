@@ -5,6 +5,7 @@ import {
   type SQLOutputValue,
 } from "node:sqlite";
 
+import { configureSqlite, verifySqliteIntegrity } from "@orbit/config/sqlite";
 import { Effect, Scope } from "effect";
 import type { Hex } from "viem";
 
@@ -20,7 +21,6 @@ import type {
   HistoryQuery,
   IndexedHistoryEvent,
 } from "./model.ts";
-import { configureSqliteForWal, verifySqliteIntegrity } from "./sqlite-wal.ts";
 
 const SCHEMA_VERSION = "3";
 
@@ -77,7 +77,7 @@ const text = (value: SQLOutputValue | undefined): string => {
 };
 
 const initializeDatabase = (database: DatabaseSync): void => {
-  configureSqliteForWal(database, "History index");
+  configureSqlite(database, "History index");
   database.exec(`
     CREATE TABLE IF NOT EXISTS index_metadata (
       key TEXT PRIMARY KEY,

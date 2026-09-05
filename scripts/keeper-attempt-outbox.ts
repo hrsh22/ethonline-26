@@ -1,7 +1,8 @@
 import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
+import { chmodSync } from "node:fs";
 
 import { Effect, Scope } from "effect";
-import type { Hex } from "viem";
+import { keccak256, parseTransaction, type Hex } from "viem";
 
 import type {
   KeeperAttemptMilestone,
@@ -13,12 +14,9 @@ import type {
   KeeperAttemptStoreIdentity,
   KeeperTrack,
 } from "./history-indexer/keeper-attempt-store.ts";
-import {
-  configureSqliteForWal,
-  verifySqliteIntegrity,
-} from "./history-indexer/sqlite-wal.ts";
+import { configureSqlite, verifySqliteIntegrity } from "@orbit/config/sqlite";
 
-const SCHEMA_VERSION = "3";
+const SCHEMA_VERSION = "4";
 
 export type PendingKeeperAttemptMilestone = KeeperAttemptMilestone & {
   readonly outcome: "pending";
@@ -26,11 +24,19 @@ export type PendingKeeperAttemptMilestone = KeeperAttemptMilestone & {
 };
 
 export interface PendingKeeperAttemptDelivery {
+  /** Signed transaction retained locally; never sent to the history journal. */
+  readonly rawTransaction?: Hex;
   readonly runStarted: KeeperRunStartedMilestone;
   readonly attempt: PendingKeeperAttemptMilestone;
 }
 
 export interface KeeperAttemptOutbox {
+  readonly enqueueLocalSubmission: (rawTransaction: Hex) => void;
+  readonly localSubmissions: () => readonly {
+    readonly transactionHash: Hex;
+    readonly rawTransaction: Hex;
+  }[];
+  readonly resolveLocalSubmission: (transactionHash: Hex) => void;
   readonly enqueue: (
     delivery: PendingKeeperAttemptDelivery,
     recordedAt: bigint,
@@ -154,33 +160,24 @@ const migrateDatabase = (database: DatabaseSync): void => {
       .all()
       .map((row) => String((row as Record<string, unknown>).name)),
   );
-  if (schemaVersion === undefined) {
-    if (!columns.has("action_slot")) {
-      database.exec(
-        "ALTER TABLE submitted_attempts ADD COLUMN action_slot TEXT",
-      );
-    }
-    if (!columns.has("delivery_acknowledged")) {
-      database.exec(
-        "ALTER TABLE submitted_attempts ADD COLUMN delivery_acknowledged INTEGER NOT NULL DEFAULT 0",
-      );
-    }
-    return;
-  }
-  if (schemaVersion === SCHEMA_VERSION) return;
-  if (schemaVersion !== "2") {
+  if (
+    schemaVersion !== undefined &&
+    !["2", "3", SCHEMA_VERSION].includes(schemaVersion)
+  ) {
     throw new Error(
       `Keeper attempt outbox schema mismatch: expected ${SCHEMA_VERSION}, observed ${schemaVersion}`,
     );
   }
-
-  if (!columns.has("action_slot")) {
-    database.exec("ALTER TABLE submitted_attempts ADD COLUMN action_slot TEXT");
-  }
-  if (!columns.has("delivery_acknowledged")) {
-    database.exec(
-      "ALTER TABLE submitted_attempts ADD COLUMN delivery_acknowledged INTEGER NOT NULL DEFAULT 0",
-    );
+  if (schemaVersion === SCHEMA_VERSION) return;
+  for (const [name, definition] of [
+    ["action_slot", "TEXT"],
+    ["delivery_acknowledged", "INTEGER NOT NULL DEFAULT 0"],
+    ["raw_transaction", "TEXT"],
+  ] as const) {
+    if (!columns.has(name))
+      database.exec(
+        `ALTER TABLE submitted_attempts ADD COLUMN ${name} ${definition}`,
+      );
   }
   const rows = database
     .prepare("SELECT attempt_id, action_kind, track FROM submitted_attempts")
@@ -199,12 +196,11 @@ const migrateDatabase = (database: DatabaseSync): void => {
   database.exec(`
     CREATE INDEX IF NOT EXISTS submitted_attempts_slot_idx
       ON submitted_attempts (run_id, action_slot);
-    UPDATE outbox_metadata SET value = '3' WHERE key = 'schema_version';
+    UPDATE outbox_metadata SET value = '4' WHERE key = 'schema_version';
   `);
 };
 
 const initializeDatabase = (database: DatabaseSync): void => {
-  configureSqliteForWal(database, "Keeper attempt outbox");
   database.exec(`
     CREATE TABLE IF NOT EXISTS outbox_metadata (
       key TEXT PRIMARY KEY,
@@ -221,6 +217,10 @@ const initializeDatabase = (database: DatabaseSync): void => {
       observed_at INTEGER NOT NULL,
       transaction_hash TEXT NOT NULL,
       recorded_at INTEGER NOT NULL
+    ) STRICT;
+    CREATE TABLE IF NOT EXISTS local_submissions (
+      transaction_hash TEXT PRIMARY KEY,
+      raw_transaction TEXT NOT NULL
     ) STRICT;
   `);
   migrateDatabase(database);
@@ -266,6 +266,9 @@ const verifyMetadata = (
 const deliveryFromRow = (row: SqliteRow): PendingKeeperAttemptDelivery => {
   const track = trackFrom(row.track);
   return {
+    ...(typeof row.raw_transaction === "string"
+      ? { rawTransaction: row.raw_transaction as Hex }
+      : {}),
     runStarted: {
       type: "run-started",
       runId: text(row.run_id, "run_id"),
@@ -295,18 +298,23 @@ const assertExistingIdentity = (
 ): void => {
   if (prior === undefined) return;
   const { attempt, runStarted } = delivery;
-  const changed =
-    text(prior.run_id, "run_id") !== attempt.runId ||
-    text(prior.action_kind, "action_kind") !== attempt.actionKind ||
-    trackFrom(prior.track) !== attempt.track ||
-    integer(prior.run_observed_block, "run_observed_block") !==
-      runStarted.observedBlock ||
-    integer(prior.run_observed_at, "run_observed_at") !==
-      runStarted.observedAt ||
-    integer(prior.observed_block, "observed_block") !== attempt.observedBlock ||
-    integer(prior.observed_at, "observed_at") !== attempt.observedAt ||
-    text(prior.transaction_hash, "transaction_hash") !==
-      attempt.transactionHash;
+  const changed = [
+    [text(prior.run_id, "run_id"), attempt.runId],
+    [text(prior.action_kind, "action_kind"), attempt.actionKind],
+    [trackFrom(prior.track), attempt.track],
+    [
+      integer(prior.run_observed_block, "run_observed_block"),
+      runStarted.observedBlock,
+    ],
+    [integer(prior.run_observed_at, "run_observed_at"), runStarted.observedAt],
+    [integer(prior.observed_block, "observed_block"), attempt.observedBlock],
+    [integer(prior.observed_at, "observed_at"), attempt.observedAt],
+    [text(prior.transaction_hash, "transaction_hash"), attempt.transactionHash],
+    [
+      optionalText(prior.raw_transaction, "raw_transaction"),
+      delivery.rawTransaction,
+    ],
+  ].some(([stored, received]) => stored !== received);
   if (changed) throw new Error("Keeper attempt outbox identity cannot change");
 };
 
@@ -316,9 +324,20 @@ export const openKeeperAttemptOutbox = (
 ): KeeperAttemptOutbox => {
   const database = new DatabaseSync(path);
   try {
-    initializeDatabase(database);
-    verifyMetadata(database, identity);
-    verifySqliteIntegrity(database, "Keeper attempt outbox");
+    if (path !== ":memory:") chmodSync(path, 0o600);
+    configureSqlite(database, "Keeper attempt outbox", {
+      wal: path !== ":memory:",
+    });
+    database.exec("BEGIN IMMEDIATE");
+    try {
+      initializeDatabase(database);
+      verifyMetadata(database, identity);
+      verifySqliteIntegrity(database, "Keeper attempt outbox");
+      database.exec("COMMIT");
+    } catch (cause) {
+      database.exec("ROLLBACK");
+      throw cause;
+    }
   } catch (cause) {
     database.close();
     throw cause;
@@ -330,8 +349,8 @@ export const openKeeperAttemptOutbox = (
     INSERT INTO submitted_attempts (
       attempt_id, run_id, action_kind, track, run_observed_block,
       run_observed_at, observed_block, observed_at, transaction_hash,
-      recorded_at, action_slot
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      recorded_at, action_slot, raw_transaction
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (attempt_id) DO NOTHING
   `);
   const acknowledge = database.prepare(
@@ -351,9 +370,54 @@ export const openKeeperAttemptOutbox = (
   const unresolved = database.prepare(
     "SELECT * FROM submitted_attempts ORDER BY rowid ASC",
   );
+  const validateTransaction = (rawTransaction: Hex, hash: Hex) => {
+    if (
+      keccak256(rawTransaction) !== hash ||
+      parseTransaction(rawTransaction).chainId !== identity.chainId
+    ) {
+      throw new Error(
+        "Prepared operator transaction identity does not match the outbox",
+      );
+    }
+  };
   return {
+    enqueueLocalSubmission: (rawTransaction) => {
+      const hash = keccak256(rawTransaction);
+      validateTransaction(rawTransaction, hash);
+      database
+        .prepare(
+          "INSERT INTO local_submissions VALUES (?, ?) ON CONFLICT(transaction_hash) DO NOTHING",
+        )
+        .run(hash, rawTransaction);
+    },
+    localSubmissions: () =>
+      database
+        .prepare("SELECT * FROM local_submissions ORDER BY rowid")
+        .all()
+        .map((row) => {
+          const transactionHash = requireHash(
+            text(row.transaction_hash, "transaction_hash"),
+            "transaction_hash",
+          );
+          const rawTransaction = text(
+            row.raw_transaction,
+            "raw_transaction",
+          ) as Hex;
+          validateTransaction(rawTransaction, transactionHash);
+          return { transactionHash, rawTransaction };
+        }),
+    resolveLocalSubmission: (transactionHash) => {
+      database
+        .prepare("DELETE FROM local_submissions WHERE transaction_hash = ?")
+        .run(transactionHash);
+    },
     enqueue: (delivery, recordedAt) => {
       validateDelivery(delivery);
+      if (delivery.rawTransaction !== undefined)
+        validateTransaction(
+          delivery.rawTransaction,
+          delivery.attempt.transactionHash,
+        );
       databaseInteger(recordedAt, "recordedAt");
       const { attempt, runStarted } = delivery;
       assertExistingIdentity(existing.get(attempt.attemptId), delivery);
@@ -377,6 +441,7 @@ export const openKeeperAttemptOutbox = (
         attempt.transactionHash,
         databaseInteger(recordedAt, "recordedAt"),
         actionSlot,
+        delivery.rawTransaction ?? null,
       );
     },
     pendingDeliveries: () => pendingDeliveries.all().map(deliveryFromRow),

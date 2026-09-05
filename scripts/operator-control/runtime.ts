@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  cycleAuthority,
-  type CycleAuthority,
-  type OperatorExecutionPolicy,
-} from "./policy.ts";
+import { type CycleAuthority, type OperatorExecutionPolicy } from "./policy.ts";
 import type { OperatorControlStore } from "./store.ts";
 
 /**
@@ -29,6 +25,7 @@ export interface OperatorCycleGrant {
    * the cycle began, or this supervisor no longer holds the writer lease.
    */
   readonly maySignNow: () => boolean;
+  readonly renew: () => boolean;
   readonly finish: (outcome: {
     readonly outcome: "completed" | "failed" | "skipped";
     readonly sanitizedFailure?: string | undefined;
@@ -38,6 +35,8 @@ export interface OperatorCycleGrant {
 
 export interface OperatorSupervisor {
   readonly id: string;
+  /** Called once at process startup, before serving commands or scheduling work. */
+  readonly initialize: () => boolean;
   /** Returns undefined when another supervisor holds the writer lease. */
   readonly beginCycle: () => OperatorCycleGrant | undefined;
   readonly release: () => void;
@@ -51,6 +50,7 @@ const skippedGrant = (
   authority,
   finish: () => undefined,
   maySignNow: () => false,
+  renew: () => false,
   policy,
   runId,
 });
@@ -62,6 +62,36 @@ export const createOperatorSupervisor = ({
   supervisorId = randomUUID(),
 }: OperatorSupervisorOptions): OperatorSupervisor => ({
   id: supervisorId,
+  initialize: () => {
+    const at = now();
+    if (
+      !store.acquireWriterLease({
+        holder: supervisorId,
+        leaseMilliseconds,
+        now: at,
+      })
+    )
+      return false;
+    try {
+      const previous = store.readPolicy();
+      store.applyCommand({
+        actor: supervisorId,
+        role: "supervisor",
+        command: "stop",
+        commandId: randomUUID(),
+        appliedAt: at,
+        previousMode: previous.mode,
+        previousOneShot: previous.oneShot,
+        nextMode: "stopped",
+        nextOneShot: "none",
+        result: "supervisor-restarted",
+        transactionHash: undefined,
+      });
+      return true;
+    } finally {
+      store.releaseWriterLease(supervisorId);
+    }
+  },
   beginCycle: () => {
     const startedAt = now();
     // A durable lease, not an in-process flag, so two supervisors sharing a
@@ -75,27 +105,34 @@ export const createOperatorSupervisor = ({
     ) {
       return undefined;
     }
-    const granted = store.readPolicy();
-    const authority = cycleAuthority(granted);
-    const runId = `${startedAt.toString(36)}-${supervisorId.slice(0, 8)}`;
-
-    // The queued pass is consumed now, so a crash mid-cycle cannot replay it
-    // on restart. The revision is captured afterwards so this consumption is
-    // not mistaken for an operator's later stop.
-    if (granted.oneShot !== "none") store.consumeOneShot(startedAt);
-    const grantRevision = store.readPolicyRevision().updatedAt;
-
-    store.recordHeartbeat({
-      at: startedAt,
-      observedMode: granted.mode,
+    const runId = randomUUID();
+    const { policy: granted, authority } = store.claimRun({
+      runId,
       supervisor: supervisorId,
+      at: startedAt,
     });
 
     if (authority === "skip") return skippedGrant(authority, granted, runId);
 
-    store.startRun({ authority, runId, startedAt });
     return {
       authority,
+      renew: () => {
+        const at = now();
+        if (
+          !store.renewWriterLease({
+            holder: supervisorId,
+            leaseMilliseconds,
+            now: at,
+          })
+        )
+          return false;
+        store.recordHeartbeat({
+          at,
+          observedMode: store.readPolicy().mode,
+          supervisor: supervisorId,
+        });
+        return true;
+      },
       finish: ({ outcome, sanitizedFailure, transactionHash }) => {
         const finishedAt = now();
         store.finishRun({
@@ -105,23 +142,15 @@ export const createOperatorSupervisor = ({
           sanitizedFailure,
           transactionHash,
         });
-        store.recordHeartbeat({
-          at: finishedAt,
-          observedMode: store.readPolicy().mode,
-          supervisor: supervisorId,
-        });
+        if (store.readWriterLease()?.holder === supervisorId) {
+          store.recordHeartbeat({
+            at: finishedAt,
+            observedMode: store.readPolicy().mode,
+            supervisor: supervisorId,
+          });
+        }
       },
-      maySignNow: () => {
-        if (authority !== "execute") return false;
-        const lease = store.readWriterLease();
-        if (lease === undefined || lease.holder !== supervisorId) return false;
-        const current = store.readPolicyRevision();
-        // A stop written after this grant blocks the boundary, including for a
-        // one-shot live pass that was already claimed.
-        return !(
-          current.updatedAt > grantRevision && current.policy.mode === "stopped"
-        );
-      },
+      maySignNow: () => store.maySign(runId, now()),
       policy: granted,
       runId,
     };

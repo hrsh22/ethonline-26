@@ -49,6 +49,10 @@
       "import": "./dist/public-api.js",
       "default": "./dist/public-api.js"
     },
+    "./sqlite": {
+      "types": "./dist/sqlite.d.ts",
+      "import": "./dist/sqlite.js"
+    },
     "./test-venue-configuration": {
       "types": "./dist/test-venue-configuration.d.ts",
       "import": "./dist/test-venue-configuration.js"

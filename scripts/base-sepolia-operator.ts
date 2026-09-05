@@ -19,6 +19,7 @@ import {
   createPublicClient,
   createWalletClient,
   encodeAbiParameters,
+  encodeFunctionData,
   getAddress,
   http,
   keccak256,
@@ -77,6 +78,7 @@ import {
   type KeeperAttemptOutbox,
 } from "./keeper-attempt-outbox.ts";
 import { deriveHistoryIndexConfiguration } from "./history-indexer/configuration.ts";
+import { openOperatorControlStore } from "./operator-control/store.ts";
 import type { KeeperAttemptFailureClass } from "./history-indexer/keeper-attempt-store.ts";
 import {
   decodeEnvironment,
@@ -98,6 +100,12 @@ const OperatorEnvironmentSchema = Schema.Struct({
   OPERATOR_EXECUTE: Schema.optionalWith(Schema.BooleanFromString, {
     default: () => false,
   }),
+  OPERATOR_CONTROL_DATABASE_PATH: Schema.optional(
+    Schema.String.pipe(Schema.minLength(1)),
+  ),
+  OPERATOR_CONTROL_RUN_ID: Schema.optional(
+    Schema.String.pipe(Schema.pattern(/^[0-9a-f-]{36}$/u)),
+  ),
   OPERATOR_MINIMUM_OUTPUT_BPS: Schema.optional(Schema.String),
   OPERATOR_POL_MINIMUM_QUEUE_WETH: Schema.optional(Schema.String),
   OPERATOR_POL_TARGET_WETH_PER_CYCLE: Schema.optional(Schema.String),
@@ -183,6 +191,8 @@ export type OperatorActionIntent =
     };
 
 export interface OperatorEnvironment {
+  readonly controlGrant?:
+    { readonly databasePath: string; readonly runId: string } | undefined;
   readonly rpcUrl: string;
   readonly manifestPath: string;
   readonly evidencePath: string;
@@ -264,6 +274,30 @@ const parsePolStaleQueueSeconds = (value: string | undefined): bigint => {
   return BigInt(normalized);
 };
 
+const operatorControlGrant = (
+  decoded: OperatorEnvironmentBindings,
+  root: string,
+): OperatorEnvironment["controlGrant"] => {
+  const databasePath = decoded.OPERATOR_CONTROL_DATABASE_PATH;
+  const runId = decoded.OPERATOR_CONTROL_RUN_ID;
+  if (databasePath === undefined) {
+    if (runId !== undefined)
+      throw new Error("An operator control grant requires its database path");
+    return undefined;
+  }
+  if (runId === undefined) {
+    if (decoded.OPERATOR_EXECUTE)
+      throw new Error(
+        "Controlled execution requires a supervisor-issued run grant",
+      );
+    return undefined;
+  }
+  return {
+    databasePath: resolveRepositoryPath(root, databasePath, databasePath),
+    runId,
+  };
+};
+
 const operatorEnvironment = (
   decoded: OperatorEnvironmentBindings,
   root: string,
@@ -297,6 +331,7 @@ const operatorEnvironment = (
     );
   }
   return {
+    controlGrant: operatorControlGrant(decoded, root),
     rpcUrl,
     manifestPath: resolveRepositoryPath(
       root,
@@ -356,7 +391,10 @@ const loadOperatorEnvironment = Effect.gen(function* () {
   );
 });
 
-const makeClients = (environment: OperatorEnvironment) => {
+const makeClients = (
+  environment: OperatorEnvironment,
+  assertMaySign?: () => void,
+) => {
   const transport = http(environment.rpcUrl, {
     retryCount: 6,
     retryDelay: 250,
@@ -373,6 +411,7 @@ const makeClients = (environment: OperatorEnvironment) => {
     return { account, walletClient };
   };
   return {
+    assertMaySign,
     publicClient,
     roles: {
       keeper: roleClient(environment.keeperPrivateKey),
@@ -402,6 +441,7 @@ export interface OperatorChain {
   readonly reconcileSubmission?: (
     transactionHash: Hex,
   ) => Promise<OperatorSubmissionResolution>;
+  readonly rebroadcastSubmission?: (rawTransaction: Hex) => Promise<Hex>;
 }
 
 export type OperatorSubmissionResolution =
@@ -690,7 +730,11 @@ type OperatorCall = OperatorCallDetails &
 
 export interface OperatorCallObserver {
   readonly beforeAttempt: () => Promise<void>;
-  readonly submitted: (transactionHash: Hex) => Promise<void>;
+  /** Persist the signed identity before any RPC can receive the transaction. */
+  readonly submitted: (
+    transactionHash: Hex,
+    rawTransaction?: Hex,
+  ) => Promise<void>;
 }
 
 const noopCallObserver: OperatorCallObserver = {
@@ -740,7 +784,7 @@ const journalObserver = (
     context.recorder.observeAttempt(
       keeperMilestone(context, { outcome: "preparing" }),
     ),
-  submitted: (transactionHash) => {
+  submitted: (transactionHash, rawTransaction) => {
     const milestone = keeperMilestone(context, {
       outcome: "pending",
       transactionHash,
@@ -751,7 +795,11 @@ const journalObserver = (
     return deliverSubmittedKeeperAttempt(
       context.outbox,
       context.recorder,
-      { runStarted: context.runStarted, attempt: milestone },
+      {
+        runStarted: context.runStarted,
+        attempt: milestone,
+        ...(rawTransaction === undefined ? {} : { rawTransaction }),
+      },
       BigInt(Math.floor(Date.now() / 1_000)),
     );
   },
@@ -880,11 +928,11 @@ const revalidateSigningBlockIdentities = async (
   }
 };
 
-const submitOperatorCall = async (
+const prepareOperatorCall = async (
   clients: OperatorClients,
   authorization: OperatorAuthorization,
   request: unknown,
-): Promise<Hex> => {
+) => {
   const roleClient = clients.roles[authorization];
   if (
     roleClient.walletClient === undefined ||
@@ -894,10 +942,39 @@ const submitOperatorCall = async (
       `Execute mode has no configured ${authorization} signing account`,
     );
   }
-  return roleClient.walletClient.writeContract({
-    ...(request as WriteContractParameters),
+  const { address, abi, functionName, args, ...transaction } =
+    request as WriteContractParameters;
+  const prepared = await roleClient.walletClient.prepareTransactionRequest({
+    ...transaction,
     account: roleClient.account,
-  } as WriteContractParameters);
+    to: address,
+    data: encodeFunctionData({ abi, functionName, args }),
+  });
+  return { walletClient: roleClient.walletClient, request: prepared };
+};
+
+const signAndSubmitOperatorCall = async (
+  clients: OperatorClients,
+  authorization: OperatorAuthorization,
+  request: unknown,
+  persist: (hash: Hex, rawTransaction: Hex) => Promise<void>,
+  beforeSigning?: () => Promise<void>,
+): Promise<Hex> => {
+  const prepared = await prepareOperatorCall(clients, authorization, request);
+  await beforeSigning?.();
+  clients.assertMaySign?.();
+  const rawTransaction = await prepared.walletClient.signTransaction(
+    prepared.request,
+  );
+  const hash = keccak256(rawTransaction);
+  await persist(hash, rawTransaction);
+  clients.assertMaySign?.();
+  const broadcastHash = await prepared.walletClient.sendRawTransaction({
+    serializedTransaction: rawTransaction,
+  });
+  if (broadcastHash !== hash)
+    throw new Error("RPC returned a different operator transaction hash");
+  return hash;
 };
 
 const failureClassForStage = (
@@ -1111,22 +1188,25 @@ export const attemptOperatorCall = async (
       };
     }
     stage = "submission";
-    const transactionHash = await submitOperatorCall(
+    const transactionHash = await signAndSubmitOperatorCall(
       clients,
       call.authorization,
       simulation.request,
+      async (hash, rawTransaction) => {
+        submittedHash = hash;
+        try {
+          await journal.submitted(hash, rawTransaction);
+        } catch (cause) {
+          journalFailure = true;
+          throw new SubmittedAttemptJournalError(
+            "A signed transaction could not be durably journaled; broadcast was not attempted",
+            { cause },
+          );
+        }
+        stage = "receipt";
+      },
+      () => revalidateSigningBlockIdentities(clients, call),
     );
-    submittedHash = transactionHash;
-    try {
-      await journal.submitted(transactionHash);
-    } catch (cause) {
-      journalFailure = true;
-      throw new SubmittedAttemptJournalError(
-        "A broadcast transaction hash could not be durably journaled",
-        { cause },
-      );
-    }
-    stage = "receipt";
     const receipt = await clients.publicClient.waitForTransactionReceipt({
       hash: transactionHash,
       confirmations: 2,
@@ -1779,6 +1859,15 @@ export const createViemOperatorChain = (
   observe: (request) => observeCanonicalOperatorState(input, request),
   reconcileSubmission: (transactionHash) =>
     reconcileOperatorSubmission(input.clients, transactionHash),
+  rebroadcastSubmission: async (rawTransaction) => {
+    input.clients.assertMaySign?.();
+    const hash = await input.clients.publicClient.sendRawTransaction({
+      serializedTransaction: rawTransaction,
+    });
+    if (hash !== keccak256(rawTransaction))
+      throw new Error("RPC returned a different operator transaction hash");
+    return hash;
+  },
   attempt: (request, observer) =>
     attemptOperatorIntent(
       input.clients,
@@ -1954,40 +2043,82 @@ const liquidityEvidence = async (
     : evidence;
 };
 
+const rebroadcastPendingSubmission = async (
+  chain: OperatorChain,
+  rawTransaction: Hex | undefined,
+  execute: boolean,
+) => {
+  if (
+    !execute ||
+    rawTransaction === undefined ||
+    chain.rebroadcastSubmission === undefined
+  )
+    return;
+  // The exact signed bytes retain their nonce. An ambiguous retry never removes the signing gate.
+  try {
+    await chain.rebroadcastSubmission(rawTransaction);
+  } catch {
+    /* Leave the durable row unresolved. */
+  }
+};
+
 const reconcileUnresolvedSubmissions = async (
   chain: OperatorChain,
   outbox: KeeperAttemptOutbox,
   recorder: KeeperAttemptRecorder,
+  execute: boolean,
 ): Promise<void> => {
   await replayKeeperAttemptOutbox(outbox, recorder);
   const stillUnresolved: Array<{
     readonly transactionHash: Hex;
     readonly reason: string;
   }> = [];
-  for (const delivery of outbox.unresolved()) {
+  const pending = [
+    ...outbox.unresolved().map((delivery) => ({
+      transactionHash: delivery.attempt.transactionHash,
+      rawTransaction: delivery.rawTransaction,
+      resolve: () =>
+        outbox.resolve(
+          delivery.attempt.attemptId,
+          delivery.attempt.transactionHash,
+        ),
+    })),
+    ...outbox.localSubmissions().map((transaction) => ({
+      ...transaction,
+      resolve: () => outbox.resolveLocalSubmission(transaction.transactionHash),
+    })),
+  ];
+  for (const delivery of pending) {
     const resolution =
       chain.reconcileSubmission === undefined
         ? {
             status: "submitted-unknown" as const,
             reason: "No canonical receipt reconciliation source is configured.",
           }
-        : await chain.reconcileSubmission(delivery.attempt.transactionHash);
+        : await chain.reconcileSubmission(delivery.transactionHash);
     if (resolution.status === "submitted-unknown") {
+      if (
+        "failureClass" in resolution &&
+        resolution.failureClass === "receipt-unavailable"
+      ) {
+        await rebroadcastPendingSubmission(
+          chain,
+          delivery.rawTransaction,
+          execute,
+        );
+      }
       stillUnresolved.push({
-        transactionHash: delivery.attempt.transactionHash,
+        transactionHash: delivery.transactionHash,
         reason: resolution.reason,
       });
     } else {
-      outbox.resolve(
-        delivery.attempt.attemptId,
-        delivery.attempt.transactionHash,
-      );
+      delivery.resolve();
     }
   }
-  if (stillUnresolved.length === 0) return;
   const first = stillUnresolved[0];
+  if (first === undefined) return;
   throw new Error(
-    `Operator signing is gated by ${stillUnresolved.length} unresolved submitted transaction(s); ${first?.transactionHash ?? "hash unavailable"}: ${first?.reason ?? "canonical outcome unavailable"}`,
+    `Operator signing is gated by ${stillUnresolved.length} unresolved submitted transaction(s); ${first.transactionHash}: ${first.reason}`,
   );
 };
 
@@ -2071,7 +2202,12 @@ export const runOperatorWorkflow = async (
   if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
     throw new Error(`Operator RPC returned chain ${chainId}, expected 84532`);
   }
-  await reconcileUnresolvedSubmissions(chain, outbox, recorder);
+  await reconcileUnresolvedSubmissions(
+    chain,
+    outbox,
+    recorder,
+    environment.execute,
+  );
   let state = await chain.observe();
   const actors = bindOperatorActors({
     accounts: chain.accounts,
@@ -2239,22 +2375,28 @@ const readPreviousPolQueueObservation = (
 export const operatorProgram = Effect.scoped(
   Effect.gen(function* () {
     const environment = yield* loadOperatorEnvironment;
+    const grant = environment.controlGrant;
+    const controlStore =
+      grant === undefined
+        ? undefined
+        : yield* Effect.acquireRelease(
+            Effect.try(() => openOperatorControlStore(grant.databasePath)),
+            (store) => Effect.sync(store.close),
+          );
+    const assertMaySign = () => {
+      if (
+        grant !== undefined &&
+        !controlStore?.maySign(grant.runId, Date.now())
+      ) {
+        throw new Error("Operator signing authority is unavailable or revoked");
+      }
+    };
     const previousPolQueueObservedAt = yield* fileSystem(
       "Could not read prior Base Sepolia operator evidence",
       () => readPreviousPolQueueObservation(environment.evidencePath),
     );
     const manifest = yield* readLaunchedBaseSepoliaManifest(
       environment.manifestPath,
-    );
-    const discoveryMaintenance = yield* rpc(
-      "Base Sepolia discovery maintenance failed",
-      () =>
-        maintainBaseSepoliaDiscovery({
-          execute: environment.execute,
-          manifest,
-          privateKey: environment.keeperPrivateKey,
-          rpcUrl: environment.rpcUrl,
-        }),
     );
     yield* fileSystem("Could not create keeper-attempt outbox directory", () =>
       mkdirSync(dirname(environment.keeperAttemptOutboxPath), {
@@ -2269,19 +2411,49 @@ export const operatorProgram = Effect.scoped(
         manifestFingerprint: historyConfiguration.manifestFingerprint,
       },
     );
+    const clients = makeClients(environment, assertMaySign);
+    const contracts = createProtocolContracts(manifest);
+    const chain = createViemOperatorChain({ clients, contracts, manifest });
+    const recorder = createKeeperAttemptRecorder({
+      baseUrl: environment.historyIndexUrl,
+      ingestApiToken: parseHistoryCredential(
+        environment.historyIngestApiToken,
+        "HISTORY_INGEST_API_TOKEN",
+      ),
+    });
+    yield* rpc("Operator prior submissions are unresolved", async () => {
+      if ((await chain.getChainId()) !== manifest.chainId)
+        throw new Error("Operator RPC chain does not match the deployment");
+      await reconcileUnresolvedSubmissions(
+        chain,
+        outbox,
+        recorder,
+        environment.execute,
+      );
+    });
+    const discoveryMaintenance = yield* rpc(
+      "Base Sepolia discovery maintenance failed",
+      () =>
+        maintainBaseSepoliaDiscovery({
+          assertMaySign,
+          execute: environment.execute,
+          manifest,
+          privateKey: environment.keeperPrivateKey,
+          rpcUrl: environment.rpcUrl,
+          submitTransaction: (request) =>
+            signAndSubmitOperatorCall(
+              clients,
+              "keeper",
+              request,
+              async (_hash, rawTransaction) => {
+                outbox.enqueueLocalSubmission(rawTransaction);
+              },
+            ),
+        }),
+    );
     const operatorEvidence = yield* rpc(
       "Base Sepolia operator workflow failed",
       () => {
-        const clients = makeClients(environment);
-        const contracts = createProtocolContracts(manifest);
-        const chain = createViemOperatorChain({ clients, contracts, manifest });
-        const recorder = createKeeperAttemptRecorder({
-          baseUrl: environment.historyIndexUrl,
-          ingestApiToken: parseHistoryCredential(
-            environment.historyIngestApiToken,
-            "HISTORY_INGEST_API_TOKEN",
-          ),
-        });
         return runOperatorWorkflow(
           environment,
           manifest,

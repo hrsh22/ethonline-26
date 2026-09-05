@@ -53,6 +53,17 @@ must expect the same host the browser signs.
 `OPERATOR_EXECUTE` becomes a **startup default only**. Once a control ledger is
 configured, the stored desired policy governs every cycle, and the startup
 announcement says so rather than claiming a mode the policy will override.
+Every watch startup appends a `supervisor-restarted` Stop to the audit before
+accepting commands. It clears queued passes. It refuses startup while another
+supervisor still holds an unexpired lease; restart after that lease expires.
+The reset does not run on ordinary database reads or between cycles.
+
+The watch passes an internal `OPERATOR_CONTROL_RUN_ID` to its child. Do not set
+this in an environment file. Controlled one-shot execution without a current
+supervisor grant is refused. Each local signature checks the persisted run,
+monotonic Stop revision, lease owner, and expiry. The active watch renews its
+lease and heartbeat throughout a run; interruption cancels renewal and releases
+only its own lease.
 
 ## Reading the state honestly
 
