@@ -20,7 +20,9 @@ export function RecoverySurface({
   return (
     <PageFrame>
       <PageHeading eyebrow={eyebrow} lede={description} title={title} />
-      <div className="mt-5 flex flex-wrap items-center gap-2">{actions}</div>
+      <div className="mt-5 flex flex-wrap items-center gap-2 [&>a]:h-auto [&>a]:max-w-full [&>a]:py-3 [&>a]:whitespace-normal">
+        {actions}
+      </div>
     </PageFrame>
   );
 }

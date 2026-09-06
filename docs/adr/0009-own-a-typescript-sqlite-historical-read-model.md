@@ -148,8 +148,11 @@ The following boundaries are mandatory:
   signing. The planning/quote identity is also revalidated after preflight acquisition and at the
   signing boundary. Invalidated roles, routes, eligibility, quote protection, or call requests fail
   closed and require replanning.
-  Wallet permanent-identity candidates come from durable `Committed` history; current `ownerOf` and
-  permanence are then verified directly at the same indexed checkpoint.
+  Wallet permanent-identity candidates come from durable `Committed` history and previously
+  observed wallet identities. Current ownership, permanence, rewards, and collectible balance
+  are verified at the wallet's current block. Enumeration is complete only when the verified
+  identities match the onchain collectible count. This keeps a just-committed identity visible
+  while the index catches up, and prevents index lag from appearing as an empty wallet.
 
 SQLite runs in WAL mode with `synchronous=FULL`, a busy timeout, one writer, and a local persistent
 volume. Node is pinned to at least 24.15.0 because its bundled SQLite 3.51.3 contains the WAL-reset
@@ -171,3 +174,28 @@ database; it never reuses the Base Sepolia file.
 This ADR narrows the old POC statement that direct RPC is sufficient: direct RPC remains
 authoritative for current point-in-time state, but it is no longer the application's durable
 historical read model.
+
+### 6 September 2026: collector Discovery evidence
+
+The same canonical event index also tracks FuelCore `DiscoveryRequested`,
+`DiscoveryFulfilled`, and `DiscoveryCancelled`. Correlation uses the per-unit
+bytes32 protocol request ID, not the adapter's numeric VRF batch ID. The requested
+event's transaction hash identifies the acquisition; fulfilment provides the exact
+identity and cancellation provides the explicit lost-backing outcome. Indexed
+delivery evidence does not establish current NFT ownership.
+
+The existing bounded page boundary adds `/v1/protocol/discoveries` with a validated
+account filter included in the SQL predicate and cursor query identity. The
+collector consumes at most 100 recent events in one page, exposes truncation, and
+verifies current holdings before showing a delivered card. It does not interpret
+absence from a bounded or partial page as cancellation or delivery.
+
+A persisted tracked-event revision distinguishes databases built before these
+events were indexed. After metadata/integrity validation, an old revision atomically
+invalidates its checkpoint and query snapshots, increments the canonical revision
+when a checkpoint existed, and marks the new event revision. The existing
+synchronizer then replays from the manifest launch block in its normal bounded
+ranges. Coverage remains partial until replay catches up. Opening a current store
+does not replay it again. Cursor generations rotate as before; old continuations
+cannot cross this migration. This authorized derived-history migration makes no
+contract change and does not manually reset a running service's database.

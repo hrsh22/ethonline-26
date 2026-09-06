@@ -180,7 +180,9 @@ each signer must match its corresponding current onchain role; with a shared ide
 account must currently hold both roles.
 When `OPERATOR_CONTROL_DATABASE_PATH` is configured, start the watch and use an authorized control
 command instead. A direct execute-mode child without a supervisor-issued grant is refused, and
-every watch restart begins stopped. See [Operator control plane](operator-control-plane.md).
+watch restarts resume its last authorized policy for the same deployment. Fresh
+or legacy unbound ledgers require a signed live command once. See
+[Operator control plane](operator-control-plane.md).
 
 For the explicitly self-funded staging profile, `pnpm backend` reuses `DEPLOYER_PRIVATE_KEY` only
 when execute mode is live and no operator-specific key is configured. That fallback is projected

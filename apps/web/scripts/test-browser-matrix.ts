@@ -15,6 +15,8 @@ import { runHarnessSelfTest } from "../browser/self-test.ts";
 
 const PORT = 3_108;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
+const API_PORT = 18_800;
+const API_ORIGIN = `http://127.0.0.1:${API_PORT}`;
 
 const argument = (name: string): string | undefined => {
   const prefix = `--${name}=`;
@@ -49,8 +51,8 @@ runInterruptibleMain(
           ))
       ) {
         yield* Effect.acquireRelease(
-          rpc("Could not start test-only admin API on 127.0.0.1:8800", () =>
-            startAdminFixtureServer(),
+          rpc(`Could not start test-only admin API on ${API_ORIGIN}`, () =>
+            startAdminFixtureServer(API_PORT),
           ),
           (api) => Effect.promise(() => api[Symbol.asyncDispose]()),
         );
@@ -64,7 +66,7 @@ runInterruptibleMain(
             {
               cwd: new URL("..", import.meta.url),
               env: {
-                NEXT_PUBLIC_API_URL: "http://127.0.0.1:8800",
+                NEXT_PUBLIC_API_URL: API_ORIGIN,
                 // next.config.ts fails a production start without the app
                 // origin, because it is signed into operator commands and
                 // published as wallet metadata. The audit server satisfies the

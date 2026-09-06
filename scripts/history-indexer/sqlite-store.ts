@@ -244,6 +244,7 @@ const queryKey = (query: HistoryQuery, order: "asc" | "desc"): string =>
     query.fromBlock.toString(),
     query.toBlock.toString(),
     order,
+    query.account?.toLowerCase(),
   ]);
 
 const encodeCursor = (
@@ -755,6 +756,7 @@ const readQueryRows = (
         WHERE event_name IN (${placeholders})
           AND block_number >= ?
           AND block_number <= ?
+          AND (? IS NULL OR lower(json_extract(payload, '$.account')) = ?)
           ${predicate.sql}
         ORDER BY block_number ${order}, transaction_index ${order},
           log_index ${order}, block_hash ${order}
@@ -765,6 +767,8 @@ const readQueryRows = (
       ...query.eventNames,
       Number(query.fromBlock),
       Number(toBlock),
+      query.account?.toLowerCase() ?? null,
+      query.account?.toLowerCase() ?? null,
       ...predicate.parameters,
       query.limit + 1,
     )
@@ -841,6 +845,28 @@ function assertCursorSnapshot(
   }
 }
 
+/** Derived history must replay when the event set grows; an old checkpoint is not coverage. */
+const migrateTrackedEvents = (database: DatabaseSync): void => {
+  runTransaction(database, () => {
+    const row = database
+      .prepare(
+        "SELECT value FROM index_metadata WHERE key = 'tracked_event_revision'",
+      )
+      .get();
+    if (row?.value === "discovery-v1") return;
+    if (row !== undefined)
+      throw new Error("Unsupported tracked history event revision");
+    database.exec(
+      `UPDATE canonical_revision SET revision = revision + 1 WHERE EXISTS (SELECT 1 FROM index_checkpoint); DELETE FROM index_checkpoint; DELETE FROM canonical_headers; DELETE FROM query_snapshots;`,
+    );
+    database
+      .prepare(
+        "INSERT INTO index_metadata (key, value) VALUES ('tracked_event_revision', 'discovery-v1')",
+      )
+      .run();
+  });
+};
+
 export const openHistoryStore = (
   path: string,
   configuration: HistoryIndexConfiguration,
@@ -851,6 +877,7 @@ export const openHistoryStore = (
     initializeDatabase(database);
     verifyMetadata(database, configuration);
     verifyDatabaseIntegrity(database);
+    migrateTrackedEvents(database);
     indexGeneration = rotateIndexGeneration(database);
   } catch (cause) {
     database.close();

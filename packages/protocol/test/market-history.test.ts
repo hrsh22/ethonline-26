@@ -21,6 +21,9 @@ const manifest = decodeProtocolDeploymentManifest(
   JSON.parse(readFileSync("../../deployments/31337.json", "utf8")) as unknown,
 );
 const identity = selectIdentityConfiguration("orbit-4444");
+const discoveries = async () => {
+  throw new Error("Discovery history is not used by market reads");
+};
 const permanentIdentityCandidates = async () => {
   throw new Error("not used");
 };
@@ -468,6 +471,7 @@ describe("canonical indexed market history", () => {
           fees: async (request) => pageFor(request, feeItems),
         },
         protocol: {
+          discoveries,
           permanentIdentityCandidates,
           liquidityCycles: emptyPage,
           operations: emptyPage,
@@ -594,6 +598,7 @@ describe("canonical indexed market history", () => {
       }),
       market: { swaps: readEmpty, fees: readEmpty },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: async (request) => {
           requests.push(request);
@@ -699,6 +704,7 @@ describe("canonical indexed market history", () => {
       },
       market: { swaps: readEmpty, fees: readEmpty },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: async (request) => {
           requests.push(request);
@@ -800,6 +806,7 @@ describe("canonical indexed market history", () => {
       }),
       market: { swaps: readEmpty, fees: readEmpty },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: async (request) => {
           requests.push(request);
@@ -863,6 +870,7 @@ describe("canonical indexed market history", () => {
         fees: revisionZero,
       },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: revisionZero,
         operations: revisionZero,
@@ -912,6 +920,7 @@ describe("canonical indexed market history", () => {
       }),
       market: { swaps: read, fees: read },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: read,
         operations: read,
@@ -963,6 +972,7 @@ describe("canonical indexed market history", () => {
       status: async () => index,
       market: { swaps: read, fees: read },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: read,
         operations: read,
@@ -1013,6 +1023,7 @@ describe("canonical indexed market history", () => {
         fees: async (request) => pageFor(request, hash("7")),
       },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: async (request) => pageFor(request, hash("9")),
         operations: async (request) => pageFor(request, hash("9")),
@@ -1055,6 +1066,7 @@ describe("canonical indexed market history", () => {
       status: async () => index,
       market: { swaps: read, fees: read },
       protocol: {
+        discoveries,
         permanentIdentityCandidates,
         liquidityCycles: read,
         operations: read,

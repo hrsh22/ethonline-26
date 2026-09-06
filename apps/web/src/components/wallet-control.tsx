@@ -129,9 +129,9 @@ function ConnectionWalletControl({
       {rejected && notices ? (
         <StateFeedback
           compact
-          description="The wallet connection was not approved. Try again when ready."
+          description="The wallet connection did not finish. Open your wallet and try again when ready."
           surface={surface}
-          title="Connection request declined"
+          title="Wallet connection not completed"
           tone="error"
         />
       ) : null}
@@ -304,9 +304,9 @@ export function WalletControl({
         notices={notices}
         onConnect={() => {
           connectionFeedback.beginConnection();
-          void Promise.resolve(modal?.open({ view: "Connect" })).catch(() =>
-            connectionFeedback.failConnection(),
-          );
+          void Promise.resolve()
+            .then(() => modal?.open({ view: "Connect" }))
+            .catch(() => connectionFeedback.failConnection());
         }}
         reasonId={connectionReasonId}
         rejected={connectionFeedback.rejected}

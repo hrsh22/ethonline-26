@@ -32,6 +32,16 @@ import { createCanonicalMarketHistoryReader } from "@orbit/protocol/market-histo
 import { makeViemProtocolTransport } from "@orbit/protocol/viem-transport";
 import { bindReadSignal, runPublicRead } from "@orbit/protocol/read-lifetime";
 import { PUBLIC_API_PATHS } from "@orbit/config/public-api";
+import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
+
+import {
+  readCollectorTransaction,
+  readCompletedCollectorTransactions,
+  type CompletedCollectorTransaction,
+  writeCollectorTransaction,
+  type CollectorTransactionMetadata,
+  type SubmittedTransactionPhase,
+} from "@/lib/collector-transaction-record";
 
 import {
   getCollectorAccessState,
@@ -52,7 +62,10 @@ import {
   ADMIN_SESSION_ENDED_EVENT,
   adminProtectedFetch,
 } from "@/lib/admin-protected-fetch";
-import { retryPreSubmissionPublicRpc } from "@/lib/pre-submission-rpc";
+import {
+  isTransientPreSubmissionRpcFailure,
+  retryPreSubmissionPublicRpc,
+} from "@/lib/pre-submission-rpc";
 import {
   getProtocolHealthReadScope,
   shouldLoadMarketHistory,
@@ -72,6 +85,7 @@ import {
   type ExecutedProtocolTransaction,
   refetchUntilObservedBlock,
   RevertedProtocolTransactionError,
+  ReplacedProtocolTransactionError,
   UnknownProtocolTransactionOutcomeError,
 } from "@/lib/transaction-execution";
 import {
@@ -118,7 +132,12 @@ type ProtocolWalletRead =
     }
   | { readonly status: "loading" }
   | { readonly status: "failed"; readonly error: Error }
-  | { readonly status: "loaded"; readonly snapshot: WalletSnapshot };
+  | {
+      readonly status: "loaded";
+      readonly snapshot: WalletSnapshot;
+      readonly stale?: true;
+      readonly error?: Error;
+    };
 
 type ProtocolNativeBalanceRead =
   | {
@@ -277,6 +296,7 @@ type ProtocolClientContextValue = {
   readonly connected: boolean;
   readonly deploymentAvailable: boolean;
   readonly reader: ProtocolReader | undefined;
+  readonly readerForSignal: (signal: AbortSignal) => ProtocolReader | undefined;
   readonly health: HealthSnapshot | undefined;
   readonly healthPending: boolean;
   readonly healthRefreshing: boolean;
@@ -292,6 +312,17 @@ type ProtocolClientContextValue = {
   readonly walletRead: ProtocolWalletRead;
   readonly nativeBalanceRead: ProtocolNativeBalanceRead;
   readonly transaction: TransactionState;
+  readonly transactionPersistenceAvailable?: boolean;
+  readonly completedTransactions?: readonly CompletedCollectorTransaction[];
+  readonly transactionMetadata?:
+    | {
+        readonly operationId: string;
+        readonly identityIds: readonly number[];
+        readonly actionType: string;
+        readonly createdAt: number;
+      }
+    | undefined;
+  readonly clearTransaction?: () => void;
   /**
    * A bare refresh reads once. A caller that knows a balance or holding changed
    * passes its block so direct balances and indexed holdings retry together,
@@ -388,6 +419,25 @@ const deriveScopedHealthRead = ({
   } as const;
 };
 
+const canRetainWalletAfterFailure = (error: Error): boolean => {
+  try {
+    let cause: unknown = error;
+    let transient = false;
+    for (let depth = 0; depth < 8 && cause instanceof Error; depth += 1) {
+      if (cause.name === "IndexedHistoryError") {
+        if (!("code" in cause) || cause.code !== "history-rpc-unavailable")
+          return false;
+        transient = true;
+      }
+      if (cause.name === "PublicReadTimeoutError") transient = true;
+      cause = cause.cause;
+    }
+    return transient || isTransientPreSubmissionRpcFailure(error);
+  } catch {
+    return false;
+  }
+};
+
 export const deriveWalletRead = ({
   accessState,
   error,
@@ -407,7 +457,11 @@ export const deriveWalletRead = ({
     return { status: "blocked", accessState };
   }
   const walletError = getError(error);
-  if (walletError !== null) return { status: "failed", error: walletError };
+  if (walletError !== null) {
+    return snapshot !== undefined && canRetainWalletAfterFailure(walletError)
+      ? { status: "loaded", snapshot, stale: true, error: walletError }
+      : { status: "failed", error: walletError };
+  }
   if (snapshot !== undefined) {
     if (
       walletSnapshotIsSynchronizing(
@@ -461,21 +515,6 @@ export const deriveNativeBalanceRead = ({
   return { status: "loading" };
 };
 
-const readWithRetry = async <Value,>(read: () => Promise<Value>) => {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    try {
-      return await read();
-    } catch (error) {
-      lastError = error;
-      if (attempt < 2) {
-        await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
-      }
-    }
-  }
-  throw lastError;
-};
-
 export const walletSnapshotIsSynchronizing = (
   minimumBlock: bigint | undefined,
   observedBlock: bigint | undefined,
@@ -503,13 +542,19 @@ const walletObservation = (
   };
 };
 
+const knownCollectibleIds = (snapshot: WalletSnapshot | undefined): number[] =>
+  snapshot === undefined
+    ? []
+    : [
+        ...snapshot.collectibles.transient,
+        ...snapshot.collectibles.permanent,
+      ].map((craft) => craft.identityId);
+
 type WalletClient = ViemWalletClient;
 type PreparedTransaction = ReturnType<ProtocolReader["prepareTransaction"]>;
 type SwapAction = Extract<ProtocolAction, { type: "swap-exact-input" }>;
 type SwapQuoteRead = Awaited<ReturnType<ProtocolReader["quoteExactInput"]>>;
 type ExchangeApprovalAsset = "liquid-token" | "weth";
-type SubmittedTransactionPhase =
-  { readonly kind: "action" } | { readonly kind: "approval" };
 
 const requireWalletBoundSwapQuote = (
   quote: SwapQuoteRead,
@@ -616,8 +661,11 @@ const retriableTransactionFailureCodes = new Set([
   "transaction-outcome-unknown",
 ]);
 
-const normalizeTransactionFailure = (cause: unknown) => {
+const normalizeTransactionFailure = (cause: unknown, failureStep: string) => {
   try {
+    if (cause instanceof ReplacedProtocolTransactionError) {
+      return { code: "transaction-replaced", message: cause.message };
+    }
     if (cause instanceof AdminActionAuthorizationDeniedError) {
       return { code: "admin-action-forbidden", message: cause.message };
     }
@@ -640,7 +688,11 @@ const normalizeTransactionFailure = (cause: unknown) => {
     // Hostile providers can reject with proxies whose prototype/property
     // access throws. Fall through to the bounded, fail-closed normalizer.
   }
-  return normalizeProtocolError(cause, identity);
+  const error = normalizeProtocolError(cause, identity);
+  return error.code === "rpc-failure" &&
+    failureStep.endsWith("wallet submission")
+    ? { ...error, message: applicationCopy.transaction.walletSubmissionFailed }
+    : error;
 };
 
 const isTransactionScopeChangedError = (cause: unknown): boolean => {
@@ -669,12 +721,42 @@ const releaseExecutionLock = (
   executionId: symbol,
   state: TransactionState,
 ): boolean =>
-  activeExecution === executionId && state.status !== "outcome-unknown";
+  activeExecution === executionId &&
+  state.status !== "outcome-unknown" &&
+  state.status !== "submission-unknown";
 
 interface TransactionExecutionBoundary {
   readonly privacyIsCurrent: () => boolean;
   readonly scopeIsCurrent: () => boolean;
+  readonly persistUncertainSubmission: (state: TransactionState) => void;
 }
+
+const uncertainWalletSubmission = (
+  state: TransactionState,
+  failureStep: string,
+  code: string,
+  cause: unknown,
+): TransactionState | undefined =>
+  failureStep.endsWith("wallet submission") &&
+  state.status === "simulated" &&
+  code !== "wallet-rejected" &&
+  !isTransactionScopeChangedError(cause)
+    ? {
+        status: "submission-unknown",
+        label: state.label,
+        message:
+          "The app did not receive a transaction hash from your wallet. Check your wallet activity before trying again; the transaction may have been sent.",
+      }
+    : undefined;
+
+const publishSubmissionUncertainty = (
+  boundary: TransactionExecutionBoundary,
+  state: TransactionState,
+  update: (state: TransactionState) => void,
+): void => {
+  if (boundary.privacyIsCurrent()) update(state);
+  else boundary.persistUncertainSubmission(state);
+};
 
 const handleTransactionExecutionFailure = ({
   boundary,
@@ -697,6 +779,18 @@ const handleTransactionExecutionFailure = ({
   };
   readonly updateTransaction: (state: TransactionState) => void;
 }): TransactionState => {
+  const domainError = normalizeTransactionFailure(cause, failureStep);
+  const uncertain = uncertainWalletSubmission(
+    executionState.current,
+    failureStep,
+    domainError.code,
+    cause,
+  );
+  if (uncertain !== undefined) {
+    executionState.current = uncertain;
+    publishSubmissionUncertainty(boundary, uncertain, updateTransaction);
+    return uncertain;
+  }
   if (!boundary.privacyIsCurrent()) {
     submittedPhase.current = undefined;
     return createTransactionState();
@@ -716,11 +810,10 @@ const handleTransactionExecutionFailure = ({
     }
     return currentTransaction();
   }
-  const domainError = normalizeTransactionFailure(cause);
   if (domainError.code === "quote-review-changed" && scopeCurrent) {
     invalidateExchangeQuote();
   }
-  console.error(
+  console.warn(
     `Protocol transaction failed during ${failureStep} (${domainError.code})`,
   );
   const failed = advanceTransaction(executionState.current, {
@@ -762,26 +855,48 @@ const releaseTransactionExecution = ({
   activeExecution.current = undefined;
 };
 
+const replacementFailure = (
+  state: TransactionState,
+): ReplacedProtocolTransactionError | undefined =>
+  (state.status === "outcome-unknown" || state.status === "submitted") &&
+  state.replacement !== undefined
+    ? new ReplacedProtocolTransactionError(state.hash, state.replacement)
+    : undefined;
+
 const reconcileUnknownTransaction = async ({
   refresh,
   state,
+  onState,
 }: {
   readonly refresh: (minimumWalletBlock?: bigint) => Promise<void>;
   readonly state: Extract<TransactionState, { status: "outcome-unknown" }>;
+  readonly onState: (state: TransactionState) => void;
 }): Promise<TransactionState> => {
+  let observedState: TransactionState = state;
   let receipt: Awaited<
     ReturnType<typeof protocolTransactionClient.waitForTransactionReceipt>
   >;
   try {
     receipt = await protocolTransactionClient.waitForTransactionReceipt({
       hash: state.hash,
+      timeout: 30_000,
+      retryCount: 1,
+      pollingInterval: 4_000,
+      onReplaced: ({ transaction, reason }) => {
+        observedState = advanceTransaction(observedState, {
+          type: "replace",
+          hash: transaction.hash,
+          reason,
+        });
+        onState(observedState);
+      },
     });
   } catch (cause) {
     const domainError = normalizeProtocolError(cause, identity);
-    console.error(
+    console.warn(
       `Protocol transaction reconciliation failed (${domainError.code})`,
     );
-    const outcomeUnknown = advanceTransaction(state, {
+    const outcomeUnknown = advanceTransaction(observedState, {
       type: "fail",
       message: applicationCopy.transaction.outcomeUnknownMessage,
       retriable: true,
@@ -806,26 +921,34 @@ const reconcileUnknownTransaction = async ({
     console.error(
       `Protocol transaction reconciliation returned invalid receipt evidence (${domainError.code})`,
     );
-    return advanceTransaction(state, {
+    return advanceTransaction(observedState, {
       type: "fail",
       message: applicationCopy.transaction.outcomeUnknownMessage,
       retriable: true,
     });
   }
+  const replacement = replacementFailure(observedState);
+  if (replacement !== undefined) {
+    return advanceTransaction(observedState, {
+      type: "fail",
+      message: replacement.message,
+      retriable: false,
+    });
+  }
   if (receiptStatus === "reverted") {
-    const failed = advanceTransaction(state, {
+    const failed = advanceTransaction(observedState, {
       type: "fail",
       message: applicationCopy.transaction.reverted,
       retriable: false,
     });
     return failed;
   }
-  const confirmed = advanceTransaction(state, { type: "confirm" });
+  const confirmed = advanceTransaction(observedState, { type: "confirm" });
   try {
     await refresh(blockNumber);
   } catch (cause) {
     const domainError = normalizeProtocolError(cause, identity);
-    console.error(
+    console.warn(
       `Protocol transaction post-confirmation refresh failed (${domainError.code})`,
     );
   }
@@ -887,13 +1010,16 @@ const readPreflightSnapshots = async ({
   const freshOperatorHealth = freshOperatorActionTypes.has(action.type);
   failureStep.current = "protocol health preflight";
   const health = freshOperatorHealth
-    ? await readWithRetry(() =>
-        reader.readHealth(address, undefined, undefined, {
-          includeOperationalHistory: true,
-          includeRewardHistory: false,
-        }),
-      )
-    : (cachedHealth ?? (await readWithRetry(() => reader.readHealth(address))));
+    ? await reader.readHealth(address, undefined, undefined, {
+        includeOperationalHistory: true,
+        includeRewardHistory: false,
+      })
+    : (cachedHealth ??
+      (await reader.readHealth(address, undefined, undefined, {
+        includeBytecodeInventory: false,
+        includeOperationalHistory: false,
+        includeRewardHistory: false,
+      })));
   const directIdentityIds =
     action.type === "claim"
       ? action.identityIds
@@ -903,12 +1029,10 @@ const readPreflightSnapshots = async ({
   failureStep.current = "wallet ownership preflight";
   const [wallet, directCollectibles] = await Promise.all([
     ownershipActionTypes.has(action.type)
-      ? readWithRetry(() => reader.readWallet(address))
+      ? reader.readWallet(address, knownCollectibleIds(cachedWallet))
       : Promise.resolve(cachedWallet),
     Promise.all(
-      directIdentityIds.map((identityId) =>
-        readWithRetry(() => reader.readCollectible(identityId)),
-      ),
+      directIdentityIds.map((identityId) => reader.readCollectible(identityId)),
     ),
   ]);
   return { directCollectibles, freshOperatorHealth, health, wallet };
@@ -919,7 +1043,7 @@ const updateRuntimeBlock = async (
   freshOperatorHealth: boolean,
 ): Promise<TransactionRuntimeContext> => {
   if (freshOperatorHealth) return runtime;
-  const block = await readWithRetry(() => protocolTransactionClient.getBlock());
+  const block = await protocolTransactionClient.getBlock();
   return {
     ...runtime,
     currentBlock: block.number,
@@ -980,9 +1104,16 @@ const sendPreparedTransaction = async ({
         gas,
       });
     },
-    waitForReceipt: async (hash) => {
+    waitForReceipt: async (hash, onReplacement) => {
       const receipt = await protocolTransactionClient.waitForTransactionReceipt(
-        { hash },
+        {
+          hash,
+          timeout: 30_000,
+          retryCount: 1,
+          pollingInterval: 4_000,
+          onReplaced: ({ transaction, reason }) =>
+            onReplacement(transaction.hash, reason),
+        },
       );
       return {
         blockNumber: receipt.blockNumber,
@@ -1303,6 +1434,60 @@ const createProtocolRuntime = (signal?: AbortSignal) => {
   };
 };
 
+const deploymentReadScope =
+  protocolDeploymentManifest === undefined
+    ? "unpublished"
+    : deploymentManifestFingerprint(protocolDeploymentManifest);
+const deploymentLaunchHash = protocolDeploymentManifest?.launch.transactionHash;
+
+const isCurrentOperation = (
+  metadata: CollectorTransactionMetadata | undefined,
+  current: CollectorTransactionMetadata | undefined,
+): boolean =>
+  metadata === undefined || metadata.operationId === current?.operationId;
+
+const collectorMetadata = (
+  action: ProtocolAction,
+  previous: CollectorTransactionMetadata | undefined,
+): CollectorTransactionMetadata => {
+  const affectedIdentityIds =
+    "identityId" in action
+      ? [action.identityId]
+      : action.type === "claim"
+        ? action.identityIds
+        : [];
+  // ponytail: retain 64 recent ownership hints; indexed history supplies the rest.
+  return {
+    operationId: crypto.randomUUID(),
+    actionType: action.type,
+    affectedIdentityIds,
+    createdAt: Date.now(),
+    identityIds: [
+      ...new Set([...(previous?.identityIds ?? []), ...affectedIdentityIds]),
+    ].slice(-64),
+  };
+};
+
+const displayedTransactionMetadata = (
+  metadata: CollectorTransactionMetadata | undefined,
+): ProtocolClientContextValue["transactionMetadata"] =>
+  metadata === undefined
+    ? undefined
+    : {
+        operationId: metadata.operationId,
+        identityIds: metadata.affectedIdentityIds,
+        actionType: metadata.actionType,
+        createdAt: metadata.createdAt,
+      };
+
+const actionPreparationMessage = (cause: unknown): string =>
+  cause instanceof TransactionPreparationError
+    ? cause.message
+    : applicationCopy.common.notObserved;
+
+const walletReadRequiresRecovery = (read: ProtocolWalletRead): boolean =>
+  read.status === "failed" || (read.status === "loaded" && read.stale === true);
+
 export function ProtocolClientProvider({
   children,
 }: {
@@ -1312,6 +1497,33 @@ export function ProtocolClientProvider({
   const queryClient = useQueryClient();
   const connection = useConnection();
   const walletClient = useWalletClient({ chainId: protocolChain.id });
+  const walletRecordScope = useMemo(
+    () =>
+      connection.status !== "connected" ||
+      connection.address === undefined ||
+      connection.chainId !== protocolChain.id ||
+      protocolDeploymentManifest === undefined
+        ? undefined
+        : `${deploymentManifestFingerprint(protocolDeploymentManifest)}:${connection.chainId}:${connection.address.toLowerCase()}`,
+    [connection.status, connection.address, connection.chainId],
+  );
+  const collectorRecordScope = pathname.startsWith("/admin")
+    ? undefined
+    : walletRecordScope;
+  const recordScopeRef = useRef(walletRecordScope);
+  const transactionMetadataRef = useRef<
+    CollectorTransactionMetadata | undefined
+  >(undefined);
+  const transactionPersistRef = useRef(!pathname.startsWith("/admin"));
+  const mountedRef = useRef(true);
+  const restoredTransactionRef = useRef(false);
+  const [transactionPersistenceAvailable, setTransactionPersistenceAvailable] =
+    useState(true);
+  const [completedTransactions, setCompletedTransactions] = useState<
+    readonly CompletedCollectorTransaction[]
+  >([]);
+  const [transactionMetadata, setTransactionMetadata] =
+    useState<ProtocolClientContextValue["transactionMetadata"]>();
   const [transaction, setTransaction] = useState(createTransactionState);
   const transactionRef = useRef<TransactionState>(transaction);
   const activeExecution = useRef<symbol | undefined>(undefined);
@@ -1325,10 +1537,44 @@ export function ProtocolClientProvider({
     SubmittedTransactionPhase | undefined
   >(undefined);
   const reconciliationInFlight = useRef(false);
-  const updateTransaction = useCallback((state: TransactionState) => {
-    transactionRef.current = state;
-    setTransaction(state);
-  }, []);
+  const updateTransaction = useCallback(
+    (
+      state: TransactionState,
+      record: {
+        readonly scope: string | undefined;
+        readonly phase?: SubmittedTransactionPhase | undefined;
+        readonly persist?: boolean;
+        readonly metadata?: CollectorTransactionMetadata | undefined;
+      } = {
+        scope: recordScopeRef.current,
+        phase: submittedTransactionPhase.current,
+        persist: transactionPersistRef.current,
+        metadata: transactionMetadataRef.current,
+      },
+    ) => {
+      const metadata = record.metadata ?? transactionMetadataRef.current;
+      const stored =
+        record.scope === undefined ||
+        record.persist === false ||
+        metadata === undefined ||
+        writeCollectorTransaction(record.scope, state, record.phase, metadata);
+      if (
+        !mountedRef.current ||
+        record.scope !== recordScopeRef.current ||
+        !isCurrentOperation(record.metadata, transactionMetadataRef.current)
+      )
+        return;
+      transactionRef.current = state;
+      setTransaction(state);
+      setTransactionMetadata(displayedTransactionMetadata(metadata));
+      setTransactionPersistenceAvailable(stored);
+      if (record.scope !== undefined)
+        setCompletedTransactions(
+          readCompletedCollectorTransactions(record.scope),
+        );
+    },
+    [],
+  );
   const transactionScope = useMemo<TransactionScope>(
     () => ({
       address: connection.address,
@@ -1341,6 +1587,7 @@ export function ProtocolClientProvider({
   const transactionScopeGenerationRef = useRef(0);
   useEffect(() => {
     const purgeAdminState = () => {
+      if (!isProtectedAdminPath(transactionScopeRef.current.pathname)) return;
       transactionPrivacyGenerationRef.current += 1;
       transactionScopeGenerationRef.current += 1;
       lastAttempt.current = undefined;
@@ -1358,18 +1605,64 @@ export function ProtocolClientProvider({
     transactionScopeRef.current = transactionScope;
     lastAttempt.current = undefined;
   }, [transactionScope]);
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      transactionPrivacyGenerationRef.current += 1;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    if (recordScopeRef.current !== walletRecordScope) {
+      transactionPrivacyGenerationRef.current += 1;
+      activeExecution.current = undefined;
+      reconciliationInFlight.current = false;
+      setMinimumWalletBlock(undefined);
+    }
+    recordScopeRef.current = walletRecordScope;
+    const saved =
+      walletRecordScope === undefined
+        ? undefined
+        : readCollectorTransaction(walletRecordScope);
+    const state = saved?.state ?? createTransactionState();
+    submittedTransactionPhase.current = saved?.phase;
+    transactionMetadataRef.current = saved;
+    transactionPersistRef.current = saved !== undefined;
+    if (isTransactionInFlight(state)) {
+      activeExecution.current = Symbol("restored collector transaction");
+      restoredTransactionRef.current = true;
+    }
+    transactionRef.current = state;
+    // Synchronize the external wallet-scoped storage before painting another wallet's activity.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTransaction(state);
+    setTransactionMetadata(displayedTransactionMetadata(saved));
+    setCompletedTransactions(
+      walletRecordScope === undefined
+        ? []
+        : readCompletedCollectorTransactions(walletRecordScope),
+    );
+  }, [walletRecordScope]);
   const transactionScopeStateRef = useRef(transactionScope);
   useEffect(() => {
     if (transactionScopeStateRef.current === transactionScope) return;
     transactionScopeStateRef.current = transactionScope;
     const current = transactionRef.current;
-    if (!isTransactionInFlight(current)) {
+    if (
+      transactionScope.pathname.startsWith("/admin") &&
+      !isTransactionInFlight(current)
+    ) {
       updateTransaction(createTransactionState());
     }
   }, [transactionScope, updateTransaction]);
 
   const runtime = useMemo(() => createProtocolRuntime(), []);
   const { reader, transactionReader } = readersForPath(runtime, pathname);
+  const readerForSignal = useCallback(
+    (signal: AbortSignal) =>
+      readersForPath(createProtocolRuntime(signal), pathname).reader,
+    [pathname],
+  );
 
   const accessState = getCollectorAccessState({
     connected: connection.status === "connected",
@@ -1378,6 +1671,7 @@ export function ProtocolClientProvider({
     expectedChainId: deploymentEnvironment.chainId,
   });
   const {
+    includeBytecodeInventory,
     includeConnectedWallet,
     includeOperationalHistory,
     includeRewardHistory,
@@ -1393,8 +1687,7 @@ export function ProtocolClientProvider({
     pathname,
     connection.status === "connected",
   );
-  const publicStatusScope =
-    protocolDeploymentManifest?.launch.transactionHash ?? "unpublished";
+  const publicStatusScope = deploymentReadScope;
   const publicStatusQueryKey = useMemo(
     () => ["public-protocol-status", publicStatusScope] as const,
     [publicStatusScope],
@@ -1422,8 +1715,9 @@ export function ProtocolClientProvider({
   const healthQuery = useQuery({
     queryKey: [
       "protocol-health",
-      protocolDeploymentManifest?.launch.transactionHash,
+      deploymentLaunchHash,
       healthConnectedWallet,
+      includeBytecodeInventory,
       includeOperationalHistory,
       includeRewardHistory,
     ],
@@ -1440,6 +1734,7 @@ export function ProtocolClientProvider({
           undefined,
           undefined,
           {
+            includeBytecodeInventory,
             includeOperationalHistory,
             includeRewardHistory,
           },
@@ -1524,12 +1819,14 @@ export function ProtocolClientProvider({
     publicStatusPending: publicStatusQuery.isPending,
     publicStatusRefreshing: publicStatusQuery.isFetching,
   });
+  const walletQueryKey = [
+    "protocol-wallet",
+    deploymentLaunchHash,
+    connection.address,
+    deploymentReadScope,
+  ] as const;
   const walletQuery = useQuery({
-    queryKey: [
-      "protocol-wallet",
-      protocolDeploymentManifest?.launch.transactionHash,
-      connection.address,
-    ],
+    queryKey: walletQueryKey,
     queryFn: ({ signal }) => {
       const address = connection.address;
       if (address === undefined)
@@ -1542,19 +1839,42 @@ export function ProtocolClientProvider({
           ).reader;
           if (scopedReader === undefined)
             throw new Error("Protocol wallet reader unavailable");
-          return scopedReader.readWallet(address);
+          return scopedReader.readWallet(address, [
+            ...new Set([
+              ...knownCollectibleIds(
+                queryClient.getQueryData<WalletSnapshot>(walletQueryKey),
+              ),
+              ...(walletRecordScope === undefined
+                ? []
+                : (readCollectorTransaction(walletRecordScope)?.identityIds ??
+                  [])),
+            ]),
+          ]);
         },
         { signal },
       );
     },
     enabled: canLoadWallet(reader, connection, publicStatusEnabled),
-    refetchInterval: false,
+    // Follow unsettled work across collector routes. Completed wallets stay idle.
+    refetchInterval: ({ state }) => {
+      if (state.error !== null) return 30_000;
+      if (state.data === undefined) return false;
+      const { collectibles, partialFailures = [] } = state.data;
+      return (collectibles.pendingDiscovery?.count ?? 0) > 0 ||
+        partialFailures.length > 0 ||
+        walletSnapshotIsSynchronizing(
+          minimumWalletBlock,
+          collectibles.permanentObservedBlock,
+        )
+        ? 30_000
+        : false;
+    },
     retry: webProtocolQueryRetryCount,
   });
   const nativeBalanceQuery = useQuery({
     queryKey: [
       "protocol-native-balance",
-      protocolDeploymentManifest?.launch.transactionHash,
+      deploymentLaunchHash,
       connection.address,
     ],
     queryFn: async ({ signal }) => {
@@ -1576,16 +1896,20 @@ export function ProtocolClientProvider({
       );
     },
     enabled: canLoadWallet(reader, connection, publicStatusEnabled),
-    refetchInterval: false,
+    refetchInterval: ({ state }) =>
+      state.error !== null ||
+      walletSnapshotIsSynchronizing(
+        minimumWalletBlock,
+        state.data?.observedBlock,
+      )
+        ? 30_000
+        : false,
     retry: webProtocolQueryRetryCount,
   });
   const marketHistoryEnabled =
     runtime !== undefined && shouldLoadMarketHistory(pathname);
   const marketHistoryQuery = useQuery({
-    queryKey: [
-      "canonical-market-history",
-      protocolDeploymentManifest?.launch.transactionHash,
-    ],
+    queryKey: ["canonical-market-history", deploymentLaunchHash],
     queryFn: ({ signal }) =>
       runPublicRead(
         (readSignal) => {
@@ -1712,9 +2036,34 @@ export function ProtocolClientProvider({
       label: string,
       renewSwapDeadline = false,
       authorize?: TransactionAuthorization,
+      // Keep persistence, scope and signing fences in the same ordered operation.
+      // eslint-disable-next-line complexity
     ) => {
       if (activeExecution.current !== undefined) return transactionRef.current;
       const executionId = Symbol(label);
+      const executionRecordScope = recordScopeRef.current;
+      const executionPersists = !transactionScope.pathname.startsWith("/admin");
+      transactionPersistRef.current = executionPersists;
+      const executionMetadata = collectorMetadata(
+        action,
+        transactionMetadataRef.current,
+      );
+      transactionMetadataRef.current = executionMetadata;
+      if (executionPersists && executionRecordScope !== undefined) {
+        setTransactionPersistenceAvailable(
+          writeCollectorTransaction(
+            executionRecordScope,
+            { status: "pending", label },
+            undefined,
+            executionMetadata,
+            true,
+          ),
+        );
+      }
+      const executionPhase: { current: SubmittedTransactionPhase | undefined } =
+        {
+          current: undefined,
+        };
       activeExecution.current = executionId;
       const executionScopeGeneration = transactionScopeGenerationRef.current;
       const executionPrivacyGeneration =
@@ -1724,7 +2073,19 @@ export function ProtocolClientProvider({
       const scopeIsCurrent = (): boolean =>
         executionScopeGeneration === transactionScopeGenerationRef.current &&
         isSameTransactionScope(transactionScope, transactionScopeRef.current);
-      const boundary = { privacyIsCurrent, scopeIsCurrent };
+      const boundary = {
+        privacyIsCurrent,
+        scopeIsCurrent,
+        persistUncertainSubmission: (state: TransactionState) => {
+          if (executionPersists && executionRecordScope !== undefined)
+            writeCollectorTransaction(
+              executionRecordScope,
+              state,
+              executionPhase.current,
+              executionMetadata,
+            );
+        },
+      };
       const assertActiveScope = (): void => {
         if (!scopeIsCurrent() || !privacyIsCurrent()) {
           throw new TransactionScopeChangedError();
@@ -1806,19 +2167,32 @@ export function ProtocolClientProvider({
             label: stepLabel,
             onState: (state) => {
               executionState.current = state;
+              executionPhase.current = phase;
+              if (privacyIsCurrent()) submittedTransactionPhase.current = phase;
               if (
-                state.status === "submitted" ||
-                state.status === "outcome-unknown"
+                executionPersists ||
+                (privacyIsCurrent() &&
+                  (scopeIsCurrent() || transactionSurvivesScopeChange(state)))
               ) {
-                submittedTransactionPhase.current = phase;
-              } else if (state.status === "confirmed") {
-                submittedTransactionPhase.current = undefined;
-              }
-              if (
-                privacyIsCurrent() &&
-                (scopeIsCurrent() || transactionSurvivesScopeChange(state))
-              ) {
-                updateTransaction(state);
+                if (
+                  executionPersists &&
+                  !privacyIsCurrent() &&
+                  executionRecordScope !== undefined
+                ) {
+                  writeCollectorTransaction(
+                    executionRecordScope,
+                    state,
+                    phase,
+                    executionMetadata,
+                  );
+                } else {
+                  updateTransaction(state, {
+                    scope: executionRecordScope,
+                    phase,
+                    persist: executionPersists,
+                    metadata: executionMetadata,
+                  });
+                }
               }
             },
             prepared,
@@ -1861,9 +2235,28 @@ export function ProtocolClientProvider({
           await refresh(sent.blockNumber);
           return sent.state;
         }
+        if (privacyIsCurrent()) {
+          await queryClient.invalidateQueries({
+            queryKey: [
+              "protocol-wallet",
+              deploymentLaunchHash,
+              clients.address,
+            ],
+            refetchType: "active",
+          });
+          await queryClient.invalidateQueries({
+            queryKey: ["protocol-collectible"],
+            refetchType: "active",
+          });
+        }
         const idle = createTransactionState();
-        if (privacyIsCurrent()) updateTransaction(idle);
-        return idle;
+        if (privacyIsCurrent() && !executionPersists) {
+          updateTransaction(idle, {
+            scope: executionRecordScope,
+            persist: false,
+          });
+        }
+        return executionPersists ? sent.state : idle;
       } catch (cause) {
         return handleTransactionExecutionFailure({
           boundary,
@@ -1873,8 +2266,14 @@ export function ProtocolClientProvider({
           failureStep: failureStep.current,
           invalidateExchangeQuote: () =>
             setExchangeQuoteRevision((revision) => revision + 1),
-          submittedPhase: submittedTransactionPhase,
-          updateTransaction,
+          submittedPhase: executionPhase,
+          updateTransaction: (state) =>
+            updateTransaction(state, {
+              scope: executionRecordScope,
+              phase: executionPhase.current,
+              persist: executionPersists,
+              metadata: executionMetadata,
+            }),
         });
       } finally {
         releaseTransactionExecution({
@@ -1890,6 +2289,7 @@ export function ProtocolClientProvider({
       connection.chainId,
       currentHealth,
       refresh,
+      queryClient,
       transactionScope,
       transactionReader,
       updateTransaction,
@@ -1915,16 +2315,42 @@ export function ProtocolClientProvider({
       reconciliationInFlight.current = true;
       const privacyGeneration = transactionPrivacyGenerationRef.current;
       const phase = submittedTransactionPhase.current;
+      const reconciliationScope = recordScopeRef.current;
+      const persist = transactionPersistRef.current;
+      const metadata = transactionMetadataRef.current;
       const reconciliationExecution = activeExecution.current;
       const reconciling = { ...current, reconciling: true } as const;
       updateTransaction(reconciling);
       try {
         const reconciled = await reconcileUnknownTransaction({
-          refresh,
+          refresh: async (block) => {
+            if (privacyGeneration === transactionPrivacyGenerationRef.current)
+              await refresh(block);
+          },
           state: reconciling,
+          onState: (state) => {
+            if (privacyGeneration === transactionPrivacyGenerationRef.current) {
+              updateTransaction(state, {
+                scope: reconciliationScope,
+                phase,
+                persist,
+                metadata,
+              });
+            } else if (
+              persist &&
+              reconciliationScope !== undefined &&
+              metadata !== undefined
+            ) {
+              writeCollectorTransaction(
+                reconciliationScope,
+                state,
+                phase,
+                metadata,
+              );
+            }
+          },
         });
         if (privacyGeneration !== transactionPrivacyGenerationRef.current) {
-          submittedTransactionPhase.current = undefined;
           return createTransactionState();
         }
         if (reconciled.status === "outcome-unknown") {
@@ -1947,7 +2373,8 @@ export function ProtocolClientProvider({
         updateTransaction(settled);
         return settled;
       } finally {
-        reconciliationInFlight.current = false;
+        if (privacyGeneration === transactionPrivacyGenerationRef.current)
+          reconciliationInFlight.current = false;
       }
     },
     [refresh, updateTransaction],
@@ -1985,8 +2412,62 @@ export function ProtocolClientProvider({
     ],
   );
 
+  const reconcileRef = useRef(retryUnknownOutcome);
+  useLayoutEffect(() => {
+    reconcileRef.current = retryUnknownOutcome;
+  }, [retryUnknownOutcome]);
+  const transactionHash = "hash" in transaction ? transaction.hash : undefined;
+  useEffect(() => {
+    if (
+      collectorRecordScope === undefined ||
+      !transactionPersistRef.current ||
+      transaction.status !== "outcome-unknown"
+    )
+      return;
+    let cancelled = false;
+    let delay = 5_000;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = async () => {
+      if (cancelled || recordScopeRef.current !== collectorRecordScope) return;
+      const current = transactionRef.current;
+      if (current.status !== "outcome-unknown") return;
+      await reconcileRef.current(current);
+      if (!cancelled && transactionRef.current.status === "outcome-unknown") {
+        timer = setTimeout(() => void check(), delay);
+        delay = Math.min(delay * 2, 30_000);
+      }
+    };
+    timer = setTimeout(
+      () => void check(),
+      restoredTransactionRef.current ? 0 : delay,
+    );
+    restoredTransactionRef.current = false;
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [collectorRecordScope, transaction.status, transactionHash]);
+
+  const clearTransaction = useCallback(() => {
+    const current = transactionRef.current;
+    if (
+      isTransactionInFlight(current) &&
+      current.status !== "submission-unknown"
+    )
+      return;
+    activeExecution.current = undefined;
+    submittedTransactionPhase.current = undefined;
+    updateTransaction(createTransactionState());
+  }, [updateTransaction]);
+
   const getActionState = useCallback(
     (action: ProtocolAction) => {
+      if (accessState !== "ready") {
+        return {
+          enabled: false,
+          reason: "Connect your wallet on Base Sepolia before continuing.",
+        } as const;
+      }
       if (isTransactionInFlight(transaction)) {
         return {
           enabled: false,
@@ -1997,6 +2478,12 @@ export function ProtocolClientProvider({
         return {
           enabled: false,
           reason: applicationCopy.transaction.synchronizing,
+        } as const;
+      }
+      if (walletReadRequiresRecovery(walletRead)) {
+        return {
+          enabled: false,
+          reason: "Waiting for a current wallet check before another action.",
         } as const;
       }
       if (
@@ -2024,14 +2511,12 @@ export function ProtocolClientProvider({
       } catch (cause) {
         return {
           enabled: false,
-          reason:
-            cause instanceof TransactionPreparationError
-              ? cause.message
-              : applicationCopy.common.notObserved,
+          reason: actionPreparationMessage(cause),
         } as const;
       }
     },
     [
+      accessState,
       connection.address,
       connection.chainId,
       currentHealth,
@@ -2039,6 +2524,7 @@ export function ProtocolClientProvider({
       transaction,
       walletSynchronizing,
       walletQuery.data,
+      walletRead,
     ],
   );
 
@@ -2050,6 +2536,7 @@ export function ProtocolClientProvider({
       connected: connection.status === "connected",
       deploymentAvailable: reader !== undefined,
       reader,
+      readerForSignal,
       health: currentHealth,
       healthPending: currentHealthPending,
       healthRefreshing: currentHealthRefreshing,
@@ -2064,6 +2551,10 @@ export function ProtocolClientProvider({
       walletRead,
       nativeBalanceRead,
       transaction,
+      transactionPersistenceAvailable,
+      transactionMetadata,
+      completedTransactions,
+      clearTransaction,
       refresh,
       refreshWallet,
       refreshMarketHistory,
@@ -2087,11 +2578,16 @@ export function ProtocolClientProvider({
       marketHistory,
       getActionState,
       reader,
+      readerForSignal,
       refresh,
       refreshWallet,
       refreshMarketHistory,
       retry,
       transaction,
+      transactionPersistenceAvailable,
+      transactionMetadata,
+      completedTransactions,
+      clearTransaction,
       walletSynchronizing,
       walletRead,
       nativeBalanceRead,

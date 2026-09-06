@@ -8,17 +8,15 @@ export interface WebRpcTransportPolicy {
 
 export const webRpcTransportPolicy = {
   retryCount: 1,
-  retryDelay: 250,
+  retryDelay: 1_000,
   timeout: 5_000,
 } as const satisfies WebRpcTransportPolicy;
 
-// Transactions keep the conservative policy that existed before interactive
-// status and balance reads received a bounded failure budget. In particular,
-// receipt polling must not inherit the shorter UI-read policy after a wallet
-// has already submitted a transaction.
+// Receipt reads retain a longer deadline after wallet submission, but they
+// share the same small retry budget as other RPC reads.
 export const webTransactionRpcTransportPolicy = {
-  retryCount: 6,
-  retryDelay: 250,
+  retryCount: 1,
+  retryDelay: 1_000,
   timeout: 30_000,
 } as const satisfies WebRpcTransportPolicy;
 
@@ -30,6 +28,8 @@ type RpcFetch = (
 ) => Promise<Response>;
 
 const MAXIMUM_RPC_RESPONSE_BODY_BYTES = 10_485_760;
+// Query clients share an endpoint, so a rate limit must slow all of them down.
+const rpcCooldowns = new Map<string, number>();
 
 class RpcResponseBodyTooLargeError extends Error {
   constructor(maximumBytes: number) {
@@ -124,9 +124,49 @@ const readResponseBodyWithinSignal = async (
   return body;
 };
 
+const waitForRpcCooldown = async (
+  endpoint: string,
+  signal: AbortSignal | null | undefined,
+) => {
+  while ((rpcCooldowns.get(endpoint) ?? 0) > Date.now()) {
+    const delay = rpcCooldowns.get(endpoint)! - Date.now();
+    let timer: ReturnType<typeof setTimeout>;
+    await withinAbortSignal(
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, Math.min(delay, 2_147_483_647));
+      }),
+      signal,
+      async () => {
+        clearTimeout(timer);
+      },
+    );
+  }
+};
+
+const isRpcRateLimit = (body: Uint8Array): boolean => {
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(body)) as {
+      error?: { code?: number };
+    } | null;
+    return payload?.error?.code === 429 || payload?.error?.code === -32_005;
+  } catch {
+    return false;
+  }
+};
+
+const retryAfterDeadline = (retryAfter: string | null): number => {
+  const seconds = retryAfter === null ? NaN : Number(retryAfter);
+  const retryAt = Number.isFinite(seconds)
+    ? Date.now() + seconds * 1_000
+    : Date.parse(retryAfter ?? "");
+  return Number.isFinite(retryAt) ? retryAt : 0;
+};
+
 const withBoundedResponseHandling =
   (fetchFn: RpcFetch, maximumBytes: number): RpcFetch =>
   async (input, init) => {
+    const endpoint = input instanceof Request ? input.url : String(input);
+    await waitForRpcCooldown(endpoint, init?.signal);
     const response = await fetchFn(input, init);
     const body = await readResponseBodyWithinSignal(
       response,
@@ -134,6 +174,18 @@ const withBoundedResponseHandling =
       maximumBytes,
     );
     const headers = new Headers(response.headers);
+    if (response.status === 429 || isRpcRateLimit(body)) {
+      rpcCooldowns.set(
+        endpoint,
+        Math.max(
+          rpcCooldowns.get(endpoint) ?? 0,
+          Date.now() + 1_000,
+          retryAfterDeadline(headers.get("Retry-After")),
+        ),
+      );
+    }
+    // The shared cooldown enforces Retry-After within each read's deadline.
+    // Viem must not add a second, uncancellable wait outside that deadline.
     headers.delete("Retry-After");
     return new Response(body, {
       headers,
@@ -150,11 +202,16 @@ export const createWebReadRpcTransport = (
 ) =>
   http(url, {
     ...policy,
-    // Viem otherwise replaces retryDelay with an unbounded Retry-After value.
-    // One retry still occurs, but it always uses the configured 250 ms delay.
     fetchFn: withBoundedResponseHandling(fetchFn, maximumResponseBodyBytes),
     maxResponseBodySize: maximumResponseBodyBytes,
   });
 
 export const createWebTransactionRpcTransport = (url: string | undefined) =>
-  http(url, webTransactionRpcTransportPolicy);
+  http(url, {
+    ...webTransactionRpcTransportPolicy,
+    fetchFn: withBoundedResponseHandling(
+      globalThis.fetch,
+      MAXIMUM_RPC_RESPONSE_BODY_BYTES,
+    ),
+    maxResponseBodySize: MAXIMUM_RPC_RESPONSE_BODY_BYTES,
+  });

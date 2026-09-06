@@ -403,8 +403,8 @@ export const createIdentityApplicationCopy = (
       assets: {
         gas: {
           title: "Base Sepolia ETH",
-          badge: "Gas only",
-          body: "Provided only for Base Sepolia transaction fees. It is not a trading asset in this application.",
+          badge: "Gas and trading",
+          body: "Use Base Sepolia ETH for transaction fees or as the ETH buy input on Trade. Keep some ETH for gas.",
         },
         weth: {
           title: "Test WETH",
@@ -449,15 +449,15 @@ export const createIdentityApplicationCopy = (
         },
         submitting: {
           title: "Requesting the top-up",
-          body: "Keep this page open while the transfers are prepared.",
+          body: "Confirm the wallet message to request your test assets. Once accepted, funding continues even if you leave.",
         },
         pending: {
-          title: "Top-up transactions are pending",
-          body: "At least one transfer was submitted; a safe retry resumes the same request.",
+          title: "Your top-up is being processed",
+          body: "Your request is saved. We check each transfer automatically; no further signature is needed.",
         },
         retryable: {
-          title: "Top-up needs a safe retry",
-          body: "The previous request did not complete; retrying resumes it without sending twice.",
+          title: "Checking your top-up",
+          body: "We could not confirm the latest result. Check its status before requesting another top-up; accepted transfers continue automatically.",
         },
         "signature-rejected": {
           title: "Wallet signing cancelled",
@@ -489,7 +489,7 @@ export const createIdentityApplicationCopy = (
         },
         busy: {
           title: "The faucet is finishing another top-up",
-          body: "It serves one wallet at a time; retrying in a moment queues this wallet.",
+          body: "Another transfer is still confirming. This wallet has not been queued; check availability before requesting a top-up.",
         },
         confirming: {
           title: "Waiting for the transfers to settle",
@@ -497,7 +497,7 @@ export const createIdentityApplicationCopy = (
         },
         "rpc-unavailable": {
           title: "Base Sepolia balance check unavailable",
-          body: "Balances could not be verified safely, so nothing was sent; checking again is safe.",
+          body: "The latest balances could not be checked. Accepted transfers remain recorded and recover automatically.",
         },
         unavailable: {
           title: "Faucet temporarily unavailable",
@@ -879,7 +879,7 @@ export const createIdentityApplicationCopy = (
       creatorWaiting: "Creator fees waiting",
       directionToToken: `Buy ${identity.liquidToken.displayName}`,
       directionToWeth: `Sell ${identity.liquidToken.displayName}`,
-      refreshQuote: "Retry quote",
+      refreshQuote: "Refresh quote",
       submitBuy: `Buy ${identity.liquidToken.displayName}`,
       submitSell: `Sell ${identity.liquidToken.displayName}`,
       submittingBuy: `Buying ${identity.liquidToken.displayName}…`,
@@ -913,17 +913,19 @@ export const createIdentityApplicationCopy = (
       invalidAmount: "Enter a positive decimal with up to 18 places.",
       readerUnavailable: `The live ${identity.terms.canonicalMarket} reader is unavailable.`,
       balanceUnavailable:
-        "Wallet balance unavailable — retry the wallet read before trading.",
+        "Your wallet balance could not be checked. Refresh it before trading.",
       balanceLoading: "Reading the wallet balance…",
       reviewTitle: "Review trade",
-      quoteUnavailable: "Live quote unavailable — retry the quote.",
-      staleQuote: "Quote stale — retry before submitting.",
+      quoteUnavailable:
+        "A live quote is temporarily unavailable. Request a fresh quote.",
+      staleQuote:
+        "This quote expired. Refresh it and review the current terms.",
       quoteReviewChanged:
         "The live quote or collection impact changed. Review the refreshed trade details, then submit again.",
       discoveryEvidenceUnavailable:
-        "Wallet discovery boundary unchecked — retry the quote before submitting.",
+        "The effect on your collection could not be checked. Refresh the quote before reviewing this trade.",
       discoveryEvidenceInvalid:
-        "This quote belongs to a different wallet or boundary state — request a new quote.",
+        "Your wallet or collection changed. Request a fresh quote before trading.",
       discoveryLimit: (
         mutations: number,
         maximum: number,
@@ -1039,11 +1041,11 @@ export const createIdentityApplicationCopy = (
         "Reading complete liquidity cycles, swaps, and hook fees from the local history index.",
       historyUnavailable: "Indexed market history is unavailable",
       historyUnavailableDetail:
-        "Start or repair the history worker, then retry this read. Live market balances above remain separate.",
+        "Market history is temporarily unavailable. You can check again or view service status. Live market balances are shown separately.",
       historyStale: "History refresh failed",
       historyStaleDetail:
-        "Showing the last confirmed indexed history while the latest refresh is unavailable. Retry before treating it as current.",
-      historyRetry: "Retry indexed history",
+        "Showing the last confirmed market history. The latest update is unavailable, so these records may be behind the chain.",
+      historyRetry: "Refresh history",
       historyComplete: "Complete history",
       historyPartial: "Partial history",
       historyThrough: (block: string) => `Indexed through block ${block}`,
@@ -1113,21 +1115,22 @@ export const createIdentityApplicationCopy = (
       inspect: (stateLabel: string) => `Inspect ${stateLabel}`,
       loading: "Reading wallet holdings",
       readFailed:
-        "Wallet holdings could not be loaded. Retry the Base Sepolia read before treating this wallet as empty.",
-      partial:
-        "Permanent holdings are not available yet. Any collectibles shown here are only the confirmed portion of this wallet.",
-      discoveryWaitingTitle: "Waiting for Chainlink randomness",
+        "We couldn't load your collection. We'll check again automatically. Your collectibles have not changed.",
+      partial: `Your ${identity.terms.permanentCollectible}s haven't finished loading. The collection shown here is incomplete. We'll check again automatically.`,
+      discoveryWaitingTitle: "Your discovery is underway",
       discoveryWaiting: (count: number) =>
-        `${count} ${count === 1 ? identity.terms.pendingDiscovery : identity.terms.pendingDiscoveryPlural} remain backed by this wallet's ${identity.liquidToken.displayName}. The independently verified response has not arrived yet.`,
-      discoveryDelayedTitle: "Chainlink randomness is delayed",
+        `${count} ${count === 1 ? "collectible is" : "collectibles are"} waiting for a verified random draw. Keep the backing ${identity.liquidToken.displayName} in your wallet. We'll update your collection automatically; no action is needed.`,
+      discoveryDelayedTitle: "Your discovery is taking longer than expected",
       discoveryDelayed: (count: number) =>
-        `${count} ${count === 1 ? identity.terms.pendingDiscovery : identity.terms.pendingDiscoveryPlural} remain backed. No ${identity.terms.transientCollectible} was lost. Keep the corresponding ${identity.liquidToken.displayName} to wait, or move a whole unit away to cancel its still-unseen draw. The protocol will not reroll it.`,
-      discoveryReadyTitle: "Randomness verified",
+        `The randomness service hasn't responded for ${count} ${count === 1 ? "collectible" : "collectibles"} after 15 minutes. Your ${identity.liquidToken.displayName} is still in your wallet. We'll keep checking automatically. Selling or moving the backing whole ${identity.liquidToken.displayName} cancels its pending discovery.`,
+      discoveryReadyTitle: "Waiting for collectible delivery",
       discoveryReady: (finalized: number, count: number) =>
-        `${finalized} of ${count} results are finalized. The remaining work is stored onchain and retryable; the operator completes it in bounded transactions.`,
+        `The random draw is verified. ${finalized} of ${count} ${count === 1 ? "collectible has" : "collectibles have"} been delivered. The delivery service still needs to finish. Your collection will update automatically; no action is needed.`,
+      discoveryDeliveryDelayedTitle: "Collectible delivery is delayed",
+      discoveryDeliveryDelayed: `Your random draw is verified, but delivery has been waiting for over 15 minutes. The delivery service needs to complete it. You don't need to retry or buy more ${identity.liquidToken.displayName}. Keep the backing ${identity.liquidToken.displayName} in your wallet; we'll keep checking automatically.`,
       discoveryUnknownTitle: `${identity.terms.discoveryDraw} status unavailable`,
       discoveryUnknown:
-        "The wallet balance is confirmed, but the detailed randomness status could not be read. Retry before treating the request as failed.",
+        "Your balance and pending discovery are confirmed. We couldn't load its progress yet. We'll check again automatically.",
     },
     craft: {
       eyebrow: `${identity.collectibleToken.symbol} IDENTITY`,
@@ -1144,9 +1147,9 @@ export const createIdentityApplicationCopy = (
       viewOnchainCollection: "View onchain collection ↗",
       noRewardsAccrued: "No rewards accrued yet",
       rewardsUnavailable:
-        "Reward evidence for this identity could not be read. Retry the wallet read.",
+        "Rewards for this identity are temporarily unavailable. This does not mean no rewards are attached.",
       directReadFailed:
-        "This identity could not be read directly from Base Sepolia. Retry before treating it as missing or unowned.",
+        "This identity could not be checked on Base Sepolia. Refresh its details before treating it as missing or unowned.",
       launchConfirmed: `${identity.terms.commitment} confirmed`,
       launchSynchronizing:
         "Updating this craft from the confirmed block. Its permanent state will appear as soon as the collection index catches up.",
@@ -1221,7 +1224,7 @@ export const createIdentityApplicationCopy = (
       policyDisclosure: "How eligibility and units work",
       eligible: "Eligible now",
       gated: "Claim unavailable on this deployment",
-      gatedExplanation: `This deployment still uses the superseded per-wallet claim policy. Accrued ${identity.terms.stockReward} units remain attached to the identity and are not lost. Self-service claiming becomes available with the ownership-based replacement deployment.`,
+      gatedExplanation: `Reward activation and this deployment’s claim policy do not currently allow this claim. Attached ${identity.terms.stockReward} units stay with the identity.`,
       claim: "Claim eligible rewards",
       reviewTitle: "Review claim",
       reviewIntroduction:
@@ -1235,7 +1238,7 @@ export const createIdentityApplicationCopy = (
       empty: `No attached ${identity.terms.stockReward} units are currently claimable.`,
       connect: `Connect a wallet to review its ${identity.terms.stockReward} units.`,
       loading: "Reading attached rewards",
-      readFailed: `Attached ${identity.terms.stockReward} units could not be loaded. Retry the Base Sepolia read before treating this wallet as unrewarded.`,
+      readFailed: `Attached ${identity.terms.stockReward} units could not be loaded. This does not mean your rewards are zero.`,
     },
     relics: {
       eyebrow: "SPECIAL IDENTITIES",
@@ -1654,16 +1657,16 @@ export const createIdentityApplicationCopy = (
         "Balances and holdings are loading from the latest Base Sepolia block.",
       walletFailedTitle: "Wallet data could not be read",
       walletFailedBody:
-        "Base Sepolia did not complete the wallet read. No missing balance or holding is being treated as zero.",
+        "We couldn't refresh your balances and collectibles. We'll check again automatically. This does not mean your wallet is empty.",
       walletPartialTitle: "Wallet data is partially available",
       walletPartialBody:
-        "Balances loaded, but at least one holdings or reward-detail read failed. Incomplete sections are marked explicitly.",
-      retryWalletRead: "Retry wallet read",
+        "Your balances loaded. Some collectibles or reward details are still unavailable; we'll check again automatically.",
+      retryWalletRead: "Refresh wallet",
     },
     transaction: {
       idle: "Ready for review",
-      pending: "Confirm in your wallet",
-      simulated: "Simulation passed",
+      pending: "Preparing your transaction",
+      simulated: "Confirm in your wallet",
       submitted: "Submitted to Base Sepolia",
       outcomeUnknown: "Submitted outcome unknown",
       outcomeUnknownMessage:
@@ -1673,8 +1676,10 @@ export const createIdentityApplicationCopy = (
         "Updating wallet data from the confirmed block. Wait for the new state before taking another action.",
       reverted:
         "The transaction was mined but reverted. No protocol state changed.",
+      walletSubmissionFailed:
+        "Your wallet could not complete the network request. Check its network connection and Activity before trying again; the app did not receive a transaction hash.",
       failed: "Transaction failed",
-      retriable: "Retry available",
+      retriable: "Action needs attention",
       retry: "Try again",
       reconcile: "Check submitted outcome",
       reconciling: "Checking submitted outcome…",
@@ -1958,6 +1963,8 @@ export const createIdentityProtocolCopy = (identity: IdentityConfiguration) => {
       walletBlock: "Wallet observation block",
       walletSummary: "Wallet summary",
       walletCollectibles: `${identity.collectibleToken.name} wallet holdings`,
+      walletCollectionUpdating:
+        "Your collection is updating. Newly received or launched collectibles will appear automatically.",
       walletPermanentCollectibles: `Permanent ${identity.collectibleToken.name} wallet holdings`,
       walletCollectibleDetails: `${identity.collectibleToken.name} wallet details`,
       quoteBlock: `${terms.canonicalMarket} quote block`,

@@ -59,6 +59,39 @@ describe("bounded collectible ownership derivation", () => {
     expect(requestsAfterAbort).toBe(0);
   });
 
+  it("does not multiply exhausted HTTP retries by replaying failed multicall slots", async () => {
+    let requests = 0;
+    const client = createPublicClient({
+      chain: foundry,
+      batch: { multicall: { deployless: true } },
+      transport: http("https://rpc.test", {
+        retryCount: 0,
+        fetchFn: async () => {
+          requests += 1;
+          return new Response(
+            JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              error: { code: 429, message: "Too many requests" },
+            }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        },
+      }),
+    });
+    const transport = makeViemProtocolTransport(client, manifest, identity);
+    const result = await transport.readMany(
+      Array.from({ length: 250 }, () => ({
+        contract: "fuelCore" as const,
+        functionName: "balanceOf" as const,
+        args: [owner] as const,
+      })),
+      10n,
+    );
+    expect(result[0]?.status).toBe("failure");
+    expect(requests).toBe(1);
+  });
+
   it("derives permanent holdings from indexed candidates and current onchain state", async () => {
     const client = {
       getLogs: async () =>
@@ -107,45 +140,24 @@ describe("bounded collectible ownership derivation", () => {
     expect(results[500]).toEqual({ status: "success", value: 500n });
   });
 
-  it("retries only failed multicall slots at the observed block", async () => {
-    const calls: Array<{ size: number; blockNumber: bigint }> = [];
-    let attempt = 0;
-    const client = {
-      multicall: async ({
-        contracts,
-        blockNumber,
-      }: {
-        contracts: readonly unknown[];
-        blockNumber: bigint;
-      }) => {
-        calls.push({ size: contracts.length, blockNumber });
-        attempt += 1;
-        return attempt === 1
-          ? [
-              { status: "success", result: 10n },
-              { status: "failure", error: new Error("transient RPC slot") },
-              { status: "success", result: 30n },
-            ]
-          : [{ status: "success", result: 20n }];
-      },
-    } as unknown as PublicClient;
-    const transport = makeViemProtocolTransport(client, manifest, identity);
-    const requests = Array.from({ length: 3 }, () => ({
-      contract: "fuelCore" as const,
-      functionName: "balanceOf" as const,
-      args: [owner] as const,
-    }));
-
-    await expect(transport.readMany(requests, 10n)).resolves.toEqual([
-      { status: "success", value: 10n },
-      { status: "success", value: 20n },
-      { status: "success", value: 30n },
-    ]);
-    expect(calls).toEqual([
-      { size: 3, blockNumber: 10n },
-      { size: 1, blockNumber: 10n },
-    ]);
-  });
+  it.each([false, true])(
+    "only ignores an owner read failure when the candidate is observed non-permanent (permanent=%s)",
+    async (permanent) => {
+      const failure = new Error(
+        "ownerOf: identity returned to the available pool",
+      );
+      const client = {
+        multicall: async () => [
+          { status: "failure", error: failure },
+          { status: "success", result: permanent },
+        ],
+      } as unknown as PublicClient;
+      const transport = makeViemProtocolTransport(client, manifest, identity);
+      const read = transport.permanentIdentityIds(owner, [1639], 120n);
+      if (permanent) await expect(read).rejects.toBe(failure);
+      else await expect(read).resolves.toEqual([]);
+    },
+  );
 
   it("excludes candidates that the wallet does not currently own", async () => {
     const client = {

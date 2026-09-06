@@ -46,34 +46,25 @@ balance read lagging its own confirmed transfer, and reports `funding-confirming
 retain a top-up still spends its cooldown, lifetime allowance, and the daily budget, because the
 inventory really did leave.
 
-### One request at a time, and how it clears
+### Accepted requests recover automatically
 
-The signer serves one request at a time so a nonce cannot be double-spent. That
-makes an unresolved request a gate on every wallet behind it, so any caller may
-finish one: the transfers are already signed, and driving them is the same work
-with the same bytes whoever asks. A request is settled from its own receipts,
-completed when they all confirmed and failed when one reverted, and only a
-transfer genuinely still in flight keeps the lock. A caller that arrives while
-that is true is refused with `funding-busy`, which reaches the browser rather
-than being masked as a general outage.
+The worker records signed transfers before returning a `202` acceptance. A service-owned loop
+reconciles that request independently of HTTP requests and browser lifetime, including after a
+restart. It checks a persisted hash before any rebroadcast, uses the same signed bytes, and
+advances ETH and WETH separately. One signer request remains active at a time; an unresolved
+nonce keeps subsequent sends blocked rather than allowing competing transfers.
 
-A signed transfer whose nonce is already behind the signer is treated as dead
-rather than in flight. The node rejects it as `nonce too low` and no receipt
-will ever exist, so reading it as pending parked its request forever and
-refused every other wallet. Any nonce gap produces it: a crash between signing
-and broadcast, a dropped mempool transaction, or a second process sharing the
-signer. The request fails, the queue moves on, and the recipient's next attempt
-is a fresh request with a current nonce. Never run two workers against one
-signer key.
+Recovery starts at two-second intervals and backs off to at most thirty seconds while evidence
+remains pending or unavailable. RPC requests have a five-second timeout and no transport retry
+multiplication. Reverted or provably unusable transfers finish as failed; unavailable evidence
+keeps the accepted request recorded. A request older than two minutes reports a service delay.
+Receipt confirmation settles delivery even if the recipient subsequently moved the assets.
 
-Leaving that resolution to the request's own recipient made the gate permanent:
-a transfer that had confirmed hours earlier still read as `broadcast` in the
-ledger because nothing ever looked, and every other wallet was refused with an
-opaque error.
-
-Every decision that moves inventory or refuses to is logged — funded, refused,
-settled, and each per-recipient denial — because a faucet that answered with a
-browser error and an empty terminal cannot be operated.
+GET status is read-only. It returns the latest request for that recipient, including its stable
+identity, observed time, outcome, and per-asset progress. The browser follows active requests at
+five-second intervals and stops after settlement or wallet disconnection. Checking status never
+requests another proof. The authenticated service halt stops processing and new acceptance; its
+persisted setting survives restart. Never run two workers against one signer key.
 
 ### Service-wide bounds
 
@@ -228,14 +219,14 @@ so wallet simulation cannot reveal a token ID that the buyer can reject and retr
 ## States and operational evidence
 
 The browser-facing VM `GET /v1/funding/status?recipient=…` reports sanitized service
-availability and the destination wallet's eligibility, fixed targets, cooldown, balances, and
-remaining top-up. `POST /v1/funding/fund` reports only that wallet's pending or confirmed outcome
-and confirmed totals. The VM binds the returned address to the request and never exposes signer
-inventory, global counters, policy ledgers, internal request IDs, transaction hashes,
-prepared/broadcast/retry command state, or raw worker errors. Those remain loopback operational
-evidence. The `/start` UI still distinguishes disconnected, wrong-network,
-unavailable/retryable, funding-pending, discovery-pending, Grounded Craft, and permanent Orbiter
-states.
+availability and wallet eligibility, fixed targets, cooldown, balances, and remaining top-up.
+POST returns durable acceptance without waiting for a transaction receipt. Both responses may
+include the recipient's stable request identity, observation time, delayed flag, and per-asset
+progress. Transaction hashes are public only after broadcast; prepared signed bytes, signer
+inventory, global counters, leases, proof records, and raw diagnostics remain private.
+The API validates the returned recipient before projecting progress. Newer status replaces an
+older POST response; temporary read failures retain the last verified result without inferring
+completion. A fresh request still requires an explicit wallet-control proof.
 
 Alert on:
 

@@ -11,13 +11,13 @@ import {
 } from "./web-rpc-policy";
 
 describe("interactive web RPC failure policy", () => {
-  it("uses a five-second deadline with one short transport retry", () => {
+  it("uses a five-second deadline with one backed-off transport retry", () => {
     const transport = createWebReadRpcTransport("https://rpc.invalid")({
       chain: foundry,
     });
     expect(transport.config).toMatchObject({
       retryCount: 1,
-      retryDelay: 250,
+      retryDelay: 1_000,
       timeout: 5_000,
     });
   });
@@ -26,7 +26,7 @@ describe("interactive web RPC failure policy", () => {
     expect(webProtocolQueryRetryCount).toBe(0);
   });
 
-  it("caps server-directed Retry-After backoff on the actual read transport", async () => {
+  it("backs off before retrying a rate-limited read", async () => {
     let requestCount = 0;
     const fetchFn: typeof fetch = async () => {
       requestCount += 1;
@@ -53,8 +53,43 @@ describe("interactive web RPC failure policy", () => {
     await expect(client.getBlockNumber()).resolves.toBe(1n);
 
     expect(requestCount).toBe(2);
-    expect(performance.now() - startedAt).toBeLessThan(800);
+    expect(performance.now() - startedAt).toBeGreaterThanOrEqual(1_000);
   });
+
+  it.each([429, 200])(
+    "shares a rate-limit cooldown across readers after HTTP %s without extending read deadlines",
+    async (status) => {
+      let requests = 0;
+      const endpoint = `https://cooldown-${status}.test`;
+      const fetchFn: typeof fetch = async () => {
+        requests += 1;
+        return Response.json(
+          {
+            id: 1,
+            jsonrpc: "2.0",
+            error: { code: 429, message: "Too many requests" },
+          },
+          { status, headers: { "Retry-After": "60" } },
+        );
+      };
+      const reader = () =>
+        createPublicClient({
+          chain: foundry,
+          transport: createWebReadRpcTransport(endpoint, fetchFn, {
+            retryCount: 0,
+            retryDelay: 0,
+            timeout: 40,
+          }),
+        });
+      await expect(reader().getBlockNumber()).rejects.toThrow();
+      await expect(
+        reader().getBalance({
+          address: "0x0000000000000000000000000000000000000001",
+        }),
+      ).rejects.toThrow();
+      expect(requests).toBe(1);
+    },
+  );
 
   it("times out an RPC response whose body never completes", async () => {
     const stalledBody = new ReadableStream<Uint8Array>({
@@ -199,8 +234,8 @@ describe("interactive web RPC failure policy", () => {
       webTransactionRpcTransportPolicy.timeout,
     );
     expect(webTransactionRpcTransportPolicy).toEqual({
-      retryCount: 6,
-      retryDelay: 250,
+      retryCount: 1,
+      retryDelay: 1_000,
       timeout: 30_000,
     });
   });

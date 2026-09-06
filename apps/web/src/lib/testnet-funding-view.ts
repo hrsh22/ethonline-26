@@ -69,10 +69,12 @@ const resolveAccessView = (accessState: CollectorAccessState): ResolvedView => {
 
 export const isTestnetFundingComplete = (
   response: TestnetFundingResponse | undefined,
-): boolean =>
-  response?.recipient?.state === "already-funded" ||
-  response?.recipient?.state === "funded" ||
-  response?.request?.state === "funded";
+): boolean => {
+  if (response === undefined) return false;
+  const recipient = response.recipient;
+  if (recipient === undefined) return response.request?.state === "funded";
+  return recipient.state === "already-funded" || recipient.state === "funded";
+};
 
 const resolveTransportView = (
   mutationPending: boolean,
@@ -82,7 +84,12 @@ const resolveTransportView = (
 ): ResolvedView => {
   if (mutationPending) return view("submitting", "none");
   if (mutationFailure !== undefined)
-    return view(mutationFailure, "retry-funding");
+    return view(
+      mutationFailure,
+      mutationFailure === "signature-rejected"
+        ? "retry-funding"
+        : "retry-status",
+    );
   if (queryFailed && !hasMutationResponse) {
     return view("unavailable", "retry-status");
   }
@@ -110,20 +117,20 @@ const resolveBusyView = (
   response: TestnetFundingResponse | undefined,
 ): ResolvedView =>
   response?.error?.code === "funding-busy"
-    ? view("busy", "retry-funding")
+    ? view("busy", "retry-status")
     : undefined;
 
 const resolveRequestView = (
   response: TestnetFundingResponse | undefined,
 ): ResolvedView => {
   if (response?.request?.state === "retryable") {
-    return view("retryable", "retry-funding");
+    return view("retryable", "retry-status");
   }
   if (
     response?.recipient?.state === "pending" ||
     response?.request?.state === "pending"
   ) {
-    return view("pending", "retry-funding");
+    return view("pending", "none");
   }
   return undefined;
 };
@@ -169,9 +176,7 @@ const resolveRpcView = (
   response: TestnetFundingResponse | undefined,
 ): ResolvedView => {
   if (response?.error?.code === "funding-confirming") {
-    // Only resuming the request settles it; a status read observes no receipt
-    // and would leave the collector clicking a button that cannot finish.
-    return view("confirming", "retry-funding");
+    return view("confirming", "retry-status");
   }
   if (response?.error?.code === "funding-rpc-unavailable") {
     return view("rpc-unavailable", "retry-status");

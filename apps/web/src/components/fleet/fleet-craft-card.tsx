@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { CraftArt } from "@/components/ui/craft-art";
+import { Disclosure } from "@/components/ui/disclosure";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Amount, Unavailable } from "@/components/ui/value";
 import { applicationCopy, identity } from "@/lib/identity";
@@ -9,6 +10,8 @@ import { applicationCopy, identity } from "@/lib/identity";
 /** The fields a holding card presents, plus which side of the collection it came from. */
 export interface FleetCraft {
   readonly claimEligible: boolean;
+  readonly claimEligibilityStatus?: "observed" | "unavailable";
+  readonly specialKindCode?: "ordinary" | "basket" | "indicator";
   readonly hasAttachedRewards: boolean;
   readonly identityId: number;
   readonly observedAt: number | undefined;
@@ -97,10 +100,17 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
     >
       <div className="flex items-center justify-center border-b border-line bg-canvas p-4">
         <CraftArt
-          className="size-32"
+          className="size-40"
           decorative
           identityId={craft.identityId}
-          kind={craft.permanent ? "permanent" : "transient"}
+          kind={
+            craft.identityId > 4440
+              ? "relic"
+              : craft.permanent
+                ? "permanent"
+                : "transient"
+          }
+          lit={craft.permanent}
           track={trackIndexFor(craft.rewardTrack)}
         />
       </div>
@@ -121,18 +131,23 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
             value={craft.rewardTrack}
           />
           <DataRow
-            label={applicationCopy.craft.tier}
-            value={craft.rarityTier}
-          />
-          <DataRow
-            label={applicationCopy.craft.weight}
-            value={<span>{craft.rewardWeight}&times;</span>}
-          />
-          <DataRow
             label={applicationCopy.craft.attachedRewards}
             value={attachedRewardsValue(craft)}
           />
         </DataList>
+        <Disclosure title="Tier and reward weight">
+          <DataList>
+            {" "}
+            <DataRow
+              label={applicationCopy.craft.tier}
+              value={craft.rarityTier}
+            />
+            <DataRow
+              label={applicationCopy.craft.weight}
+              value={<span>{craft.rewardWeight}&times;</span>}
+            />
+          </DataList>
+        </Disclosure>
         <p className="text-body-sm text-ink-soft">{consequence(craft)}</p>
         <p className="mt-auto font-mono text-caption text-ink-faint">
           {applicationCopy.craft.lastConfirmed}{" "}
@@ -147,6 +162,7 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
         <Link
           className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
           href={`/fleet/${craft.identityId}`}
+          aria-label={`Inspect ${craft.stateLabel} #${craft.identityId}`}
         >
           {applicationCopy.fleet.inspect(craft.stateLabel)}
         </Link>

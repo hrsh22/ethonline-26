@@ -28,6 +28,8 @@ const numeric = (value: SQLOutputValue | undefined): number => {
 };
 
 export interface OperatorCommandRecord {
+  /** Only supervisor startup sets this, atomically with a fail-closed reset. */
+  readonly deploymentFingerprint?: string;
   readonly actor: string;
   readonly appliedAt: number;
   readonly command: OperatorCommandName;
@@ -52,6 +54,7 @@ export interface OperatorRunRecord {
 }
 
 export interface OperatorPolicyRevision {
+  readonly deploymentFingerprint?: string;
   readonly policy: OperatorExecutionPolicy;
   readonly revision: number;
   readonly stopRevision: number;
@@ -202,6 +205,15 @@ export const openOperatorControlStore = (
         database.exec(`ALTER TABLE operator_policy ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
           ALTER TABLE operator_policy ADD COLUMN stop_revision INTEGER NOT NULL DEFAULT 0;`);
       }
+      if (
+        !policyColumns.some(
+          (column) => column.name === "deployment_fingerprint",
+        )
+      ) {
+        database.exec(
+          "ALTER TABLE operator_policy ADD COLUMN deployment_fingerprint TEXT",
+        );
+      }
       const runColumns = database
         .prepare("PRAGMA table_info(operator_runs)")
         .all();
@@ -269,6 +281,9 @@ export const openOperatorControlStore = (
         updatedAt: 0,
       };
     return {
+      ...(typeof row.deployment_fingerprint === "string"
+        ? { deploymentFingerprint: row.deployment_fingerprint }
+        : {}),
       policy: {
         mode: text(row.mode) as OperatorExecutionMode,
         oneShot: text(row.one_shot) as OperatorOneShot,
@@ -353,6 +368,13 @@ export const openOperatorControlStore = (
             record.appliedAt,
             record.command === "stop" || record.command === "enable-dry-run",
           );
+        }
+        if (record.deploymentFingerprint !== undefined) {
+          database
+            .prepare(
+              "UPDATE operator_policy SET deployment_fingerprint = ? WHERE singleton = 1",
+            )
+            .run(record.deploymentFingerprint);
         }
         database.exec("COMMIT");
       } catch (cause) {

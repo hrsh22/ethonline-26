@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { COLLECTION_SIZE } from "@orbit/config/collection-manifest";
+import { parseCanonicalIdentityId } from "@/lib/identity-route";
+import { CraftSharing } from "@/components/fleet/craft-sharing";
+import { identity } from "@/lib/identity";
 
 import { CraftDetailPanel } from "@/components/fleet/craft-detail-panel";
 import { applicationCopy } from "@/lib/identity";
-
-const parseCanonicalIdentityId = (value: string) => {
-  if (!/^[1-9]\d{0,3}$/u.test(value)) return undefined;
-  const identityId = Number(value);
-  return identityId <= COLLECTION_SIZE ? identityId : undefined;
-};
 
 export async function generateMetadata({
   params,
@@ -21,7 +17,7 @@ export async function generateMetadata({
       parsedIdentityId === undefined
         ? applicationCopy.fleet.title
         : applicationCopy.craft.title(parsedIdentityId),
-    description: applicationCopy.craft.currentOwnerOnly,
+    description: `${identity.brand} identity #${parsedIdentityId ?? "unknown"}. Explore its assigned traits and current onchain state. Web artwork is illustrative. Valueless test assets.`,
   };
 }
 
@@ -31,5 +27,10 @@ export default async function CraftDetailPage({
   const { identityId } = await params;
   const parsedIdentityId = parseCanonicalIdentityId(identityId);
   if (parsedIdentityId === undefined) notFound();
-  return <CraftDetailPanel identityId={parsedIdentityId} />;
+  return (
+    <>
+      <CraftDetailPanel identityId={parsedIdentityId} />
+      <CraftSharing identityId={parsedIdentityId} />
+    </>
+  );
 }

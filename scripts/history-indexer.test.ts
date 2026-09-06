@@ -320,6 +320,9 @@ describe("canonical RPC event source", () => {
     expect(maximumActive).toBeLessThanOrEqual(2);
     expect(events.map((item) => item.eventName).sort()).toEqual(
       [
+        "discovery-requested",
+        "discovery-fulfilled",
+        "discovery-cancelled",
         "fee-accrued",
         "protocol-liquidity-added",
         "permanent-commitment",
@@ -1397,4 +1400,82 @@ describe("durable synchronization", () => {
     expect(store.readCheckpoint()).toEqual(checkpointBefore);
     store.close();
   });
+});
+
+it("filters canonical discovery outcomes by account and binds pagination to that account", async () => {
+  const config = configuration({ launchBlock: 0n });
+  const store = openHistoryStore(temporaryDatabasePath(), config);
+  const chain = new FakeChainSource(config.chainId);
+  const account = "0x0000000000000000000000000000000000000001";
+  chain.events.push(
+    ...[1n, 2n, 3n].map((blockNumber) => ({
+      ...event({ blockNumber, eventName: "discovery-requested" }),
+      sourceAddress: config.sources.fuelCore,
+      payload: {
+        account:
+          blockNumber === 2n
+            ? "0x0000000000000000000000000000000000000002"
+            : account,
+        requestId: hash(blockNumber),
+      },
+    })),
+  );
+  await Effect.runPromise(
+    synchronizeHistory({ configuration: config, source: chain, store }),
+  );
+  const query = {
+    eventNames: ["discovery-requested"] as const,
+    account,
+    fromBlock: config.launchBlock,
+    toBlock: chain.headBlock,
+    limit: 1,
+  };
+  const page = store.queryEvents(query);
+  expect(page.items.map((item) => item.blockNumber)).toEqual([1n]);
+  expect(
+    store
+      .queryEvents({ ...query, cursor: page.page.nextCursor! })
+      .items.map((item) => item.blockNumber),
+  ).toEqual([3n]);
+  expect(() =>
+    store.queryEvents({
+      ...query,
+      account: "0x0000000000000000000000000000000000000002",
+      cursor: page.page.nextCursor!,
+    }),
+  ).toThrow("different query");
+  store.close();
+});
+
+it("replays old checkpoints once when discovery events enter the tracked set", async () => {
+  const config = configuration({ launchBlock: 0n });
+  const path = temporaryDatabasePath();
+  let store = openHistoryStore(path, config);
+  const chain = new FakeChainSource(config.chainId);
+  await Effect.runPromise(
+    synchronizeHistory({ configuration: config, source: chain, store }),
+  );
+  store.close();
+  const oldDatabase = new DatabaseSync(path);
+  oldDatabase.exec(
+    "DELETE FROM index_metadata WHERE key = 'tracked_event_revision'",
+  );
+  oldDatabase.close();
+  store = openHistoryStore(path, config);
+  expect(store.readCheckpoint()).toBeUndefined();
+  expect(
+    store.queryEvents({
+      eventNames: ["discovery-requested"],
+      fromBlock: 0n,
+      toBlock: 20n,
+      limit: 10,
+    }).status.state,
+  ).toBe("partial");
+  await Effect.runPromise(
+    synchronizeHistory({ configuration: config, source: chain, store }),
+  );
+  store.close();
+  store = openHistoryStore(path, config);
+  expect(store.readCheckpoint()?.blockNumber).toBe(20n);
+  store.close();
 });

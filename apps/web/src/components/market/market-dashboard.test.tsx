@@ -232,7 +232,7 @@ describe("plain-language market balances", () => {
     expect(partial).toContain("not the current market price");
     expect(partial).toContain("average execution price");
     expect(failed).toContain('role="alert"');
-    expect(failed).toContain("Retry indexed history");
+    expect(failed).toContain("Refresh history");
     expect(failed).not.toContain("private upstream");
   });
 

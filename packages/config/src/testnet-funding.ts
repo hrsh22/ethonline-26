@@ -25,6 +25,7 @@ export const TestnetFundingRecipientStateSchema = Schema.Literal(
 export const TestnetFundingRequestStateSchema = Schema.Literal(
   "pending",
   "retryable",
+  "failed",
   "funded",
 );
 
@@ -119,11 +120,12 @@ const TestnetFundingRecipientSchema = Schema.Struct({
 const TestnetFundingRequestSchema = Schema.Struct({
   id: Schema.String.pipe(Schema.minLength(1)),
   state: TestnetFundingRequestStateSchema,
+  delayed: Schema.optional(Schema.Boolean),
   transactions: Schema.optional(
     Schema.Array(
       Schema.Struct({
         kind: Schema.Literal("weth", "eth"),
-        hash: TransactionHash,
+        hash: Schema.optional(TransactionHash),
         state: Schema.Literal("prepared", "broadcast", "confirmed"),
       }),
     ),
@@ -161,6 +163,9 @@ const TestnetFundingChallengeSchema = Schema.Struct({
 
 export const TestnetFundingResponseSchema = Schema.Struct({
   apiVersion: Schema.Literal(1),
+  observedAt: Schema.optional(
+    Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
+  ),
   service: Schema.optional(TestnetFundingServiceSchema),
   recipient: Schema.optional(TestnetFundingRecipientSchema),
   request: Schema.optional(TestnetFundingRequestSchema),

@@ -230,6 +230,7 @@ describe("public admin sign-in", () => {
       }),
     );
 
+    expect(document.activeElement).toBe(button);
     expect(state.modalOpen).toHaveBeenCalledWith({ view: "Connect" });
     expect(
       container.querySelector("[data-wallet-state='rejected']"),

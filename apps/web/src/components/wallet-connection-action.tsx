@@ -1,17 +1,9 @@
 "use client";
 
-import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { CircleHelp } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
-import {
-  dialogActionsClassName,
-  dialogBackdropClassName,
-  dialogDescriptionClassName,
-  dialogPopupClassName,
-  dialogTitleClassName,
-} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { identity } from "@/lib/identity";
-import { cn } from "@/lib/utils";
 
 export function WalletConnectionAction({
   ariaDescribedBy,
@@ -29,48 +21,31 @@ export function WalletConnectionAction({
   readonly size?: "default" | "sm";
 }) {
   return (
-    <AlertDialog.Root>
-      <AlertDialog.Trigger
+    <div className="relative flex items-center gap-1">
+      <Button
         aria-describedby={ariaDescribedBy}
-        className={cn(buttonVariants({ size }), className)}
+        aria-haspopup="dialog"
+        className={className}
         disabled={disabled}
+        onClick={onContinue}
+        size={size}
       >
         {children}
-      </AlertDialog.Trigger>
-      <AlertDialog.Portal>
-        <AlertDialog.Backdrop className={dialogBackdropClassName} />
-        <AlertDialog.Popup className={dialogPopupClassName}>
-          <AlertDialog.Title className={dialogTitleClassName}>
-            Connect only what you need
-          </AlertDialog.Title>
-          <AlertDialog.Description className={dialogDescriptionClassName}>
-            Connect a wallet to view your collection and approve Base Sepolia
-            actions. {identity.brand} never takes custody of your assets and
-            will not ask for an email login. Connecting alone does not submit a
-            transaction.
-          </AlertDialog.Description>
-          <ul className="mt-4 grid gap-1.5 border-t border-line pt-4 font-mono text-body-sm text-ink-soft">
-            <li>· Check the wallet and network shown before approving.</li>
-            <li>
-              · Every asset in this application is a valueless test asset.
-            </li>
-            <li>· You can disconnect from the application at any time.</li>
-          </ul>
-          <div className={dialogActionsClassName}>
-            <AlertDialog.Close
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Not now
-            </AlertDialog.Close>
-            <AlertDialog.Close
-              className={buttonVariants()}
-              onClick={onContinue}
-            >
-              Choose wallet
-            </AlertDialog.Close>
-          </div>
-        </AlertDialog.Popup>
-      </AlertDialog.Portal>
-    </AlertDialog.Root>
+      </Button>
+      <details className="text-body-sm text-ink-soft">
+        <summary
+          aria-label="What does connecting allow?"
+          className="flex size-11 cursor-pointer list-none items-center justify-center rounded border border-line-strong text-ink-soft [&::-webkit-details-marker]:hidden"
+        >
+          <CircleHelp aria-hidden="true" className="size-5" />
+        </summary>
+        <p className="absolute top-full left-0 z-50 mt-2 w-[min(20rem,calc(100vw-4rem))] [header.sticky_&]:right-0 [header.sticky_&]:left-auto [header.sticky_&]:w-[min(20rem,calc(100vw-6rem))] rounded border border-line bg-surface-1 p-4 text-body shadow-[var(--shadow-overlay)] laptop:[header.sticky_&]:right-auto laptop:[header.sticky_&]:left-0 laptop:[header.sticky_&]:top-auto laptop:[header.sticky_&]:bottom-full laptop:[header.sticky_&]:mt-0 laptop:[header.sticky_&]:mb-2">
+          {identity.brand} reads your public collection. Connecting does not
+          submit a transaction or give permission to spend. You approve each
+          action in your wallet. This app uses valueless Base Sepolia test
+          assets.
+        </p>
+      </details>
+    </div>
   );
 }

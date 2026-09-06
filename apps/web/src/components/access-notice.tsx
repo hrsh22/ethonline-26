@@ -33,6 +33,7 @@ export interface BlockedAccessMessage {
   /** True only when connecting a wallet is what clears the block. */
   readonly connectable: boolean;
   readonly title: string;
+  readonly tone: "notice" | "blocked";
 }
 
 /**
@@ -48,6 +49,7 @@ export const blockedAccessMessage = (
 ): BlockedAccessMessage => ({
   ...messages[accessState],
   connectable: accessState === "disconnected",
+  tone: accessState === "disconnected" ? "notice" : "blocked",
 });
 
 const noticeFor = (walletRead: WalletRead) => {
@@ -61,7 +63,7 @@ const noticeFor = (walletRead: WalletRead) => {
         // pending deployment is not the reader's to fix.
         connectable: blocked.connectable,
         retriable: false,
-        tone: "blocked",
+        tone: blocked.tone,
       } as const;
     }
     case "loading":
@@ -91,7 +93,7 @@ const noticeFor = (walletRead: WalletRead) => {
               body: applicationCopy.access.walletPartialBody,
             }
           : messages.ready,
-        retriable: partial,
+        retriable: false,
         tone: partial ? "partial" : "success",
       } as const;
     }
@@ -112,7 +114,7 @@ export function AccessNotice({
             title: applicationCopy.access.walletLoadingTitle,
             body: applicationCopy.transaction.synchronizing,
           },
-          retriable: true,
+          retriable: false,
           tone: "loading" as const,
         }
       : noticeFor(walletRead);

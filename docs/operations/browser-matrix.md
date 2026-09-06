@@ -4,6 +4,10 @@ One runner checks the production build's HTTP responses, hydrated accessibility,
 layout, wallet connection, and funding states in Chromium. There is no separate
 SSR/JSDOM axe pass.
 
+The release build and its test API use port 18800, separate from the development
+API on 8800. Completed public views stay idle; failed wallet reads are checked
+for bounded automatic recovery.
+
 ## Commands
 
 | Command                                 | Scope                                            |

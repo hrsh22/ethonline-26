@@ -117,10 +117,6 @@ export const testnetFundingWorker = Effect.scoped(
       },
       nowMilliseconds: Date.now,
       port: inputs.environment.port,
-      // Comfortably inside the public API's 10s upstream timeout, and long
-      // enough for several Base Sepolia blocks, so one click usually gets one
-      // answer instead of a "come back and retry".
-      receiptSettleMilliseconds: 6_000,
       requestId: randomUUID,
     });
     process.stdout.write(

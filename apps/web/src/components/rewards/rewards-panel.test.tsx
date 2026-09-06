@@ -5,6 +5,9 @@ const protocolState = vi.hoisted(() => ({
   protocol: undefined as unknown,
 }));
 
+vi.mock("@/hooks/use-delivery-status", () => ({
+  useDeliveryStatus: () => ({ state: "unknown" }),
+}));
 vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => protocolState.protocol,
 }));
@@ -60,6 +63,90 @@ describe("rewards transaction controls", () => {
     ).toHaveLength(1);
   });
 
+  it("keeps known rewards visible when another identity's rewards or eligibility are unavailable", () => {
+    protocolState.protocol = {
+      accessState: "ready",
+      execute: vi.fn(),
+      retry: vi.fn(),
+      transaction: { status: "idle" },
+      walletRead: {
+        status: "loaded",
+        snapshot: {
+          partialFailures: [],
+          collectibles: {
+            permanentHoldingsStatus: "complete",
+            permanent: [
+              {
+                identityId: 42,
+                stateLabel: "Orbiter",
+                claimEligible: true,
+                pendingRewardsStatus: "observed",
+                pendingRewards: [{ track: "AAPLc", rawTokenUnits: 10n ** 18n }],
+              },
+              {
+                identityId: 43,
+                stateLabel: "Orbiter",
+                claimEligible: false,
+                claimEligibilityStatus: "unavailable",
+                pendingRewardsStatus: "unavailable",
+                pendingRewards: [],
+              },
+            ],
+          },
+        },
+      },
+    };
+    const html = renderToStaticMarkup(<RewardsPanel />);
+    expect(html).toContain("Reward data is incomplete");
+    expect(html).toContain("Rewards unavailable for #43");
+    expect(html).toContain("Eligibility is updating");
+    expect(html).toContain("Known claimable");
+    expect(html).not.toContain("No claimable rewards");
+    expect(html).not.toContain(applicationCopy.rewards.gatedExplanation);
+  });
+
+  it.each([false, true])(
+    "explains a verified zero with an Orbiter present: %s",
+    (hasOrbiter) => {
+      protocolState.protocol = {
+        accessState: "ready",
+        execute: vi.fn(),
+        retry: vi.fn(),
+        transaction: { status: "idle" },
+        walletRead: {
+          status: "loaded",
+          snapshot: {
+            partialFailures: [],
+            collectibles: {
+              permanentHoldingsStatus: "complete",
+              permanent: hasOrbiter
+                ? [
+                    {
+                      identityId: 42,
+                      stateLabel: "Orbiter",
+                      claimEligible: true,
+                      pendingRewardsStatus: "observed",
+                      pendingRewards: [],
+                    },
+                  ]
+                : [],
+            },
+          },
+        },
+      };
+      const html = renderToStaticMarkup(<RewardsPanel />);
+      expect(html).toContain(
+        hasOrbiter
+          ? "Your Orbiter is eligible, but no rewards have accrued to it yet"
+          : "Launch a Grounded Craft to make it permanent and reward-eligible",
+      );
+      expect(html).toContain("Queued conversions are shared protocol funds");
+      expect(html).toContain("Valueless test tokens");
+      for (const name of ["Apple", "Alphabet", "Meta", "NVIDIA"])
+        expect(html).toContain(name);
+    },
+  );
+
   it("speaks about rewards, not the collection, when the wallet is not read", () => {
     protocolState.protocol = {
       accessState: "disconnected",
@@ -93,7 +180,7 @@ describe("rewards transaction controls", () => {
   it.each([
     ["loading", "loading", "Loading rewards"],
     ["failed", "error", "Rewards unavailable"],
-    ["blocked", "blocked", "Connect a wallet"],
+    ["blocked", "notice", "Connect a wallet"],
   ] as const)(
     "uses shared %s feedback for wallet state",
     (walletStatus, tone, title) => {

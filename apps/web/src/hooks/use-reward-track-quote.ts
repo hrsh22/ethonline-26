@@ -1,5 +1,6 @@
 "use client";
 
+import { runPublicRead } from "@orbit/protocol/read-lifetime";
 import { useQuery } from "@tanstack/react-query";
 
 import type { useProtocolClient } from "@/providers/protocol-client-provider";
@@ -36,24 +37,30 @@ export const useRewardTrackQuote = (
     // reconnect, and explicit refresh can update the same cached quote without
     // blanking it mid-read; transaction preparation re-validates its age.
     queryKey: ["reward-track-quote", track, wethInput?.toString()],
-    queryFn: async () => {
-      if (protocol.reader === undefined || wethInput === undefined) {
-        throw new Error("The reward track route cannot be quoted yet");
-      }
-      const quote = await protocol.reader.quoteRewardTrack(track, wethInput);
-      return {
-        quotedOutput: quote.quotedOutput,
-        minimumOutput: quote.minimumOutput,
-        minimumOutputBps: quote.minimumOutputBps,
-        quoteBlock: quote.observedBlock,
-      };
-    },
+    queryFn: async ({ signal }) =>
+      runPublicRead(
+        async (readSignal) => {
+          const reader = protocol.readerForSignal(readSignal);
+          if (reader === undefined || wethInput === undefined) {
+            throw new Error("The reward track route cannot be quoted yet");
+          }
+          const quote = await reader.quoteRewardTrack(track, wethInput);
+          return {
+            quotedOutput: quote.quotedOutput,
+            minimumOutput: quote.minimumOutput,
+            minimumOutputBps: quote.minimumOutputBps,
+            quoteBlock: quote.observedBlock,
+          };
+        },
+        { signal },
+      ),
     enabled:
       protocol.reader !== undefined &&
       wethInput !== undefined &&
       wethInput > 0n,
     retry: webProtocolQueryRetryCount,
-    refetchInterval: false,
+    refetchInterval: (query) =>
+      query.state.status === "error" ? 30_000 : false,
     staleTime: 15_000,
   });
   return {

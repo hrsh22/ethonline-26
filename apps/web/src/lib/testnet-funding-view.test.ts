@@ -38,7 +38,7 @@ describe("testnet faucet state", () => {
 
   it.each([
     [response("eligible"), "eligible", "fund"],
-    [response("pending"), "pending", "retry-funding"],
+    [response("pending"), "pending", "none"],
     [response("already-funded"), "funded", "trade"],
     [response("funded"), "funded", "trade"],
     [response("rate-limited"), "cooldown", "retry-status"],
@@ -112,7 +112,7 @@ describe("testnet faucet state", () => {
         hasMutationResponse: true,
         response: { apiVersion: 1, error: { code: "funding-busy" } },
       }),
-    ).toMatchObject({ state: "busy", action: "retry-funding" });
+    ).toMatchObject({ state: "busy", action: "retry-status" });
   });
 
   it("separates a settling balance read from an unavailable node", () => {
@@ -121,7 +121,7 @@ describe("testnet faucet state", () => {
         accessState: "ready",
         response: { apiVersion: 1, error: { code: "funding-confirming" } },
       }),
-    ).toMatchObject({ state: "confirming", action: "retry-funding" });
+    ).toMatchObject({ state: "confirming", action: "retry-status" });
   });
 
   it("distinguishes a retryable transfer from an in-flight mutation", () => {
@@ -135,7 +135,7 @@ describe("testnet faucet state", () => {
           error: { code: "funding-failed" },
         },
       }),
-    ).toMatchObject({ state: "retryable", action: "retry-funding" });
+    ).toMatchObject({ state: "retryable", action: "retry-status" });
     expect(
       createTestnetFundingView({
         accessState: "ready",
@@ -151,7 +151,7 @@ describe("testnet faucet state", () => {
         mutationFailure: "retryable",
         response: response("eligible"),
       }),
-    ).toMatchObject({ state: "retryable", action: "retry-funding" });
+    ).toMatchObject({ state: "retryable", action: "retry-status" });
   });
 
   it("does not let stale query evidence mask a failed status refresh", () => {

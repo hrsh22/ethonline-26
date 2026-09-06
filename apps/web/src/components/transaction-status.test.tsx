@@ -4,6 +4,25 @@ import { describe, expect, it, vi } from "vitest";
 import { TransactionStatus } from "./transaction-status";
 
 describe("transaction status", () => {
+  it("shows automatic receipt recovery without asking the collector to retry", () => {
+    const html = renderToStaticMarkup(
+      <TransactionStatus
+        automaticRecovery
+        onRetry={vi.fn()}
+        state={{
+          status: "outcome-unknown",
+          label: "Launch #42",
+          hash: `0x${"12".repeat(32)}`,
+          message: "RPC timeout",
+        }}
+      />,
+    );
+    expect(html).toContain("checking its outcome automatically");
+    expect(html).toContain("View transaction");
+    expect(html).not.toContain("Check submitted outcome");
+    expect(html).not.toContain("RPC timeout");
+  });
+
   it("announces a failed transaction assertively", () => {
     const html = renderToStaticMarkup(
       <TransactionStatus

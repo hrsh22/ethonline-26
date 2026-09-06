@@ -78,14 +78,9 @@ export interface TestnetFundingHttpServerOptions {
   readonly nowMilliseconds: () => number;
   readonly port: number;
   readonly requestId: () => string;
-  /**
-   * How long one request may wait for its own transfers to confirm before
-   * reporting them as still settling. Base Sepolia produces a block every two
-   * seconds, so answering after a single look made the common case "come back
-   * and click again". Zero keeps the single look, which is what the tests and
-   * the foreign-settle path want.
-   */
+  /** Optional bounded inline settlement; omitted returns durable acceptance immediately. */
   readonly receiptSettleMilliseconds?: number;
+  readonly processingIntervalMilliseconds?: number;
   /**
    * Every decision that moves inventory or refuses to. A faucet that denied a
    * request and wrote nothing anywhere left the operator with a browser error
@@ -261,6 +256,14 @@ const readyStatus = (
       },
       nextEligibleAt: evaluation.nextEligibleAt,
     },
+    ...(active !== undefined && !sameAddress(active.recipient, recipient)
+      ? {
+          error: {
+            code: "funding-busy",
+            message: "The service is finishing another top-up",
+          },
+        }
+      : {}),
     ...(active !== undefined && sameAddress(active.recipient, recipient)
       ? { request: { id: active.id, state: "pending" } }
       : {}),
@@ -372,6 +375,8 @@ const hasReachedTargets = (
   inspection.recipientBalance.ethWei >= configuration.policy.target.ethWei;
 
 const RECEIPT_POLL_INTERVAL_MILLISECONDS = 400;
+const activeFundingOperations = new WeakSet<TestnetFundingStore>();
+class TerminalFundingTransferError extends Error {}
 
 /**
  * A signed transfer whose nonce is already behind the signer can never land:
@@ -433,7 +438,9 @@ const reportPending = async (
   transfer: StoredFundingTransfer,
 ): Promise<"pending"> => {
   if (await transferIsStranded(options, transfer)) {
-    throw new Error("Funding transfer can no longer be broadcast");
+    throw new TerminalFundingTransferError(
+      "Funding transfer can no longer be broadcast",
+    );
   }
   return "pending";
 };
@@ -451,7 +458,8 @@ const broadcastPreparedTransfer = async (
     );
   } catch {
     const receipt = await observeReceipt(options, transfer.hash);
-    if (receipt === "reverted") throw new Error("Funding transaction reverted");
+    if (receipt === "reverted")
+      throw new TerminalFundingTransferError("Funding transaction reverted");
     // A rejected broadcast with no receipt is the shape a stranded nonce
     // takes, and it is the one that reached production: reported as pending,
     // it parked the request and refused every other wallet.
@@ -477,6 +485,26 @@ const broadcastPreparedTransfer = async (
   return "broadcast";
 };
 
+const settleObservedReceipt = async (
+  options: TestnetFundingHttpServerOptions,
+  store: TestnetFundingStore,
+  requestId: string,
+  transfer: StoredFundingTransfer,
+  receipt: TestnetFundingReceiptState,
+): Promise<"confirmed" | "pending" | "retryable"> => {
+  if (receipt === "pending") return reportPending(options, transfer);
+  if (receipt === "unavailable") return "retryable";
+  if (receipt === "reverted")
+    throw new TerminalFundingTransferError("Funding transaction reverted");
+  store.updateTransferState(
+    requestId,
+    transfer.kind,
+    "confirmed",
+    options.nowMilliseconds(),
+  );
+  return "confirmed";
+};
+
 const executeTransfer = async (
   options: TestnetFundingHttpServerOptions,
   store: TestnetFundingStore,
@@ -486,6 +514,16 @@ const executeTransfer = async (
 ): Promise<"confirmed" | "pending" | "retryable"> => {
   if (transfer.state === "confirmed") return "confirmed";
   if (transfer.state === "prepared") {
+    // A crash can leave signed bytes as prepared after the network accepted them.
+    const previousReceipt = await observeReceipt(options, transfer.hash);
+    if (previousReceipt !== "pending")
+      return settleObservedReceipt(
+        options,
+        store,
+        requestId,
+        transfer,
+        previousReceipt,
+      );
     const broadcast = await broadcastPreparedTransfer(
       options,
       store,
@@ -496,16 +534,7 @@ const executeTransfer = async (
     if (broadcast === "confirmed") return "confirmed";
   }
   const receipt = await awaitReceipt(options, transfer.hash, deadline);
-  if (receipt === "pending") return reportPending(options, transfer);
-  if (receipt === "unavailable") return "retryable";
-  if (receipt === "reverted") throw new Error("Funding transaction reverted");
-  store.updateTransferState(
-    requestId,
-    transfer.kind,
-    "confirmed",
-    options.nowMilliseconds(),
-  );
-  return "confirmed";
+  return settleObservedReceipt(options, store, requestId, transfer, receipt);
 };
 
 const fundedResponse = (
@@ -537,6 +566,7 @@ const pendingResponse = (
   recipient: Address,
   request: StoredFundingRequest,
 ) => ({
+  observedAt: request.createdAt,
   request: {
     id: request.id,
     state: "pending",
@@ -659,6 +689,17 @@ const driveRequestTransfers = async (
  * with the same bytes -- there is nothing about it that only the original
  * caller may do. Only a transfer genuinely still in flight keeps the lock.
  */
+const failTerminalFundingRequest = (
+  store: TestnetFundingStore,
+  requestId: string,
+  now: number,
+  cause: unknown,
+): boolean => {
+  if (!(cause instanceof TerminalFundingTransferError)) return false;
+  store.failRequest(requestId, now);
+  return true;
+};
+
 const settleForeignRequest = async (
   options: TestnetFundingHttpServerOptions,
   store: TestnetFundingStore,
@@ -674,8 +715,9 @@ const settleForeignRequest = async (
     ) {
       return false;
     }
-  } catch {
-    store.failRequest(request.id, now);
+  } catch (cause) {
+    if (!failTerminalFundingRequest(store, request.id, now, cause))
+      return false;
     store.releaseLease(request.id);
     return true;
   }
@@ -781,7 +823,12 @@ const executeFundingRequest = async (
       ),
     );
   } catch (cause) {
-    store.failRequest(request.id, options.nowMilliseconds());
+    failTerminalFundingRequest(
+      store,
+      request.id,
+      options.nowMilliseconds(),
+      cause,
+    );
     store.releaseLease(request.id);
     throw cause;
   }
@@ -801,7 +848,9 @@ const createFundingRequest = async (
   }
   try {
     const transfers = await Effect.runPromise(
-      options.chain.prepare({ recipient, amounts }),
+      options.chain
+        .prepare({ recipient, amounts })
+        .pipe(Effect.timeout("5 seconds")),
     );
     validatePreparedTransfers(transfers, amounts);
     const request = store.createPreparedRequest({
@@ -810,7 +859,10 @@ const createFundingRequest = async (
       transfers,
       createdAt: options.nowMilliseconds(),
     });
-    await executeFundingRequest(response, options, store, request);
+    if (options.receiptSettleMilliseconds === undefined) {
+      store.releaseLease(id);
+      json(response, 202, pendingResponse(recipient, request));
+    } else await executeFundingRequest(response, options, store, request);
   } catch (cause) {
     store.releaseLease(id);
     throw cause;
@@ -903,7 +955,10 @@ const fundRecipient = async (
 ): Promise<void> => {
   const inspection = await Effect.runPromise(options.chain.inspect(recipient));
   validateInspection(options.configuration, inspection);
-  const active = await remainingActiveRequest(options, store, recipient);
+  const active =
+    options.receiptSettleMilliseconds === undefined
+      ? store.readActiveRequest()
+      : await remainingActiveRequest(options, store, recipient);
   if (active !== undefined) {
     if (!sameAddress(active.recipient, recipient)) {
       options.log?.(
@@ -916,7 +971,10 @@ const fundRecipient = async (
       sendBusy(response);
       return;
     }
-    await executeFundingRequest(response, options, store, active);
+    if (options.receiptSettleMilliseconds === undefined) {
+      store.releaseLease(active.id);
+      json(response, 202, pendingResponse(recipient, active));
+    } else await executeFundingRequest(response, options, store, active);
     return;
   }
   const nowMilliseconds = options.nowMilliseconds();
@@ -991,6 +1049,7 @@ const handleStatusRequest = async (
       json(response, 200, disabledStatus(options.configuration, recipient));
       return;
     }
+    const observedAt = options.nowMilliseconds();
     const inspectedRecipient = recipient ?? options.configuration.signer;
     const inspection = await Effect.runPromise(
       options.chain.inspect(inspectedRecipient),
@@ -1008,10 +1067,34 @@ const handleStatusRequest = async (
       ),
       store.readServiceDisabledAt(),
     );
+    const latest =
+      recipient === undefined ? undefined : store.readLatestRequest(recipient);
     json(
       response,
       200,
-      recipient === undefined ? { service: status.service } : status,
+      recipient === undefined
+        ? { service: status.service }
+        : {
+            ...status,
+            observedAt,
+            ...(latest === undefined
+              ? {}
+              : {
+                  request: {
+                    id: latest.id,
+                    state:
+                      latest.state === "funded"
+                        ? "funded"
+                        : latest.state === "failed"
+                          ? "failed"
+                          : "pending",
+                    delayed:
+                      latest.completedAt === undefined &&
+                      observedAt - latest.createdAt >= 120_000,
+                    transactions: publicTransactions(latest.transfers),
+                  },
+                }),
+          },
     );
   } catch {
     json(response, 503, {
@@ -1292,7 +1375,19 @@ const handleFundRequest = async (
     return;
   }
   try {
-    await fundRecipient(response, options, store, recipient);
+    if (activeFundingOperations.has(store)) {
+      const active = store.readActiveRequest();
+      if (active !== undefined && sameAddress(active.recipient, recipient)) {
+        json(response, 202, pendingResponse(recipient, active));
+      } else sendBusy(response);
+      return;
+    }
+    activeFundingOperations.add(store);
+    try {
+      await fundRecipient(response, options, store, recipient);
+    } finally {
+      activeFundingOperations.delete(store);
+    }
   } catch {
     if (response.headersSent) return;
     json(response, 502, {
@@ -1430,54 +1525,115 @@ export const acquireTestnetFundingHttpServer = (
       ),
     ),
     Effect.flatMap((store) =>
-      Effect.acquireRelease(
-        Effect.async<
-          RunningTestnetFundingHttpServer & {
-            readonly server: ReturnType<typeof createServer>;
-          },
-          TestnetFundingHttpError
-        >((resume) => {
-          const server = createServer((request, response) => {
-            void handleRequest(request, response, options, store).catch(
-              (cause: unknown) => {
-                if (!response.headersSent) {
-                  json(response, 500, {
-                    error: {
-                      code: "funding-internal-error",
-                      message: "Testnet funding could not complete the request",
-                    },
-                  });
-                } else {
-                  response.destroy(cause instanceof Error ? cause : undefined);
+      Effect.gen(function* () {
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            let stopped = false;
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            let running: Promise<void> = Promise.resolve();
+            let interval = options.processingIntervalMilliseconds ?? 2_000;
+            const tick = async (): Promise<void> => {
+              try {
+                const request = store.readActiveRequest();
+                if (
+                  !activeFundingOperations.has(store) &&
+                  !serviceHalted(options, store) &&
+                  request !== undefined &&
+                  acquireRequestLease(
+                    options,
+                    store,
+                    request.id,
+                    request.recipient,
+                  )
+                ) {
+                  activeFundingOperations.add(store);
+                  try {
+                    const settled = await settleForeignRequest(
+                      options,
+                      store,
+                      request,
+                    );
+                    interval = settled
+                      ? (options.processingIntervalMilliseconds ?? 2_000)
+                      : Math.min(interval * 2, 30_000);
+                  } finally {
+                    activeFundingOperations.delete(store);
+                    store.releaseLease(request.id);
+                  }
                 }
-              },
-            );
-          });
-          const fail = (cause: Error): void => {
-            resume(
-              Effect.fail(
-                new TestnetFundingHttpError({
-                  message: "Could not start testnet funding HTTP server",
-                  cause,
+              } catch {
+                options.log?.(
+                  "Funding recovery delayed; the accepted request remains recorded",
+                );
+              }
+              if (!stopped)
+                timer = setTimeout(() => {
+                  running = tick();
+                }, interval);
+            };
+            timer = setTimeout(() => {
+              running = tick();
+            }, interval);
+            return async () => {
+              stopped = true;
+              clearTimeout(timer);
+              await running;
+            };
+          }),
+          (stop) => Effect.promise(stop),
+        );
+        return yield* Effect.acquireRelease(
+          Effect.async<
+            RunningTestnetFundingHttpServer & {
+              readonly server: ReturnType<typeof createServer>;
+            },
+            TestnetFundingHttpError
+          >((resume) => {
+            const server = createServer((request, response) => {
+              void handleRequest(request, response, options, store).catch(
+                (cause: unknown) => {
+                  if (!response.headersSent) {
+                    json(response, 500, {
+                      error: {
+                        code: "funding-internal-error",
+                        message:
+                          "Testnet funding could not complete the request",
+                      },
+                    });
+                  } else {
+                    response.destroy(
+                      cause instanceof Error ? cause : undefined,
+                    );
+                  }
+                },
+              );
+            });
+            const fail = (cause: Error): void => {
+              resume(
+                Effect.fail(
+                  new TestnetFundingHttpError({
+                    message: "Could not start testnet funding HTTP server",
+                    cause,
+                  }),
+                ),
+              );
+            };
+            server.once("error", fail);
+            server.listen(options.port, options.host, () => {
+              server.removeListener("error", fail);
+              const address = server.address() as AddressInfo;
+              resume(
+                Effect.succeed({
+                  url: `http://${options.host}:${address.port}`,
+                  server,
                 }),
-              ),
-            );
-          };
-          server.once("error", fail);
-          server.listen(options.port, options.host, () => {
-            server.removeListener("error", fail);
-            const address = server.address() as AddressInfo;
-            resume(
-              Effect.succeed({
-                url: `http://${options.host}:${address.port}`,
-                server,
-              }),
-            );
-          });
-          return Effect.sync(() => server.close());
-        }),
-        ({ server }) => stopServer(server),
-      ),
+              );
+            });
+            return Effect.sync(() => server.close());
+          }),
+          ({ server }) => stopServer(server),
+        );
+      }),
     ),
     Effect.map(({ url }) => ({ url })),
   );

@@ -38,6 +38,7 @@ export interface WalletSnapshotInput {
    * from missing evidence.
    */
   unavailablePendingRewardIdentityIds?: ReadonlySet<number>;
+  unavailableClaimEligibilityIdentityIds?: ReadonlySet<number>;
   claimableIdentityIds: Set<number>;
 }
 
@@ -60,6 +61,8 @@ export interface CollectibleSnapshot {
   /** `unavailable` means the amounts are substituted, not observed as zero. */
   pendingRewardsStatus: "observed" | "unavailable";
   claimEligible: boolean;
+  /** Missing activation evidence must not be presented as a confirmed denial. */
+  claimEligibilityStatus?: "observed" | "unavailable";
 }
 
 const Q192 = 1n << 192n;
@@ -554,6 +557,14 @@ const attributesFor = (
   return { attributes, rarityTier, rewardTrack };
 };
 
+const claimEligibilityStatusFor = (
+  input: WalletSnapshotInput,
+  identityId: number,
+): "observed" | "unavailable" =>
+  input.unavailableClaimEligibilityIdentityIds?.has(identityId) === true
+    ? "unavailable"
+    : "observed";
+
 export const deriveCollectibleSnapshot = (
   input: WalletSnapshotInput,
   identity: IdentityConfiguration,
@@ -604,6 +615,7 @@ export const deriveCollectibleSnapshot = (
         ? "unavailable"
         : "observed",
     claimEligible: permanent && input.claimableIdentityIds.has(identityId),
+    claimEligibilityStatus: claimEligibilityStatusFor(input, identityId),
   };
 };
 

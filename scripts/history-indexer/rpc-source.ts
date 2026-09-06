@@ -20,6 +20,15 @@ import type {
 import type { HistoryChainSource } from "./synchronize.ts";
 
 const eventAbis = {
+  "discovery-requested": parseAbiItem(
+    "event DiscoveryRequested(address indexed account,bytes32 indexed requestId)",
+  ),
+  "discovery-fulfilled": parseAbiItem(
+    "event DiscoveryFulfilled(address indexed account,bytes32 indexed requestId,uint16 indexed identityId)",
+  ),
+  "discovery-cancelled": parseAbiItem(
+    "event DiscoveryCancelled(address indexed account,bytes32 indexed requestId)",
+  ),
   swap: parseAbiItem(
     "event Swap(bytes32 indexed id,address indexed sender,int128 amount0,int128 amount1,uint160 sqrtPriceX96,uint128 liquidity,int24 tick,uint24 fee)",
   ),
@@ -87,6 +96,22 @@ const hashFixture = `0x${"1".repeat(64)}`;
 export const historyEventDefinitions = (
   configuration: HistoryIndexConfiguration,
 ): readonly HistoryEventDefinition[] => [
+  ...(
+    [
+      "discovery-requested",
+      "discovery-fulfilled",
+      "discovery-cancelled",
+    ] as const
+  ).map((eventName) => ({
+    eventName,
+    address: configuration.sources.fuelCore,
+    event: eventAbis[eventName],
+    fixtureArguments: {
+      account: addressFixture,
+      requestId: hashFixture,
+      ...(eventName === "discovery-fulfilled" ? { identityId: 1 } : {}),
+    },
+  })),
   {
     eventName: "swap",
     address: configuration.sources.poolManager,

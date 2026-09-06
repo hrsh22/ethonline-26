@@ -125,7 +125,7 @@ export const isTransientPreSubmissionRpcFailure = (cause: unknown): boolean => {
   return records.some(isTransientRecord);
 };
 
-const PRE_SUBMISSION_RETRY_DELAY_MILLISECONDS = 250;
+const PRE_SUBMISSION_RETRY_DELAY_MILLISECONDS = 1_000;
 
 export const retryPreSubmissionPublicRpc = async <Value>({
   assertActive,
@@ -143,8 +143,8 @@ export const retryPreSubmissionPublicRpc = async <Value>({
     if (!isTransientPreSubmissionRpcFailure(cause)) throw cause;
     assertActive();
   }
-  // The transaction transport already permits seven wire attempts. One outer
-  // retry caps this pre-submission read at fourteen without ever retrying the
+  // The transaction transport permits two wire attempts. One outer
+  // retry caps this pre-submission read at four without ever retrying the
   // wallet submission or any post-hash operation.
   await new Promise((resolve) =>
     setTimeout(resolve, PRE_SUBMISSION_RETRY_DELAY_MILLISECONDS),

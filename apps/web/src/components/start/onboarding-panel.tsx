@@ -8,11 +8,12 @@ import { Disclosure } from "@/components/ui/disclosure";
 import { Metric, MetricGroup } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
 import { Amount, Unavailable } from "@/components/ui/value";
-import { WalletControl } from "@/components/wallet-control";
+import { DiscoveryOutcomes } from "@/components/fleet/discovery-outcomes";
+import { DiscoveryProgress } from "@/components/fleet/discovery-progress";
+import { CollectorNextAction } from "@/components/start/collector-next-action";
 import { useTestnetFundingStatus } from "@/hooks/use-testnet-funding";
 import {
   createCollectorJourneyView,
-  type CollectorJourneyAction,
   type CollectorJourneyMetrics,
   type CollectorJourneyPhase,
   type CollectorJourneyPhaseStatus,
@@ -41,13 +42,12 @@ const phaseStateTone: Record<CollectorJourneyPhaseStatus, BadgeTone> = {
   waiting: "neutral",
 };
 
-const fundActionDescriptions: Partial<Record<CollectorJourneyAction, string>> =
-  {
-    "connect-wallet": applicationCopy.onboarding.access.disconnected,
-    "open-trade": applicationCopy.onboarding.phases.fund.trade,
-    "switch-network": applicationCopy.onboarding.access["wrong-network"],
-    none: applicationCopy.onboarding.access["deployment-pending"],
-  };
+const fundActionDescriptions: Partial<Record<string, string>> = {
+  "connect-wallet": applicationCopy.onboarding.access.disconnected,
+  "open-trade": applicationCopy.onboarding.phases.fund.trade,
+  "switch-network": applicationCopy.onboarding.access["wrong-network"],
+  none: applicationCopy.onboarding.access["deployment-pending"],
+};
 
 const copyForPhase = (phase: CollectorJourneyPhase) =>
   applicationCopy.onboarding.phases[phase.id];
@@ -59,49 +59,6 @@ const descriptionForPhase = (phase: CollectorJourneyPhase): string => {
   if (phase.id !== "fund") return copy.current;
   return fundActionDescriptions[phase.action] ?? copy.current;
 };
-
-function JourneyAction({ phase }: { readonly phase: CollectorJourneyPhase }) {
-  switch (phase.action) {
-    case "connect-wallet":
-    case "switch-network":
-      // The header already reports connection and network status. Repeating
-      // its notices here would give the same state two competing voices.
-      return <WalletControl notices={false} />;
-    case "open-faucet":
-      return (
-        <ButtonLink href="/faucet">
-          {applicationCopy.onboarding.actions.faucet}
-        </ButtonLink>
-      );
-    case "open-trade":
-      return (
-        <ButtonLink href="/exchange">
-          {applicationCopy.onboarding.actions.trade}
-        </ButtonLink>
-      );
-    case "open-collection":
-      return (
-        <ButtonLink href="/fleet" variant="outline">
-          {applicationCopy.onboarding.actions.collection}
-        </ButtonLink>
-      );
-    case "review-launch":
-      if (phase.targetIdentityId === undefined) return null;
-      return (
-        /* The only action label that carries an identity id, which makes it the
-           longest in the application; a button neither wraps nor shrinks by
-           default, so it may wrap here. */
-        <ButtonLink
-          className="h-auto min-h-11 max-w-full py-2 text-center whitespace-normal"
-          href={`/fleet/${phase.targetIdentityId}`}
-        >
-          {applicationCopy.onboarding.actions.launch(phase.targetIdentityId)}
-        </ButtonLink>
-      );
-    case "none":
-      return null;
-  }
-}
 
 function JourneyPhasePanel({
   index,
@@ -145,11 +102,6 @@ function JourneyPhasePanel({
             </span>
             {applicationCopy.onboarding.launchWarning}
           </p>
-        ) : null}
-        {current ? (
-          <div className="mt-auto pt-1">
-            <JourneyAction phase={phase} />
-          </div>
         ) : null}
       </Panel>
     </li>
@@ -197,6 +149,24 @@ function JourneyProgressPending({
 }: {
   readonly state: Exclude<CollectorProgressState, "ready">;
 }) {
+  if (state === "disconnected")
+    return (
+      <StateFeedback
+        compact
+        tone="notice"
+        title="Connect to see your progress"
+        description="Explore freely, then connect a wallet when you want to collect."
+      />
+    );
+  if (state === "partial")
+    return (
+      <StateFeedback
+        compact
+        tone="partial"
+        title="Collection is updating"
+        description="We are checking the rest of your collection. Confirmed collectibles remain available; you do not need to buy again."
+      />
+    );
   return (
     <StateFeedback
       compact
@@ -221,7 +191,10 @@ function JourneyProgressPending({
  */
 function JourneyBoard({ journey }: { readonly journey: CollectorJourneyView }) {
   const state = journey.progressState;
-  if (state !== "ready") {
+  if (
+    state !== "ready" &&
+    !(state === "partial" && journey.primaryIdentityId !== undefined)
+  ) {
     return (
       <div data-progress-state={state}>
         <JourneyProgressPending state={state} />
@@ -232,6 +205,7 @@ function JourneyBoard({ journey }: { readonly journey: CollectorJourneyView }) {
   const phase = phaseCell(journey);
   return (
     <div data-progress-state={state}>
+      {state === "partial" ? <JourneyProgressPending state="partial" /> : null}
       <MetricGroup columns={4} label={applicationCopy.onboarding.progressLabel}>
         <Metric
           hint={`${phase.hint} · ${collectionProgress(metrics)}`}
@@ -294,8 +268,14 @@ function CompletedJourney({
           {applicationCopy.onboarding.journeyCompleteBody}
         </p>
         <div className="mt-4">
-          <ButtonLink href={`/fleet/${identityId}`}>
-            {applicationCopy.onboarding.journeyCompleteAction(identityId)}
+          <ButtonLink
+            href={
+              journey.hasClaimableRewards ? "/rewards" : `/fleet/${identityId}`
+            }
+          >
+            {journey.hasClaimableRewards
+              ? "Review claimable rewards"
+              : applicationCopy.onboarding.journeyCompleteAction(identityId)}
           </ButtonLink>
         </div>
         <Disclosure
@@ -330,6 +310,16 @@ export function OnboardingPanel() {
     <div className="mt-5 grid gap-3">
       {/* Data first: the board states where the wallet is before the plan. */}
       <JourneyBoard journey={journey} />
+      {protocol.walletRead.status === "loaded" &&
+      protocol.walletRead.snapshot.collectibles.pendingDiscovery.count > 0 ? (
+        <DiscoveryProgress
+          pending={protocol.walletRead.snapshot.collectibles.pendingDiscovery}
+          observedAt={protocol.walletRead.snapshot.observedAt}
+        />
+      ) : null}
+      {!journey.complete ? (
+        <CollectorNextAction journey={journey} returnTo="/start" />
+      ) : null}
       {journey.complete ? (
         <CompletedJourney journey={journey} />
       ) : (
@@ -341,6 +331,7 @@ export function OnboardingPanel() {
           ))}
         </ol>
       )}
+      <DiscoveryOutcomes />
       <JourneyDetails />
     </div>
   );

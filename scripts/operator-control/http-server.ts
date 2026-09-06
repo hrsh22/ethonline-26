@@ -12,6 +12,7 @@ import { getAddress } from "viem";
 import {
   applyOperatorControlCommand,
   readOperatorControlState,
+  readPublicDeliveryStatus,
   type OperatorControlDependencies,
 } from "./service.ts";
 
@@ -91,6 +92,18 @@ const actorFrom = (
   }
 };
 
+const readOnlyResponse = (
+  url: URL,
+  options: OperatorControlServerOptions,
+): unknown => {
+  if (url.search !== "") return undefined;
+  if (url.pathname === "/v1/delivery-status")
+    return readPublicDeliveryStatus(options.dependencies);
+  if (url.pathname === "/v1/state")
+    return { state: readOperatorControlState(options.dependencies) };
+  return undefined;
+};
+
 export const createOperatorControlServer = (
   options: OperatorControlServerOptions,
 ) =>
@@ -101,10 +114,10 @@ export const createOperatorControlServer = (
         return;
       }
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
-      if (request.method === "GET" && url.pathname === "/v1/state") {
-        json(response, 200, {
-          state: readOperatorControlState(options.dependencies),
-        });
+      const read =
+        request.method === "GET" ? readOnlyResponse(url, options) : undefined;
+      if (read !== undefined) {
+        json(response, 200, read);
         return;
       }
       if (request.method === "POST" && url.pathname === "/v1/command") {

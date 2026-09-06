@@ -1,5 +1,6 @@
 "use client";
 
+import { runPublicRead } from "@orbit/protocol/read-lifetime";
 import { useQuery } from "@tanstack/react-query";
 
 import { protocolDeploymentManifest } from "@/lib/deployment";
@@ -27,16 +28,21 @@ export const useCollectibleRead = (
       protocolDeploymentManifest?.launch.transactionHash,
       identityId,
     ],
-    queryFn: () => {
-      if (protocol.reader === undefined) {
-        throw new Error("Collectible reader unavailable");
-      }
-      return protocol.reader.readCollectible(identityId);
-    },
+    queryFn: ({ signal }) =>
+      runPublicRead(
+        (readSignal) => {
+          const reader = protocol.readerForSignal(readSignal);
+          if (reader === undefined)
+            throw new Error("Collectible reader unavailable");
+          return reader.readCollectible(identityId);
+        },
+        { signal },
+      ),
     // Known-token ownership and metadata are public chain state. Requiring a
     // connected wallet here left shared NFT links permanently loading even
     // though the reader was available; only mutations remain wallet-gated.
     enabled: protocol.deploymentAvailable && protocol.reader !== undefined,
-    refetchInterval: false,
+    refetchInterval: (query) =>
+      query.state.status === "error" ? 30_000 : false,
     retry: webProtocolQueryRetryCount,
   });
