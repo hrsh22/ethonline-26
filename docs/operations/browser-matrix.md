@@ -4,6 +4,16 @@ One runner checks the production build's HTTP responses, hydrated accessibility,
 layout, wallet connection, and funding states in Chromium. There is no separate
 SSR/JSDOM axe pass.
 
+Visits run in batches of four, each with a separate browser context, cookies,
+storage, and fixtures. All route, viewport, and state cases still run; the two
+idle checks overlap without shortening their observation windows.
+
+Metric definition-list structure is checked by Axe on the rendered status page,
+with and without hints. The status case also requires the named funds group.
+The existing accessibility self-check moves an actual metric hint outside its
+definition and requires Axe to catch it.
+The former source-string wallet-theme and CSS-class checks are not retained.
+
 ## Commands
 
 | Command                                 | Scope                                            |

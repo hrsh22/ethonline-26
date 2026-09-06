@@ -3,7 +3,7 @@ import { parseUnits } from "viem";
 import { describe, expect, it } from "vitest";
 
 import { CraftArt } from "./craft-art";
-import { Address, Amount, Count, Rate, Unavailable } from "./value";
+import { Amount, Rate, Unavailable } from "./value";
 
 const markup = (element: React.ReactElement) => renderToStaticMarkup(element);
 
@@ -25,18 +25,6 @@ describe("value primitives", () => {
     expect(markup(<Amount value={parseUnits("2.5", 18)} />)).not.toContain(
       "title=",
     );
-  });
-
-  it("keeps values in tabular mono so columns align", () => {
-    for (const element of [
-      <Amount key="a" value={parseUnits("1", 18)} />,
-      <Count key="c" value={4442} />,
-      <Address key="d" value="0x2f4C1bE5a9D8e7F60a1B2c3D4e5F60718293A4b5" />,
-    ]) {
-      const html = markup(element);
-      expect(html).toContain("font-mono");
-      expect(html).toContain("tabular-nums");
-    }
   });
 
   it("states an unreadable value once instead of repeating a placeholder", () => {

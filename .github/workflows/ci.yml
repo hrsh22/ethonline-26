@@ -148,7 +148,7 @@ jobs:
         run: pnpm build:packages
 
       - name: Run web unit tests
-        run: pnpm --dir apps/web test
+        run: pnpm --dir apps/web test --maxWorkers=100%
 
   public_api:
     name: Public API unit and integration tests
@@ -369,15 +369,13 @@ jobs:
       - name: Build shared TypeScript packages once
         run: pnpm build:packages
 
-      - name: Verify generated web deployment bindings
-        run: node scripts/generate-web-deployment-manifest.ts --check
-
       - name: Build the production application once
+        # The launcher builds config and verifies deployment bindings itself.
         run: node scripts/staging-web.ts build
 
       # Playwright pins its own Chromium build; it is not vendored.
       - name: Install the pinned Chromium build
-        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+        run: pnpm --dir apps/web exec playwright install --with-deps --only-shell chromium
 
       - name: Prove the browser harness fails on injected defects
         run: pnpm --dir apps/web test:browser:self

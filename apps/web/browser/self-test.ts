@@ -224,9 +224,18 @@ export const runHarnessSelfTest = async (
 
   // 4. An accessibility violation Axe must report after hydration.
   outcomes.push(
-    await withPage(origin, "/", async (page) => {
-      await page.goto(`${origin}/`, { waitUntil: "commit" });
+    await withPage(origin, "/status", async (page) => {
+      await installDataFixture(page, "cached-stale");
+      await page.goto(`${origin}/status`, { waitUntil: "commit" });
       await settle(page);
+      const hint = page
+        .getByLabel("Destination-locked funds", { exact: true })
+        .locator("dd p")
+        .first();
+      await hint.waitFor({ state: "visible" });
+      // Reproduce the former Metric bug on the rendered component: a hint
+      // beside its dd makes the definition list invalid.
+      await hint.evaluate((node) => node.parentElement!.after(node));
       await page.evaluate(() => {
         const image = document.createElement("img");
         image.src = "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
@@ -246,12 +255,16 @@ export const runHarnessSelfTest = async (
         ).axe;
         const result = await runner.run(document, {
           resultTypes: ["violations"],
-          runOnly: { type: "rule", values: ["image-alt"] },
+          runOnly: { type: "rule", values: ["image-alt", "definition-list"] },
         });
-        return result.violations.length;
+        return result.violations.map(
+          (violation) => (violation as { readonly id: string }).id,
+        );
       });
       return {
-        detected: violations > 0,
+        detected:
+          violations.includes("image-alt") &&
+          violations.includes("definition-list"),
         expected: "accessibility" as const,
         name: "accessibility violation",
         observed: [],
