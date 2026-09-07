@@ -40,8 +40,8 @@ export function SegmentedControl<Value extends string>({
     <ToggleGroup
       aria-label={label}
       className={cn(
-        // `minmax(0,1fr)` lets segments shrink with the container; `auto-cols-fr`
-        // floors the track at each segment's nowrap min-content.
+        // Equal-width segments share the available width; long labels wrap
+        // and grow the row instead of being clipped.
         "grid w-full grid-flow-col auto-cols-[minmax(0,1fr)] gap-0.5 rounded-[var(--radius-control)] border border-line bg-canvas p-0.5",
         className,
       )}
@@ -55,7 +55,7 @@ export function SegmentedControl<Value extends string>({
       {options.map((option) => (
         <Toggle
           className={cn(
-            "flex min-w-0 items-center justify-center overflow-hidden rounded-[calc(var(--radius-control)-1px)] px-3 text-center font-mono font-semibold text-ellipsis whitespace-nowrap uppercase text-ink-faint transition-colors duration-[var(--motion-fast)] select-none",
+            "flex min-w-0 items-center justify-center rounded-[calc(var(--radius-control)-1px)] px-3 py-2 text-center font-mono font-semibold whitespace-normal [overflow-wrap:anywhere] uppercase text-ink-faint transition-colors duration-[var(--motion-fast)] select-none",
             "hover:not-data-pressed:not-data-disabled:text-ink",
             "data-pressed:bg-surface-3 data-pressed:text-ink data-pressed:shadow-[inset_0_0_0_1px_var(--border-strong)]",
             "data-disabled:opacity-50",

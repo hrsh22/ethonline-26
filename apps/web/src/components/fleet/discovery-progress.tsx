@@ -141,7 +141,7 @@ export function DiscoveryProgress({
         evidence.delayed || evidence.deliveryDelayed ? "stale" : "notice"
       }
       aria-label="Discovery progress"
-      className="grid gap-3 rounded border border-line bg-panel p-4"
+      className="grid min-w-0 grid-cols-1 gap-3 rounded border border-line bg-panel p-4 [overflow-wrap:anywhere]"
     >
       <h2 className="font-semibold">{progressTitle(pending, evidence)}</h2>
       <ProgressStages pending={pending} received={evidence.randomReceived} />

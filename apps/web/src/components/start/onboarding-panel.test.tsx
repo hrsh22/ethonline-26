@@ -428,7 +428,7 @@ describe("three-phase collector journey", () => {
     expect(progress?.textContent).toContain("0.4000");
   });
 
-  it("compacts long token values without hiding their exact amount", async () => {
+  it("compacts balances and rounds remaining requirements upward without hiding exact amounts", async () => {
     const balance = "0.724218211757156969";
     const remaining = "0.275781788242843031";
     testState.protocol = protocol("ready", "empty", address, 0n, {
@@ -453,7 +453,7 @@ describe("three-phase collector journey", () => {
     ];
     expect(values[0]?.textContent).toBe("0.72422");
     expect(values[0]?.getAttribute("title")).toBe(balance);
-    expect(values[1]?.textContent).toBe("0.27578");
+    expect(values[1]?.textContent).toBe("0.27579");
     expect(values[1]?.getAttribute("title")).toBe(remaining);
   });
 });

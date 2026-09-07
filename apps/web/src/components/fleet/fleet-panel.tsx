@@ -101,7 +101,7 @@ const countValue = (
  *
  * Only rendered for a loaded read, so the one value that can still be
  * unreadable is the permanent count when enumeration fell over. Every amount
- * is typeset from base units so the balance and the threshold round alike.
+ * is typeset from base units; the remaining requirement rounds upward.
  */
 function CollectionSummary({
   walletRead,
@@ -126,10 +126,13 @@ function CollectionSummary({
       />
       <Metric
         label={applicationCopy.fleet.remaining}
-        value={amountValue(
-          liquidToken.nextDiscoveryDraw.remainingWei,
-          notObserved,
-        )}
+        value={
+          <Amount
+            minimumFractionDigits={4}
+            rounding="ceil"
+            value={liquidToken.nextDiscoveryDraw.remainingWei}
+          />
+        }
       />
       <Metric
         label={applicationCopy.fleet.grounded}
@@ -410,7 +413,7 @@ function LoadedCollection({
   const change = (update: Partial<FleetFilters>) =>
     onFilters({ ...filters, ...update, page: 1 });
   const controlClass =
-    "min-h-11 w-full rounded-[var(--radius-control)] border border-line bg-canvas px-3 text-[16px] text-ink";
+    "min-h-11 min-w-0 w-full rounded-[var(--radius-control)] border border-line bg-canvas px-3 text-[16px] text-ink";
   return (
     <>
       {holdingsIncomplete ? (
@@ -430,8 +433,8 @@ function LoadedCollection({
         }))}
         value={filters.state}
       />
-      <div className="grid gap-3 tablet:grid-cols-3">
-        <label className="grid gap-1 text-body-sm">
+      <div className="grid min-w-0 grid-cols-1 gap-3 tablet:grid-cols-3">
+        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
           Identity number
           <input
             aria-label="Find a held identity"
@@ -443,7 +446,7 @@ function LoadedCollection({
             onChange={(event) => change({ id: event.target.value })}
           />
         </label>
-        <label className="grid gap-1 text-body-sm">
+        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
           Reward Track
           <select
             aria-label="Filter Reward Track"
@@ -459,7 +462,7 @@ function LoadedCollection({
             ))}
           </select>
         </label>
-        <label className="grid gap-1 text-body-sm">
+        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
           Rewards
           <select
             aria-label="Filter rewards"
@@ -602,7 +605,7 @@ function FleetContent() {
   const walletRead = protocol.walletRead;
 
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 grid-cols-1 gap-3">
       <div id="discovery-outcomes">
         <DiscoveryOutcomes />
       </div>
@@ -619,7 +622,7 @@ function FleetContent() {
           pending={walletRead.snapshot.collectibles.pendingDiscovery}
         />
       ) : null}
-      <div className="grid min-h-[32rem] content-start gap-3">
+      <div className="grid min-h-[32rem] min-w-0 grid-cols-1 content-start gap-3">
         {walletRead.status === "loaded" ? (
           <CollectorNextAction
             journey={createCollectorJourneyView({

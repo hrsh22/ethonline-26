@@ -309,6 +309,8 @@ type ProtocolClientContextValue = {
   readonly exchangeQuoteRevision: number;
   /** A confirmed transaction is ahead of a wallet balance or holdings read. */
   readonly walletSynchronizing: boolean;
+  /** Session-scoped receipt floor for direct identity ownership/reward evidence. */
+  readonly minimumCollectibleBlock?: bigint | undefined;
   readonly walletRead: ProtocolWalletRead;
   readonly nativeBalanceRead: ProtocolNativeBalanceRead;
   readonly transaction: TransactionState;
@@ -1531,6 +1533,12 @@ export function ProtocolClientProvider({
   const [minimumWalletBlock, setMinimumWalletBlock] = useState<
     bigint | undefined
   >();
+  const [collectibleObservationFloor, setCollectibleObservationFloor] =
+    useState<{ readonly scope: string; readonly block: bigint }>();
+  const minimumCollectibleBlock =
+    collectibleObservationFloor?.scope === walletRecordScope
+      ? collectibleObservationFloor?.block
+      : undefined;
   const [exchangeQuoteRevision, setExchangeQuoteRevision] = useState(0);
   const lastAttempt = useRef<ScopedTransactionAttempt | undefined>(undefined);
   const submittedTransactionPhase = useRef<
@@ -1592,6 +1600,7 @@ export function ProtocolClientProvider({
       transactionScopeGenerationRef.current += 1;
       lastAttempt.current = undefined;
       setMinimumWalletBlock(undefined);
+      setCollectibleObservationFloor(undefined);
       activeExecution.current = undefined;
       updateTransaction(createTransactionState());
     };
@@ -1618,6 +1627,7 @@ export function ProtocolClientProvider({
       activeExecution.current = undefined;
       reconciliationInFlight.current = false;
       setMinimumWalletBlock(undefined);
+      setCollectibleObservationFloor(undefined);
     }
     recordScopeRef.current = walletRecordScope;
     const saved =
@@ -1955,6 +1965,18 @@ export function ProtocolClientProvider({
   const refreshWallet = useCallback(
     async (requiredWalletBlock?: bigint) => {
       if (accessState !== "ready") return;
+      if (
+        requiredWalletBlock !== undefined &&
+        walletRecordScope !== undefined &&
+        recordScopeRef.current === walletRecordScope
+      ) {
+        setCollectibleObservationFloor((current) =>
+          current?.scope === walletRecordScope &&
+          current.block >= requiredWalletBlock
+            ? current
+            : { scope: walletRecordScope, block: requiredWalletBlock },
+        );
+      }
       const targetWalletBlock = requiredWalletBlock ?? minimumWalletBlock;
       const refetchBalances = async () => {
         const [wallet, native] = await Promise.all([
@@ -1998,6 +2020,7 @@ export function ProtocolClientProvider({
     [
       accessState,
       minimumWalletBlock,
+      walletRecordScope,
       nativeBalanceQuery,
       queryClient,
       walletQuery,
@@ -2548,6 +2571,7 @@ export function ProtocolClientProvider({
       marketHistory,
       exchangeQuoteRevision,
       walletSynchronizing,
+      minimumCollectibleBlock,
       walletRead,
       nativeBalanceRead,
       transaction,
@@ -2589,6 +2613,7 @@ export function ProtocolClientProvider({
       completedTransactions,
       clearTransaction,
       walletSynchronizing,
+      minimumCollectibleBlock,
       walletRead,
       nativeBalanceRead,
     ],

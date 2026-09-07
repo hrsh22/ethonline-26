@@ -3,7 +3,8 @@
 import { runPublicRead } from "@orbit/protocol/read-lifetime";
 import { useQuery } from "@tanstack/react-query";
 
-import { protocolDeploymentManifest } from "@/lib/deployment";
+import { protocolDeploymentFingerprint } from "@/lib/deployment";
+import { refetchUntilObservedBlock } from "@/lib/transaction-execution";
 import { webProtocolQueryRetryCount } from "@/lib/web-rpc-policy";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
 
@@ -25,16 +26,31 @@ export const useCollectibleRead = (
   useQuery({
     queryKey: [
       "protocol-collectible",
-      protocolDeploymentManifest?.launch.transactionHash,
+      protocolDeploymentFingerprint,
       identityId,
+      protocol.minimumCollectibleBlock?.toString(),
     ],
     queryFn: ({ signal }) =>
       runPublicRead(
-        (readSignal) => {
+        async (readSignal) => {
           const reader = protocol.readerForSignal(readSignal);
           if (reader === undefined)
             throw new Error("Collectible reader unavailable");
-          return reader.readCollectible(identityId);
+          const minimumBlock = protocol.minimumCollectibleBlock;
+          if (minimumBlock === undefined)
+            return reader.readCollectible(identityId);
+          const observed = await refetchUntilObservedBlock({
+            minimumBlock,
+            refetch: () => {
+              readSignal.throwIfAborted();
+              return reader.readCollectible(identityId);
+            },
+          });
+          if (observed.status !== "caught-up")
+            throw new Error(
+              "Checking identity ownership after the confirmed transaction.",
+            );
+          return observed.snapshot;
         },
         { signal },
       ),

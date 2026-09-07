@@ -1256,6 +1256,52 @@ describe("protocol client transaction coordination", () => {
     },
   );
 
+  it("retains a monotonic identity receipt floor only for the current wallet session", async () => {
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+    await act(async () => {
+      await currentProtocol.refreshWallet(100n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(100n);
+    expect(currentProtocol.walletSynchronizing).toBe(false);
+    await act(async () => {
+      await currentProtocol.refreshWallet(99n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(100n);
+    await act(async () => {
+      await currentProtocol.refreshWallet();
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(100n);
+
+    const oldWalletRefresh = currentProtocol.refreshWallet;
+    testState.connection.address = "0x0000000000000000000000000000000000000002";
+    await act(async () => {
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      );
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+    await act(async () => {
+      await oldWalletRefresh(100n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+    await act(async () => {
+      await currentProtocol.refreshWallet(99n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(99n);
+
+    testState.connection.chainId = 1;
+    await act(async () => {
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      );
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+  });
+
   it("keeps reconciliation single-flight and the execution lock owned until refresh settles", async () => {
     const action = {
       type: "set-pause",

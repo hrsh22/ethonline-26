@@ -86,6 +86,83 @@ describe("known collectible reads", () => {
     queryClient.clear();
   });
 
+  it("rejects cached pre-transfer ownership until the confirmed block is observed", async () => {
+    vi.useFakeTimers();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const container = document.createElement("div");
+    containers.push(container);
+    const root = createRoot(container);
+    let block = 99n;
+    const readCollectible = vi.fn(async () => ({
+      identityId: 42,
+      observedBlock: block,
+      owner: block < 100n ? "sender" : "recipient",
+    }));
+    let protocol = {
+      deploymentAvailable: true,
+      reader: { readCollectible },
+      readerForSignal: () => ({ readCollectible }),
+    } as unknown as ProtocolClient;
+    let observed: ReturnType<typeof useCollectibleRead>;
+    const Probe = () => {
+      observed = useCollectibleRead(42, protocol);
+      return (
+        <span>
+          {observed.isError ? "Checking ownership" : observed.data?.identityId}
+        </span>
+      );
+    };
+    const render = async () => {
+      await act(async () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <Probe />
+          </QueryClientProvider>,
+        ),
+      );
+    };
+    try {
+      await render();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(observed!.data).toMatchObject({ owner: "sender" });
+      protocol = { ...protocol, minimumCollectibleBlock: 100n };
+      await render();
+      expect(observed!.data).toBeUndefined();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(observed!.isError).toBe(true);
+      expect(observed!.data).toBeUndefined();
+      block = 100n;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_010);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(observed!.data).toMatchObject({
+        owner: "recipient",
+        observedBlock: 100n,
+      });
+      expect(readCollectible).toHaveBeenCalledTimes(6);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(readCollectible).toHaveBeenCalledTimes(6);
+    } finally {
+      act(() => root.unmount());
+      queryClient.clear();
+      vi.useRealTimers();
+    }
+  });
+
   it("ends a stalled detail read, recovers visibly, then stays idle", async () => {
     vi.useFakeTimers();
     const queryClient = new QueryClient();

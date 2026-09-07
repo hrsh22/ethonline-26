@@ -55,7 +55,7 @@ function DiscoveryActivity({
         ? `${pending} pending ${pending === 1 ? "Discovery" : "Discoveries"}.`
         : "The last recorded batch is no longer pending. Recorded acquisition outcomes and verified holdings are in Fleet.";
   return (
-    <p className="mt-2 text-body">
+    <p className="mt-2 text-body [overflow-wrap:anywhere]">
       {message}{" "}
       {reference === undefined ? "" : `Discovery request ${reference}. `}
       <Link className="underline" href="/fleet">

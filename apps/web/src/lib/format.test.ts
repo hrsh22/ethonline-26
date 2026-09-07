@@ -13,6 +13,34 @@ import {
 const wei = (value: string) => parseUnits(value, 18);
 
 describe("formatTokenAmount", () => {
+  it("rounds remaining requirements upward without losing their exact value or hiding tiny amounts", () => {
+    for (const value of [
+      wei("0.928063001893924137"),
+      wei("0.911324785315306868"),
+      wei("0.999999999999999999"),
+      1n,
+      0n,
+    ]) {
+      const formatted = formatTokenAmount(value, { rounding: "ceil" });
+      expect(
+        parseUnits(formatted.display.replaceAll(",", ""), 18),
+      ).toBeGreaterThanOrEqual(value);
+      expect(parseUnits(formatted.exact, 18)).toBe(value);
+    }
+    expect(
+      formatTokenAmount(wei("0.928063001893924137"), { rounding: "ceil" })
+        .display,
+    ).toBe("0.92807");
+    expect(
+      formatTokenAmount(wei("0.911324785315306868"), { rounding: "ceil" })
+        .display,
+    ).toBe("0.91133");
+    expect(
+      formatTokenAmount(1n, { rounding: "ceil", maximumFractionDigits: 6 })
+        .display,
+    ).toBe("0.000001");
+  });
+
   it("shortens the exact decimal expansions the routes used to print raw", () => {
     // The three values that appeared unreadable on /exchange and /market.
     expect(formatTokenAmount(wei("0.005750386365257872")).display).toBe(

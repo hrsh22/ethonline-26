@@ -278,6 +278,37 @@ describe("Exchange panel", () => {
     expect(protocol.execute).toHaveBeenCalledOnce();
   });
 
+  it("shows a readable rounded-up discovery shortfall and preserves the exact amount for inspection", async () => {
+    const protocol = createProtocol();
+    testState.protocol = {
+      ...protocol,
+      walletRead: {
+        ...protocol.walletRead,
+        snapshot: {
+          ...protocol.walletRead.snapshot,
+          liquidToken: {
+            ...protocol.walletRead.snapshot.liquidToken,
+            nextDiscoveryDraw: { remainingWei: 928_063_001_893_924_137n },
+          },
+        },
+      },
+    };
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+    expect(container.textContent).toContain(
+      "0.92807 $FUEL to the next discovery.",
+    );
+    expect(
+      container.querySelector('[title="0.928063001893924137"]')?.textContent,
+    ).toBe("0.92807");
+    expect(testState.quoteExactInput).not.toHaveBeenCalled();
+  });
+
   it("starts blank without requesting or enabling an unsafe default trade", async () => {
     await act(async () =>
       root.render(
