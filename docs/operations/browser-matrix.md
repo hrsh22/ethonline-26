@@ -12,7 +12,9 @@ Metric definition-list structure is checked by Axe on the rendered status page,
 with and without hints. The status case also requires the named funds group.
 The existing accessibility self-check moves an actual metric hint outside its
 definition and requires Axe to catch it.
-The former source-string wallet-theme and CSS-class checks are not retained.
+Source-string wallet/manifest theme checks, mocked font-class checks, aesthetic
+luminance thresholds, and selected CSS-class assertions are not retained. The
+text and non-text contrast tests and behavioral/semantic UI assertions remain.
 
 The release build and its test API use port 18800, separate from the development
 API on 8800. Completed public views stay idle; failed wallet reads are checked

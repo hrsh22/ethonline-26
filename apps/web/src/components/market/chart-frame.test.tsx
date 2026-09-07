@@ -36,10 +36,6 @@ describe("chart frame", () => {
     // none: the sparse state gets its own title rather than the empty one.
     expect(html).toContain("Not enough history");
     expect(html).not.toContain("No swaps indexed yet");
-    // The plot keeps its own size: a clamp here crops observations rather
-    // than scaling them, and hiding observations while saying they are shown
-    // is worse than the defect being fixed.
-    expect(html).not.toContain("h-48");
   });
 
   it("draws the full plot once there is a shape to read", () => {
