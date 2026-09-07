@@ -532,7 +532,7 @@ export const createIdentityApplicationCopy = (
         },
         discover: {
           title: "Discover",
-          current: `${identity.terms.discoveryDraw} is awaiting verified randomness; check ${identity.navigation.collectionTask} for the assigned ${identity.terms.transientCollectible}.`,
+          current: `${identity.terms.discoveryDraw} is being processed; check ${identity.navigation.collectionTask} for its current stage and the assigned ${identity.terms.transientCollectible}.`,
           complete: `A ${identity.terms.transientCollectible} was assigned to this wallet.`,
         },
         launch: {
@@ -562,7 +562,7 @@ export const createIdentityApplicationCopy = (
       },
       launchWarning: `Burns exactly one ${identity.liquidToken.displayName} forever and makes the selected ${identity.terms.transientCollectible} a permanent ${identity.terms.permanentCollectible}.`,
       launchWarningLabel: "Irreversible",
-      discoveryDisclosure: `On Base Sepolia, each whole-unit ${identity.terms.discoveryDraw} requests a verifiable random draw from Chainlink VRF after the acquisition is confirmed. The wallet cannot preview the identity: a ${identity.terms.pendingDiscovery} appears first, and the ${identity.terms.transientCollectible} is assigned only in the independently verified callback.`,
+      discoveryDisclosure: `On Base Sepolia, each whole-unit ${identity.terms.discoveryDraw} requests a verifiable random draw from Chainlink VRF after the acquisition is confirmed. The wallet cannot preview the identity: a ${identity.terms.pendingDiscovery} appears first, and the ${identity.terms.transientCollectible} is assigned after verified randomness arrives and the delivery service completes the onchain result.`,
       lossDisclosure: `Selling a whole ${identity.liquidToken.displayName} first cancels the latest ${identity.terms.pendingDiscovery}, then dissolves the latest ${identity.terms.transientCollectible}. Transferring liquid tokens has the same whole-unit boundary effect. Permanent ${identity.terms.permanentCollectible}s are not dissolved.`,
       details: `How ${identity.terms.discoveryDraw} and whole-token boundaries work`,
       nextStepEyebrow: "YOUR NEXT STEP",

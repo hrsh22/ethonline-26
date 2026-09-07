@@ -256,6 +256,12 @@ describe("three-phase collector journey", () => {
     const phases = [...container.querySelectorAll("li[data-state]")];
     expect(phases[0]?.getAttribute("data-state")).toBe("complete");
     expect(phases[1]?.getAttribute("data-state")).toBe("current");
+    expect(container.textContent).toContain(
+      "check My Collection for its current stage",
+    );
+    expect(container.textContent).not.toContain(
+      "is awaiting verified randomness",
+    );
     expect(phases[2]?.getAttribute("data-state")).toBe("waiting");
     expect(container.querySelector("a[href='/fleet']")?.textContent).toBe(
       "Check Discovery in My Collection",

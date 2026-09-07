@@ -64,6 +64,12 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     ),
     true,
   );
+  assert.equal(
+    await page.evaluate(
+      () => getComputedStyle(document.documentElement).scrollBehavior,
+    ),
+    "auto",
+  );
   const preview = page
     .getByRole("button", { name: "Preview Orbiter", exact: true })
     .first();
@@ -116,6 +122,7 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     32,
   );
   await assertNoOverflow(page, "Back to Trade at 200% root text");
+  await assertShortViewportFocus(page);
   await page
     .getByRole("link", { name: "ORBIT 4444: Protocol overview", exact: true })
     .click();
@@ -124,6 +131,53 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     .getByRole("region", { name: "Explore the collection" })
     .scrollIntoViewIfNeeded();
   await assertNoOverflow(page, "Public gallery at 200% root text");
+}
+
+/** Native Tab scrolling must account for the fixed collector navigation. */
+async function assertShortViewportFocus(page: Page) {
+  const viewport = page.viewportSize();
+  const previous = await page.evaluate(() => {
+    const style = document.documentElement.style;
+    const saved = {
+      fontSize: style.fontSize,
+      scrollBehavior: style.scrollBehavior,
+    };
+    style.fontSize = "100%";
+    // Measure the scroll destination independently of animation timing.
+    style.scrollBehavior = "auto";
+    return saved;
+  });
+  try {
+    await page.setViewportSize({ width: 375, height: 350 });
+    await page.getByRole("textbox", { name: "You pay", exact: true }).focus();
+    await page.keyboard.press("Tab");
+    const bounds = await page
+      .getByRole("textbox", { name: "You receive", exact: true })
+      .evaluate((input) => ({
+        focused: document.activeElement === input,
+        input: input.getBoundingClientRect().toJSON(),
+        header: document
+          .querySelector("header")!
+          .getBoundingClientRect()
+          .toJSON(),
+        navigation: document
+          .querySelector("[data-mobile-navigation]")!
+          .getBoundingClientRect()
+          .toJSON(),
+      }));
+    assert.ok(bounds.focused, "Tab must reach the receive amount");
+    assert.ok(
+      bounds.input.top >= bounds.header.bottom + 6 &&
+        bounds.input.bottom <= bounds.navigation.top - 6,
+      `Focused amount must stay between the header and mobile navigation: ${JSON.stringify(bounds)}`,
+    );
+  } finally {
+    await page.evaluate(
+      (saved) => Object.assign(document.documentElement.style, saved),
+      previous,
+    );
+    if (viewport !== null) await page.setViewportSize(viewport);
+  }
 }
 
 /** Measure text ink too: overflow-hidden can conceal a broken segmented label. */

@@ -131,11 +131,12 @@ export const craftGeometry = (identityId: number, track: number): Craft => {
       ? `M${point(AXIS, nose)}L${point(AXIS, nose - 7)}M${point(AXIS - 3, nose - 7)}L${point(AXIS + 3, nose - 7)}`
       : undefined;
 
+  const plumeDepth = Math.min(20, SIZE - 2 - tail);
   const plume = mirrored([
     [0, tail + 2],
     [halfWidth * 0.55, tail + 4],
-    [halfWidth * 0.3, tail + 14 + random() * 6],
-    [0, tail + 20],
+    [halfWidth * 0.3, tail + plumeDepth * (0.7 + random() * 0.3)],
+    [0, tail + plumeDepth],
   ]);
 
   return { hull, fins, engines, tail, ports, stripes, antenna, plume };
