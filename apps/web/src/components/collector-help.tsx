@@ -80,7 +80,7 @@ export function CollectorHelp({
   };
   return (
     <div className="mt-3 grid gap-2 border-t border-line pt-3">
-      <div className="flex flex-wrap gap-2 [&>*]:h-auto [&>*]:max-w-full [&>*]:whitespace-normal [&>*]:py-2">
+      <div className="flex flex-wrap gap-2">
         <ButtonLink href={`/learn#help-${topic}`} size="sm" variant="outline">
           {labels[topic]}
         </ButtonLink>

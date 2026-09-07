@@ -220,7 +220,6 @@ export function ProtocolSummary() {
             action={
               feedback.tone === "error" || feedback.tone === "stale" ? (
                 <Button
-                  className="h-auto max-w-full whitespace-normal py-2"
                   onClick={() => void protocol.refresh()}
                   size="sm"
                   type="button"

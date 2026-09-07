@@ -24,6 +24,38 @@ async function assertNoOverflow(page: Page, label: string) {
   assert.fail(`${failure.detail}: ${JSON.stringify(overflowing)}`);
 }
 
+async function assertSharedActionWraps(page: Page) {
+  const measured = await page
+    .getByRole("button", { name: "Preview Grounded", exact: true })
+    .first()
+    .evaluate((source) => {
+      const container = document.createElement("div");
+      container.style.width = "160px";
+      const action = source.cloneNode(true) as HTMLButtonElement;
+      action.textContent = "Go on to the next step or go back";
+      container.append(action);
+      document.body.append(container);
+      try {
+        return {
+          height: action.getBoundingClientRect().height,
+          minimum: Number.parseFloat(getComputedStyle(action).minHeight),
+          width: action.getBoundingClientRect().width,
+          scrollWidth: container.scrollWidth,
+        };
+      } finally {
+        container.remove();
+      }
+    });
+  assert.ok(
+    measured.height > measured.minimum,
+    "Long shared text actions must grow beyond their minimum height",
+  );
+  assert.ok(
+    measured.width <= 160 && measured.scrollWidth <= 160,
+    "Shared text actions must fit their available width",
+  );
+}
+
 /** Browser emulation checks; these do not establish physical-wallet support. */
 export async function checkMobileAccessibility(page: Page, origin: string) {
   assert.equal(
@@ -51,6 +83,7 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     document.documentElement.style.fontSize = "200%";
   });
   await page.evaluate(() => document.fonts.ready);
+  await assertSharedActionWraps(page);
   await assertNoOverflow(page, "Relics at 200% root text");
   const navigation = page.locator("[data-mobile-navigation]");
   for (const [name, path] of [

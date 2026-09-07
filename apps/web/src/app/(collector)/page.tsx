@@ -22,13 +22,13 @@ export default function Home() {
           <p className="font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase">
             {applicationCopy.home.eyebrow}
           </p>
-          <h1 className="mt-3 max-w-[18ch] font-mono text-hero font-semibold text-balance">
+          <h1 className="mt-3 max-w-[18ch] font-mono text-hero font-semibold text-balance [overflow-wrap:anywhere]">
             {applicationCopy.home.title}
           </h1>
           <p className="mt-4 max-w-[56ch] text-body text-ink-soft">
             {applicationCopy.home.introduction}
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-2 [&>a]:h-auto [&>a]:max-w-full [&>a]:whitespace-normal [&>a]:py-3">
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             <ButtonLink href="/start" size="lg">
               {applicationCopy.home.primaryAction}
             </ButtonLink>

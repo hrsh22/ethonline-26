@@ -23,12 +23,7 @@ export function RelicPreview({ identityId }: { readonly identityId: number }) {
         lit={lit}
         label={`Identity ${identityId}, illustrative ${lit ? "Orbiter" : "Grounded"} preview`}
       />
-      <Button
-        className="h-auto max-w-full whitespace-normal py-2"
-        variant="outline"
-        aria-pressed={lit}
-        onClick={() => setLit(!lit)}
-      >
+      <Button variant="outline" aria-pressed={lit} onClick={() => setLit(!lit)}>
         {lit ? "Preview Grounded" : "Preview Orbiter"}
       </Button>
       <p className="text-caption text-ink-soft">

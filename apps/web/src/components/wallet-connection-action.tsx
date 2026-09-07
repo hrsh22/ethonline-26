@@ -4,7 +4,6 @@ import { CircleHelp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { identity } from "@/lib/identity";
-import { cn } from "@/lib/utils";
 
 export function WalletConnectionAction({
   ariaDescribedBy,
@@ -26,10 +25,7 @@ export function WalletConnectionAction({
       <Button
         aria-describedby={ariaDescribedBy}
         aria-haspopup="dialog"
-        className={cn(
-          "h-auto min-h-11 max-w-full whitespace-normal py-2",
-          className,
-        )}
+        className={className}
         disabled={disabled}
         onClick={onContinue}
         size={size}
