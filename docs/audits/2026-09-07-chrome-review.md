@@ -16,6 +16,12 @@ Inspected home, Get started, Trade, Fleet, Rewards, Relics, Market, Status, Lear
 
 At phone width, verified More navigation, Relic inspection, browser Back to Relics, invalid identity lookup feedback, successful lookup of #1639, copy-link feedback, and wallet-display help. The wallet chooser fitted the viewport. Closing it retained the entered Trade amount. No wallet signature or transaction was submitted. The app tab recorded no console errors during this walkthrough. After history recovery, the advanced market chart opened with interval, indicator and drawing controls.
 
+## Performance and regression checks
+
+The constrained-network benchmark exposed an additional header jump while the webfont loaded. Next's adjusted Arial fallback made the disconnected Connect button much wider than JetBrains Mono. A monospace fallback keeps the header at 56 px through font loading. Matched public-home CLS fell from 0.2343 to 0.0008, with six RPC requests in both builds. A 50-holding Fleet used 19 requests versus a baseline median of 54, with CLS falling from 0.3510 to 0.0039. Wallet readiness remains about 6.8 seconds; the later Fleet LCP is explicitly retained as a limitation. The [performance record](../operations/collector-performance.md) preserves baseline, intermediate regression and corrected measurements.
+
+The web suite passed 881 tests and configuration passed 137 tests. The 110-case production browser matrix and 17 harness self-tests passed before the font correction. The final font build is undergoing the same browser validation. Standards and Spec reviews found no remaining actionable findings through the font correction. CI also exposed a faucet-test scheduling race; it now waits for the actual recovery state and preserves its one-proof/one-request assertions.
+
 ## Running backend refresh
 
 The old API returned 404 for `/v1/delivery/status` because it had loaded a September 5 build. Rebuilt packages and API, gracefully stopped its single supervisor, verified its children exited, and started one file-backed supervisor. The existing history migration replayed the index before the operator started. Readiness then returned HTTP 200, history was complete within two blocks of its observed head, and delivery status reported the saved Live policy, online liveness and a completed run. The first resumed cycle submitted no transactions because no Discovery was pending. Chrome recovered the market and displayed Delivery running. The authorized policy was unchanged.

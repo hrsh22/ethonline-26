@@ -10,13 +10,13 @@ Component checks exercise primary links, active routes, More/Escape focus restor
 
 No unfamiliar-user session, physical-device wallet handoff, or manual screen-reader session is recorded as completed by this implementation.
 
-| Check                                                        | Status        | Record when performed                                                                                                           |
-| ------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Five unfamiliar collectors complete the journey              | Not performed | Anonymous participant ID, date, observed misunderstandings and fixes                                                            |
-| Physical mobile wallet connection and return                 | Not performed | Device, OS, browser, wallet versions, connection method and observed result                                                     |
-| Physical virtual keyboard and text enlargement               | Not performed | Device/browser, amount entry, final action reachability, and navigation overlap                                                 |
-| Manual screen reader                                         | Not performed | Screen reader/browser, focus order, meaningful announcements and repeated announcements                                         |
-| Comparable constrained-network measurements before and after | Partial       | [Recorded for one-craft Fleet and idle Trade](./collector-performance.md); public exploration and 50 holdings remain unmeasured |
+| Check                                                        | Status        | Record when performed                                                                                                                                                                            |
+| ------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Five unfamiliar collectors complete the journey              | Not performed | Anonymous participant ID, date, observed misunderstandings and fixes                                                                                                                             |
+| Physical mobile wallet connection and return                 | Not performed | Device, OS, browser, wallet versions, connection method and observed result                                                                                                                      |
+| Physical virtual keyboard and text enlargement               | Not performed | Device/browser, amount entry, final action reachability, and navigation overlap                                                                                                                  |
+| Manual screen reader                                         | Not performed | Screen reader/browser, focus order, meaningful announcements and repeated announcements                                                                                                          |
+| Comparable constrained-network measurements before and after | Recorded      | [Matched startup measurements](./collector-performance.md) cover public home, one-craft/50-holding Fleet and idle Trade; gallery interaction and physical devices remain outside these scenarios |
 
 ## Session tasks
 

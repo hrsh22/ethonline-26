@@ -1,0 +1,443 @@
+{
+  "origin": "http://127.0.0.1:3132",
+  "browserVersion": "151.0.7922.34",
+  "recordedAt": "2026-09-07T06:55:46.492Z",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh disconnected browser context; HTTP cache disabled",
+  "results": [
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 1,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 673.3000000119209,
+      "cls": 0.2976019639722714,
+      "fcp": 756,
+      "lcp": 756,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1105.5,
+          "score": 0.2976019639722714,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 149,
+                "width": 375,
+                "height": 663,
+                "top": 149,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 56,
+                "width": 375,
+                "height": 756,
+                "top": 56,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 56,
+                "width": 343,
+                "height": 92,
+                "top": 56,
+                "right": 359,
+                "bottom": 148,
+                "left": 16
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 17,
+                "y": 709.328125,
+                "width": 341,
+                "height": 102.671875,
+                "top": 709.328125,
+                "right": 358,
+                "bottom": 812,
+                "left": 17
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 0,
+                "width": 40,
+                "height": 44,
+                "top": 0,
+                "right": 56,
+                "bottom": 44,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 5.5,
+                "width": 40,
+                "height": 44,
+                "top": 5.5,
+                "right": 56,
+                "bottom": 49.5,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-h-dvh min-w-0 flex-col\"><div class=\"grid min-h-[5.25rem] content-center gap-1 border-b border-line bg-canvas px-4 py-1 tablet:flex tablet:min-h-8 tablet:flex-wrap tablet:items-center tablet:justify-between tablet:gap-x-4 tablet:px-6\"><p class=\"flex flex-col items-start gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft",
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnecte",
+            "<div class=\"flex-1 p-4 grid gap-3 compact:grid-cols-2\"><figure class=\"flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-control)] border border-line bg-canvas p-3\"><svg aria-hidden=\"true\" class=\"size-28 tablet:size-36\" fill=\"none\" stroke-linejoin=\"round\" stroke-width=\"1.5\" vector-effect=\"non-scaling-stroke\" viewBox=\"0 0 120 120\" xmlns=",
+            "<a aria-label=\"ORBIT 4444: Protocol overview\" class=\"flex min-h-11 items-center gap-3 laptop:shrink-0 mr-auto min-w-0 [&amp;_[data-brand-mark]]:hidden compact:[&amp;_[data-brand-mark]]:block laptop:mr-0 laptop:border-b laptop:border-line laptop:px-4 laptop:py-3\" href=\"/\"><span aria-hidden=\"true\" class=\"grid size-7 flex-none place-items-center round"
+          ]
+        }
+      ],
+      "elapsed": 15004.09999999404
+    },
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 2,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 714.2000000178814,
+      "cls": 0.2976019639722714,
+      "fcp": 792,
+      "lcp": 792,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1116.7000000178814,
+          "score": 0.2976019639722714,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 149,
+                "width": 375,
+                "height": 663,
+                "top": 149,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 56,
+                "width": 375,
+                "height": 756,
+                "top": 56,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 56,
+                "width": 343,
+                "height": 92,
+                "top": 56,
+                "right": 359,
+                "bottom": 148,
+                "left": 16
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 17,
+                "y": 709.328125,
+                "width": 341,
+                "height": 102.671875,
+                "top": 709.328125,
+                "right": 358,
+                "bottom": 812,
+                "left": 17
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 0,
+                "width": 40,
+                "height": 44,
+                "top": 0,
+                "right": 56,
+                "bottom": 44,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 5.5,
+                "width": 40,
+                "height": 44,
+                "top": 5.5,
+                "right": 56,
+                "bottom": 49.5,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-h-dvh min-w-0 flex-col\"><div class=\"grid min-h-[5.25rem] content-center gap-1 border-b border-line bg-canvas px-4 py-1 tablet:flex tablet:min-h-8 tablet:flex-wrap tablet:items-center tablet:justify-between tablet:gap-x-4 tablet:px-6\"><p class=\"flex flex-col items-start gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft",
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnecte",
+            "<div class=\"flex-1 p-4 grid gap-3 compact:grid-cols-2\"><figure class=\"flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-control)] border border-line bg-canvas p-3\"><svg aria-hidden=\"true\" class=\"size-28 tablet:size-36\" fill=\"none\" stroke-linejoin=\"round\" stroke-width=\"1.5\" vector-effect=\"non-scaling-stroke\" viewBox=\"0 0 120 120\" xmlns=",
+            "<a aria-label=\"ORBIT 4444: Protocol overview\" class=\"flex min-h-11 items-center gap-3 laptop:shrink-0 mr-auto min-w-0 [&amp;_[data-brand-mark]]:hidden compact:[&amp;_[data-brand-mark]]:block laptop:mr-0 laptop:border-b laptop:border-line laptop:px-4 laptop:py-3\" href=\"/\"><span aria-hidden=\"true\" class=\"grid size-7 flex-none place-items-center round"
+          ]
+        }
+      ],
+      "elapsed": 15003.59999999404
+    },
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 3,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 708.5,
+      "cls": 0.2976019639722714,
+      "fcp": 784,
+      "lcp": 784,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1107.800000011921,
+          "score": 0.2976019639722714,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 149,
+                "width": 375,
+                "height": 663,
+                "top": 149,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 56,
+                "width": 375,
+                "height": 756,
+                "top": 56,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 56,
+                "width": 343,
+                "height": 92,
+                "top": 56,
+                "right": 359,
+                "bottom": 148,
+                "left": 16
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 17,
+                "y": 709.328125,
+                "width": 341,
+                "height": 102.671875,
+                "top": 709.328125,
+                "right": 358,
+                "bottom": 812,
+                "left": 17
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 0,
+                "width": 40,
+                "height": 44,
+                "top": 0,
+                "right": 56,
+                "bottom": 44,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 5.5,
+                "width": 40,
+                "height": 44,
+                "top": 5.5,
+                "right": 56,
+                "bottom": 49.5,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-h-dvh min-w-0 flex-col\"><div class=\"grid min-h-[5.25rem] content-center gap-1 border-b border-line bg-canvas px-4 py-1 tablet:flex tablet:min-h-8 tablet:flex-wrap tablet:items-center tablet:justify-between tablet:gap-x-4 tablet:px-6\"><p class=\"flex flex-col items-start gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft",
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnecte",
+            "<div class=\"flex-1 p-4 grid gap-3 compact:grid-cols-2\"><figure class=\"flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-control)] border border-line bg-canvas p-3\"><svg aria-hidden=\"true\" class=\"size-28 tablet:size-36\" fill=\"none\" stroke-linejoin=\"round\" stroke-width=\"1.5\" vector-effect=\"non-scaling-stroke\" viewBox=\"0 0 120 120\" xmlns=",
+            "<a aria-label=\"ORBIT 4444: Protocol overview\" class=\"flex min-h-11 items-center gap-3 laptop:shrink-0 mr-auto min-w-0 [&amp;_[data-brand-mark]]:hidden compact:[&amp;_[data-brand-mark]]:block laptop:mr-0 laptop:border-b laptop:border-line laptop:px-4 laptop:py-3\" href=\"/\"><span aria-hidden=\"true\" class=\"grid size-7 flex-none place-items-center round"
+          ]
+        }
+      ],
+      "elapsed": 15003.40000000596
+    }
+  ],
+  "productSource": "70bec034b52079f672578efd6d77f3f4fdb9a68d",
+  "productionBuildId": "ub5jOfwbxL9nujZI-OHvB"
+}
