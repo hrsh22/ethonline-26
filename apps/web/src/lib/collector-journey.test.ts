@@ -34,6 +34,7 @@ const walletRead = (
     },
     settlementToken: { rawWei: settlementBalanceWei },
     collectibles: {
+      permanentHoldingsStatus: "complete" as const,
       pendingDiscovery: { count: progress === "pending" ? 1 : 0 },
       transient: progress === "grounded" ? [{ identityId: 1493 }] : [],
       permanent: progress === "orbiter" ? [{ identityId: 1493 }] : [],

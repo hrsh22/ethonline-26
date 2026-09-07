@@ -1,4 +1,5 @@
 export interface ProtocolHealthReadScope {
+  readonly includeBytecodeInventory: boolean;
   readonly includeConnectedWallet: boolean;
   readonly includeOperationalHistory: boolean;
   readonly includeRewardHistory: boolean;
@@ -17,6 +18,8 @@ export const getProtocolHealthReadScope = (
     pathname === "/admin/diagnostics" ||
     pathname.startsWith("/admin/diagnostics/");
   return {
+    includeBytecodeInventory:
+      pathname === "/admin" || pathname.startsWith("/admin/"),
     includeConnectedWallet: pathname !== "/status",
     includeOperationalHistory: pathname === "/admin" || diagnostics,
     includeRewardHistory: pathname === "/status" || diagnostics,

@@ -10,6 +10,32 @@ import {
 const hash = `0x${"12".repeat(32)}` as const;
 
 describe("protocol transaction execution", () => {
+  it("retains a wallet cancellation hash without confirming the original action", async () => {
+    const replacementHash = `0x${"34".repeat(32)}` as const;
+    const states: { status: string; hash?: string }[] = [];
+    await expect(
+      executeProtocolTransaction({
+        estimateGas: async () => 100_000n,
+        failureStep: { current: "readiness" },
+        label: "Launch #1639",
+        onState: (state) => states.push(state),
+        outcomeUnknownMessage: "Checking receipt",
+        simulate: async () => undefined,
+        submit: async () => hash,
+        waitForReceipt: async (_hash, onReplacement) => {
+          onReplacement(replacementHash, "cancelled");
+          return { blockNumber: 100n, status: "success" };
+        },
+      }),
+    ).rejects.toMatchObject({
+      name: "ReplacedProtocolTransactionError",
+      hash: replacementHash,
+      reason: "cancelled",
+    });
+    expect(states.at(-1)).toMatchObject({ hash: replacementHash });
+    expect(states.some((state) => state.status === "confirmed")).toBe(false);
+  });
+
   it("submits with a gas safety margin and confirms a successful receipt", async () => {
     const states: string[] = [];
     const failureStep = { current: "client readiness" };

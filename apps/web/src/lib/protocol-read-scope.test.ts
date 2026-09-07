@@ -9,21 +9,25 @@ import {
 describe("protocol health route scope", () => {
   it("keeps detailed operational history inside admin routes", () => {
     expect(getProtocolHealthReadScope("/exchange")).toEqual({
+      includeBytecodeInventory: false,
       includeConnectedWallet: true,
       includeOperationalHistory: false,
       includeRewardHistory: false,
     });
     expect(getProtocolHealthReadScope("/admin")).toEqual({
+      includeBytecodeInventory: true,
       includeConnectedWallet: true,
       includeOperationalHistory: true,
       includeRewardHistory: false,
     });
     expect(getProtocolHealthReadScope("/admin/diagnostics")).toEqual({
+      includeBytecodeInventory: true,
       includeConnectedWallet: true,
       includeOperationalHistory: true,
       includeRewardHistory: true,
     });
     expect(getProtocolHealthReadScope("/status")).toEqual({
+      includeBytecodeInventory: false,
       includeConnectedWallet: false,
       includeOperationalHistory: false,
       includeRewardHistory: true,

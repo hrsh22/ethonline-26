@@ -115,7 +115,7 @@ describe("collector testnet faucet", () => {
       "$FUEL",
       "Collectibles",
     ]);
-    expect(container.textContent).toContain("Gas only");
+    expect(container.textContent).toContain("Gas and trading");
     expect(container.textContent).toContain("Buy it on Trade");
     expect(container.textContent).toContain("Never minted by this faucet");
     expect(container.textContent).toContain(
@@ -347,7 +347,7 @@ describe("collector testnet faucet", () => {
       expect(cancelled?.textContent).toContain(
         "This attempt did not request a top-up or send assets.",
       );
-      expect(container.textContent).not.toContain("Top-up needs a safe retry");
+      expect(container.textContent).not.toContain("Checking your top-up");
       expect(
         fetcher.mock.calls.some(([, init]) => init?.method === "POST"),
       ).toBe(false);
@@ -376,7 +376,205 @@ describe("collector testnet faucet", () => {
     },
   );
 
-  it("offers a safe top-up retry when the POST transport fails", async () => {
+  it("replaces an inventory rejection with newer status without another proof or POST", async () => {
+    testState.protocol = protocol("ready");
+    let available = false;
+    const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+      if (String(url).includes("/challenge"))
+        return Response.json({ challenge: { message: "one proof" } });
+      if (init?.method === "POST")
+        return Response.json({
+          apiVersion: 1,
+          observedAt: 200,
+          error: { code: "funding-inventory-empty" },
+        });
+      return Response.json({
+        apiVersion: 1,
+        observedAt: available ? 300 : 100,
+        service: { chainId: 84532, state: "ready" },
+        recipient: { address, state: "eligible" },
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await renderPanel();
+    await flushPanel();
+    await flushPanel(() =>
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Top up this wallet")
+        ?.click(),
+    );
+    expect(
+      container.querySelector("[data-funding-state='inventory-empty']"),
+    ).not.toBeNull();
+    available = true;
+    await flushPanel(() =>
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Check again")
+        ?.click(),
+    );
+    expect(
+      container.querySelector("[data-funding-state='eligible']"),
+    ).not.toBeNull();
+    expect(
+      fetcher.mock.calls.filter(([, init]) => init?.method === "POST"),
+    ).toHaveLength(1);
+    expect(
+      fetcher.mock.calls.filter(([url]) => String(url).includes("/challenge")),
+    ).toHaveLength(1);
+  });
+
+  it("follows an accepted request automatically, shows each asset, and stops reads after completion", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      testState.protocol = protocol("ready");
+      let reads = 0;
+      const fetcher = vi.fn<typeof fetch>(async () => {
+        reads += 1;
+        return Response.json({
+          apiVersion: 1,
+          observedAt: reads * 100,
+          recipient: { address, state: reads === 1 ? "pending" : "funded" },
+          request: {
+            id: "tracked-grant",
+            state: reads === 1 ? "pending" : "funded",
+            transactions: [
+              { kind: "weth", state: "confirmed" },
+              { kind: "eth", state: reads === 1 ? "broadcast" : "confirmed" },
+            ],
+          },
+        });
+      });
+      vi.stubGlobal("fetch", fetcher);
+      await renderPanel();
+      await flushPanel();
+      expect(container.textContent).toContain("WETH: Received");
+      expect(container.textContent).toContain("ETH: Confirming");
+      expect(container.textContent).not.toContain("Retry top-up");
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000);
+      });
+      await flushPanel();
+      expect(
+        container.querySelector("[data-funding-state='funded']"),
+      ).not.toBeNull();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000);
+      });
+      expect(reads).toBe(2);
+      expect(
+        fetcher.mock.calls.some(([, init]) => init?.method === "POST"),
+      ).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a completed grant when an older pending POST arrives late", async () => {
+    testState.protocol = protocol("ready");
+    let finishPost: ((response: Response) => void) | undefined;
+    let completed = false;
+    const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+      if (String(url).includes("/challenge"))
+        return Response.json({ challenge: { message: "one proof" } });
+      if (init?.method === "POST")
+        return new Promise<Response>((resolve) => {
+          finishPost = resolve;
+        });
+      return Response.json(
+        completed
+          ? {
+              apiVersion: 1,
+              observedAt: 300,
+              recipient: { address, state: "funded" },
+              request: { id: "grant", state: "funded" },
+            }
+          : {
+              apiVersion: 1,
+              observedAt: 100,
+              recipient: { address, state: "eligible" },
+            },
+      );
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await renderPanel();
+    await flushPanel();
+    await flushPanel(() =>
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Top up this wallet")
+        ?.click(),
+    );
+    completed = true;
+    await act(async () => {
+      await queryClient.refetchQueries({
+        queryKey: ["testnet-funding-status"],
+      });
+    });
+    await flushPanel(() =>
+      finishPost?.(
+        Response.json({
+          apiVersion: 1,
+          observedAt: 200,
+          recipient: { address, state: "pending" },
+          request: { id: "grant", state: "pending" },
+        }),
+      ),
+    );
+    expect(
+      container.querySelector("[data-funding-state='funded']"),
+    ).not.toBeNull();
+    expect(
+      fetcher.mock.calls.filter(([, init]) => init?.method === "POST"),
+    ).toHaveLength(1);
+  });
+
+  it("does not show the old recipient's late acceptance after a wallet switch", async () => {
+    const other = "0x3000000000000000000000000000000000000003" as const;
+    testState.protocol = protocol("ready");
+    let finishPost: ((response: Response) => void) | undefined;
+    const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+      if (String(url).includes("/challenge"))
+        return Response.json({ challenge: { message: "one proof" } });
+      if (init?.method === "POST")
+        return new Promise<Response>((resolve) => {
+          finishPost = resolve;
+        });
+      return Response.json({
+        apiVersion: 1,
+        recipient: {
+          address: String(url).includes(other) ? other : address,
+          state: "eligible",
+        },
+      });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    await renderPanel();
+    await flushPanel();
+    await flushPanel(() =>
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Top up this wallet")
+        ?.click(),
+    );
+    testState.protocol = protocol("ready", other);
+    await renderPanel();
+    await flushPanel();
+    await flushPanel(() =>
+      finishPost?.(
+        Response.json({
+          apiVersion: 1,
+          recipient: { address, state: "pending" },
+          request: { id: "other-wallet-grant", state: "pending" },
+        }),
+      ),
+    );
+    expect(
+      container.querySelector("[data-funding-state='eligible']"),
+    ).not.toBeNull();
+    expect(container.textContent).not.toContain(
+      "Your top-up is being processed",
+    );
+  });
+
+  it("checks status without another proof when the POST transport fails", async () => {
     testState.protocol = protocol("ready");
     const fetcher = vi
       .fn<typeof fetch>()
@@ -403,8 +601,8 @@ describe("collector testnet faucet", () => {
     expect(
       container.querySelector("[data-funding-state='retryable']"),
     ).not.toBeNull();
-    expect(container.textContent).toContain("Top-up needs a safe retry");
-    expect(container.textContent).toContain("Retry top-up");
+    expect(container.textContent).toContain("Checking your top-up");
+    expect(container.textContent).toContain("Check again");
     const retryable = container.querySelector(
       "[data-funding-state='retryable']",
     );
@@ -485,7 +683,7 @@ describe("collector testnet faucet", () => {
         error: { code: "funding-failed" },
       },
       "retryable",
-      "Top-up needs a safe retry",
+      "Checking your top-up",
     ],
   ] as const)(
     "renders %s as a distinct public state",
@@ -600,12 +798,16 @@ describe("collector testnet faucet", () => {
     await renderPanel();
     await flushPanel();
 
-    const query = queryClient
-      .getQueryCache()
-      .find({ queryKey: ["testnet-funding-status", address] });
-    const options = query?.options as
-      { readonly refetchInterval?: number | false } | undefined;
-    expect(options?.refetchInterval).toBe(false);
+    const reads = (fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(15_000);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect((fetch as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(reads);
   });
 
   it("keeps asset education collapsed as supporting disclosure", async () => {

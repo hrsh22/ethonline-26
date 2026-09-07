@@ -53,10 +53,11 @@ must expect the same host the browser signs.
 `OPERATOR_EXECUTE` becomes a **startup default only**. Once a control ledger is
 configured, the stored desired policy governs every cycle, and the startup
 announcement says so rather than claiming a mode the policy will override.
-Every watch startup appends a `supervisor-restarted` Stop to the audit before
-accepting commands. It clears queued passes. It refuses startup while another
-supervisor still holds an unexpired lease; restart after that lease expires.
-The reset does not run on ordinary database reads or between cycles.
+Watch startup resumes the saved policy and unclaimed queued passes for the same
+deployment. An explicit Stop stays stopped; a claimed pass is never replayed.
+Fresh, legacy unbound, or changed-deployment ledgers receive an atomic
+`deployment-binding-changed` Stop and require a new signed live command.
+Startup is refused while another supervisor holds an unexpired lease.
 
 The watch passes an internal `OPERATOR_CONTROL_RUN_ID` to its child. Do not set
 this in an environment file. Controlled one-shot execution without a current
@@ -80,7 +81,8 @@ operator.
 
 ## Safety you can rely on
 
-- A fresh ledger, a wiped ledger, and a restart all read `stopped`.
+- A fresh, wiped, unbound, or changed-deployment ledger starts `stopped`.
+  Ordinary restarts preserve the last authorized policy for that deployment.
 - Only the durable writer-lease holder may cross a signing boundary, so two
   supervisors sharing a ledger cannot both broadcast. The lease survives a
   restart.

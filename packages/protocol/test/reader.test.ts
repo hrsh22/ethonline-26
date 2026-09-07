@@ -108,6 +108,7 @@ class FakeTransport implements ProtocolReadTransport {
   pendingDiscoveryState = 1;
   pendingDiscoveryDelayed = false;
   transientCollectibleCount = 1n;
+  permanentCollectibleCount = 1n;
   quotedAmountOut = 97n;
   quotedFee = 3n;
   recentRange: readonly [bigint, bigint, number] | undefined;
@@ -199,6 +200,10 @@ class FakeTransport implements ProtocolReadTransport {
     if (routed !== undefined) return routed;
     const fixedValues = new Map<string, unknown>([
       ["weth.balanceOf", 5n * 10n ** 18n],
+      [
+        "fuelMirror.balanceOf",
+        this.transientCollectibleCount + this.permanentCollectibleCount,
+      ],
       ["fuelCore.transientCount", this.transientCollectibleCount],
       ["fuelCore.pendingDiscoveryCount", this.pendingDiscoveryCount],
       ["fuelCore.pendingDiscoveryAt", `0x${"ab".repeat(32)}`],
@@ -861,13 +866,16 @@ describe("deep protocol reader", () => {
     expect(wallet.collectibles.permanentHoldingsStatus).toBe("complete");
     expect(wallet.collectibles.pendingDiscovery.count).toBe(1);
     expect(wallet.partialFailures).toHaveLength(2);
+    expect(wallet.collectibles.permanent[0]?.claimEligibilityStatus).toBe(
+      "observed",
+    );
     expect(
       wallet.collectibles.permanent[0]?.pendingRewards[0]?.rawTokenUnits,
     ).toBe(0n);
     expect(wallet.collectibles.permanent[0]?.claimEligible).toBe(true);
   });
 
-  it("reads independent wallet evidence within three network stages while preserving both block identities", async () => {
+  it("reads independent wallet evidence within three network stages at one current block", async () => {
     vi.useFakeTimers();
     try {
       const transport = new FakeTransport();
@@ -883,7 +891,11 @@ describe("deep protocol reader", () => {
           if (request?.functionName === "transientCount") {
             return { status: "success", value: current ? 1n : 0n };
           }
-          if (request?.functionName !== "balanceOf") return result;
+          if (
+            request?.functionName !== "balanceOf" ||
+            request.contract === "fuelMirror"
+          )
+            return result;
           return {
             status: "success",
             value:
@@ -937,27 +949,62 @@ describe("deep protocol reader", () => {
       const wallet = await walletRead;
 
       expect(historyRequests).toBe(1);
-      expect(transport.readBlocks).toHaveLength(5);
+      expect(transport.readBlocks).toHaveLength(4);
       expect(transport.permanentReadAttempts).toBe(1);
       expect(transport.permanentCandidates).toEqual([1493]);
-      expect(transport.permanentBlock).toBe(100_498n);
+      expect(transport.permanentBlock).toBe(100_500n);
       expect(wallet.observedBlock).toBe(100_500n);
       expect(wallet.observedAt).toBe(1_000);
       expect(wallet.liquidToken.rawWei).toBe(1_173_097_920_514_834_959n);
       expect(wallet.settlementToken.rawWei).toBe(93_000_000_000_000_000n);
-      expect(new Set(transport.readBlocks)).toEqual(
-        new Set([100_498n, 100_500n]),
-      );
+      expect(new Set(transport.readBlocks)).toEqual(new Set([100_500n]));
       expect(wallet.collectibles).toMatchObject({
         permanentHoldingsStatus: "complete",
-        permanentObservedBlock: 100_498n,
-        permanentObservedAt: 998,
+        permanentObservedBlock: 100_500n,
+        permanentObservedAt: 1_000,
       });
       expect(wallet.collectibles.permanent[0]?.identityId).toBe(1493);
     } finally {
       await vi.runAllTimersAsync();
       vi.useRealTimers();
     }
+  });
+
+  it("keeps a just-launched identity visible while its commitment is not indexed yet", async () => {
+    const transport = new FakeTransport();
+    transport.transientCollectibleCount = 0n;
+    transport.pendingDiscoveryCount = 0n;
+    transport.liquidBalance = 1n;
+    const history = {
+      permanentIdentityCandidates: async (
+        fromBlock: bigint,
+        toBlock: bigint,
+      ) => ({
+        identityIds: [],
+        fromBlock,
+        throughBlock: toBlock - 10n,
+        indexedThroughTime: 980n,
+        coverage: "partial" as const,
+      }),
+    };
+    const reader = createProtocolReader({
+      manifest,
+      identity: selectIdentityConfiguration("orbit-4444"),
+      transport,
+      history,
+    });
+    const coldWallet = await reader.readWallet(owner);
+    expect(coldWallet.collectibles.permanentHoldingsStatus).toBe("unavailable");
+    expect(coldWallet.partialFailures.length).toBeGreaterThan(0);
+    const knownWallet = await reader.readWallet(owner, [1639]);
+    expect(knownWallet.collectibles.permanent.map((c) => c.identityId)).toEqual(
+      [1639],
+    );
+    expect(knownWallet.collectibles.permanentHoldingsStatus).toBe("complete");
+    expect(knownWallet.collectibles.permanentObservedBlock).toBe(
+      transport.block.number,
+    );
+    expect(transport.permanentBlock).toBe(transport.block.number);
   });
 
   it("preserves balances and enumerable holdings when permanent history is unavailable", async () => {
@@ -1086,7 +1133,7 @@ describe("deep protocol reader", () => {
     expect(transport.claimGateReads).toBe(0);
   });
 
-  it("recovers a transient permanent-membership read without requiring a UI retry", async () => {
+  it("preserves a failed membership read for background recovery without nested RPC retries", async () => {
     const transport = new FakeTransport();
     transport.permanentFailuresRemaining = 1;
     const reader = createProtocolReader({
@@ -1098,9 +1145,9 @@ describe("deep protocol reader", () => {
 
     const wallet = await reader.readWallet(owner);
 
-    expect(transport.permanentReadAttempts).toBe(2);
-    expect(wallet.collectibles.permanentHoldingsStatus).toBe("complete");
-    expect(wallet.collectibles.permanent[0]?.identityId).toBe(4441);
+    expect(transport.permanentReadAttempts).toBe(1);
+    expect(wallet.collectibles.permanentHoldingsStatus).toBe("unavailable");
+    expect(wallet.partialFailures.length).toBeGreaterThan(0);
   });
 
   it("does not infer claim eligibility from permanence and the wallet gate alone", async () => {
@@ -1350,6 +1397,9 @@ describe("deep protocol reader", () => {
     const wallet = await reader.readWallet(owner);
 
     expect(wallet.partialFailures).toHaveLength(2);
+    expect(wallet.collectibles.permanent[0]?.claimEligibilityStatus).toBe(
+      "unavailable",
+    );
     expect(wallet.collectibles.permanent[0]?.claimEligible).toBe(false);
     expect(
       wallet.collectibles.permanent[0]?.pendingRewards.every(
@@ -1407,6 +1457,35 @@ describe("deep protocol reader", () => {
     );
     expect(liquidTokenBytecode?.explanation).toContain("Test Liquid Token");
     expect(liquidTokenBytecode?.explanation).not.toContain("fuelCore");
+  });
+
+  it("keeps collector health reads out of the deployment bytecode inventory", async () => {
+    const transport = new HealthTransport();
+    let bytecodeReads = 0;
+    const getBytecode = transport.getBytecode.bind(transport);
+    transport.getBytecode = async () => {
+      bytecodeReads += 1;
+      return getBytecode();
+    };
+    const reader = createProtocolReader({
+      manifest,
+      identity: selectIdentityConfiguration("orbit-4444"),
+      transport,
+      history: transport,
+    });
+    const snapshot = await reader.readHealth(owner, 1_010, 30, {
+      includeBytecodeInventory: false,
+      includeOperationalHistory: false,
+      includeRewardHistory: false,
+    });
+    expect(bytecodeReads).toBeLessThanOrEqual(1);
+    expect(
+      snapshot.health.checks.some((check) => check.id.startsWith("bytecode:")),
+    ).toBe(false);
+    expect(
+      snapshot.health.checks.some((check) => check.id.startsWith("binding:")),
+    ).toBe(true);
+    expect(snapshot.transactionReadAvailability.launched).toBe(true);
   });
 
   it("bounds concurrent bytecode reads for public RPC providers", async () => {

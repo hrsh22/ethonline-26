@@ -1,10 +1,13 @@
 "use client";
 
+import { runPublicRead } from "@orbit/protocol/read-lifetime";
+
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 
+import { CollectorReturnLink } from "@/components/start/collector-return-link";
 import { AccessNotice } from "@/components/access-notice";
 import { DisabledReason } from "@/components/state-feedback";
 import {
@@ -23,7 +26,6 @@ import {
   ExchangeDecisionReview,
   ExchangeTradeEvidence,
 } from "@/components/trade/exchange-review-checklist";
-import { TransactionStatus } from "@/components/transaction-status";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import {
@@ -38,6 +40,7 @@ import {
   type ExchangeSettlementMode,
   type ExchangeWalletEvidence,
 } from "@/lib/exchange-state";
+import { deploymentEnvironment } from "@/lib/deployment";
 import { applicationCopy } from "@/lib/identity";
 import { isTransactionInFlight } from "@/lib/transaction-state";
 import { webProtocolQueryRetryCount } from "@/lib/web-rpc-policy";
@@ -219,6 +222,7 @@ const exchangeWalletEvidence = (
   }
   if (walletRead.status === "loading") return { status: "loading" };
   if (walletRead.status === "failed") return { status: "failed" };
+  if (walletRead.stale === true) return { status: "failed" };
   const wallet = walletRead.snapshot;
   return {
     status: "loaded",
@@ -232,6 +236,39 @@ const exchangeWalletEvidence = (
     wethBalanceWei: wallet.settlementToken.rawWei,
   };
 };
+
+const quoteWalletScopeKey = (intent: ExchangeIntent): string =>
+  intent.status === "ready"
+    ? [
+        intent.account.toLowerCase(),
+        intent.walletObservedBlock.toString(),
+        intent.liquidTokenBalanceWei.toString(),
+      ].join(":")
+    : intent.status;
+
+function DiscoveryShortfall({
+  protocol,
+  direction,
+}: {
+  readonly protocol: ProtocolClient;
+  readonly direction: ExchangeDirection;
+}) {
+  if (
+    direction !== "buy" ||
+    protocol.walletRead.status !== "loaded" ||
+    protocol.walletRead.stale === true
+  )
+    return null;
+  const next = protocol.walletRead.snapshot.liquidToken.nextDiscoveryDraw;
+  if (next === undefined) return null;
+  return (
+    <p className="text-body-sm text-ink-soft">
+      {formatUnits(next.remainingWei, 18)} $FUEL to the next discovery.
+      Estimated output can change; use the protected minimum received below when
+      checking the threshold.
+    </p>
+  );
+}
 
 const useMarketQuote = (
   protocol: ProtocolClient,
@@ -253,51 +290,52 @@ const useMarketQuote = (
     settlementMode,
     wallet,
   });
-  const walletScopeKey =
-    intent.status === "ready"
-      ? [
-          intent.account.toLowerCase(),
-          intent.walletObservedBlock.toString(),
-          intent.liquidTokenBalanceWei.toString(),
-        ].join(":")
-      : intent.status;
+  const walletScopeKey = quoteWalletScopeKey(intent);
   const query = useQuery({
     queryKey: [
       "canonical-market-quote",
       protocol.address,
       direction,
       settlementMode,
-      quoteAmount,
+      amount,
       walletScopeKey,
       protocol.exchangeQuoteRevision,
     ],
-    queryFn: async () => {
-      if (
-        protocol.reader === undefined ||
-        protocol.address === undefined ||
-        intent.status !== "ready"
-      ) {
-        throw new Error(applicationCopy.exchange.unavailable);
-      }
-      const quote = await protocol.reader.quoteExactInput(
-        direction === "sell",
-        intent.amountIn,
-        protocol.address,
-      );
-      return {
-        quote,
-        receivedAtMilliseconds: Date.now(),
-        walletScope: {
-          account: intent.account,
-          observedBlock: intent.walletObservedBlock,
-          liquidTokenBalanceWei: intent.liquidTokenBalanceWei,
+    queryFn: async ({ signal }) =>
+      runPublicRead(
+        async (readSignal) => {
+          const reader = protocol.readerForSignal(readSignal);
+          if (
+            reader === undefined ||
+            protocol.address === undefined ||
+            intent.status !== "ready"
+          ) {
+            throw new Error(applicationCopy.exchange.unavailable);
+          }
+          const quote = await reader.quoteExactInput(
+            direction === "sell",
+            intent.amountIn,
+            protocol.address,
+          );
+          return {
+            quote,
+            receivedAtMilliseconds: Date.now(),
+            walletScope: {
+              account: intent.account,
+              observedBlock: intent.walletObservedBlock,
+              liquidTokenBalanceWei: intent.liquidTokenBalanceWei,
+            },
+          };
         },
-      };
-    },
-    enabled: intent.quoteEnabled && protocol.address !== undefined,
-    // Quotes expire locally and expose an explicit refresh action. A standing
-    // timer here spent RPC capacity forever after one amount was entered.
-    refetchInterval: false,
+        { signal },
+      ),
+    enabled:
+      amount === quoteAmount &&
+      intent.quoteEnabled &&
+      protocol.address !== undefined,
+    // Recover visible failed reads only. Settled quotes remain idle and expire locally.
+    refetchInterval: (query) =>
+      query.state.status === "error" ? 30_000 : false,
     refetchOnWindowFocus: "always",
     retry: webProtocolQueryRetryCount,
   });
@@ -642,7 +680,7 @@ export function ExchangePanel() {
 
   const submitExchange = async () => {
     if (currentQuote === undefined || protocol.address === undefined) return;
-    await protocol.execute(
+    const result = await protocol.execute(
       {
         type: "swap-exact-input",
         quote: currentQuote,
@@ -660,12 +698,7 @@ export function ExchangePanel() {
         ? applicationCopy.exchange.directionToToken
         : applicationCopy.exchange.directionToWeth,
     );
-    // `execute` resolves only after confirmation and the protocol refresh. At
-    // that point the submitted quote is historical: keeping it in this
-    // controlled field made the completed trade look like an untouched form.
-    // A rejected or reverted transaction throws before this line, preserving
-    // the amount so the trader can retry or edit it.
-    setAmount("");
+    if (result.status === "confirmed") setAmount("");
   };
 
   const assets = exchangeAssets(direction, settlementMode);
@@ -676,6 +709,9 @@ export function ExchangePanel() {
    * summary, the submit button, then the full terms as evidence. */
   return (
     <div className="mt-4 grid gap-3 laptop:grid-cols-12">
+      <div className="laptop:col-span-12">
+        <CollectorReturnLink />
+      </div>
       <Panel
         bodyClassName="grid gap-4"
         className="laptop:col-span-7"
@@ -713,6 +749,15 @@ export function ExchangePanel() {
             onBuyRecovery={() => setDirection("buy")}
           />
         </div>
+        <p className="text-body-sm text-ink-soft">
+          {direction === "buy" && settlementMode === "native"
+            ? "One wallet transaction buys $FUEL with ETH; no token approval is needed."
+            : `Your wallet may first ask to approve ${assets.pay}, then confirm the ${direction === "buy" ? "purchase" : "sale"}. Approval alone does not complete the trade.`}
+        </p>
+        <DiscoveryShortfall protocol={protocol} direction={direction} />
+        <p className="text-body-sm text-ink-soft">
+          Network: {deploymentEnvironment.chainLabel}. Valueless test assets.
+        </p>
         <ExchangeDecisionReview
           displayedQuote={displayedQuote}
           nowMilliseconds={nowMilliseconds}
@@ -729,10 +774,6 @@ export function ExchangePanel() {
             onSubmit={submitExchange}
             pending={transactionPending}
             retryQuote={"retryAvailable" in reviewState}
-          />
-          <TransactionStatus
-            onRetry={() => void protocol.retry()}
-            state={protocol.transaction}
           />
         </div>
         <ExchangeTradeEvidence

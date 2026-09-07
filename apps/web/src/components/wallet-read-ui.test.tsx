@@ -9,6 +9,12 @@ const testState = vi.hoisted(() => ({
   refreshWallet: vi.fn(),
 }));
 
+vi.mock("@/hooks/use-discovery-history", () => ({
+  useDiscoveryHistory: () => ({ data: undefined, isError: false }),
+}));
+vi.mock("@/hooks/use-delivery-status", () => ({
+  useDeliveryStatus: () => ({ state: "unknown" }),
+}));
 vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => testState.protocol,
 }));
@@ -43,6 +49,7 @@ const partialProtocol = () => ({
           remainingFormatted: "1",
         },
       },
+      settlementToken: { rawWei: 0n },
       collectibles: {
         transient: [],
         permanent: [],
@@ -80,13 +87,13 @@ describe("wallet read states", () => {
   it("does not turn a failed holdings read into zero balances or an empty wallet", async () => {
     await act(async () => root.render(<FleetPanel />));
 
-    expect(container.textContent).toContain(
-      "Wallet holdings could not be loaded",
-    );
+    expect(container.textContent).toContain("We couldn't load your collection");
     expect(container.textContent).not.toContain(
       "No ORBIT 4444 Collectibles are held by this wallet yet.",
     );
-    expect(container.textContent).toContain("Collection read failed");
+    expect(container.textContent).toContain(
+      "Your collection is temporarily unavailable",
+    );
     expect(
       container.querySelectorAll("[role='alert'][data-state='error']"),
     ).toHaveLength(1);
@@ -102,12 +109,12 @@ describe("wallet read states", () => {
     expect(container.textContent).toContain("$FUEL balance2.0000");
     expect(container.textContent).toContain("Orbiter—");
     expect(container.textContent).toContain(
-      "Permanent holdings are not available yet",
+      "Your Orbiters haven't finished loading",
     );
     expect(
       container.querySelector("[role='status'][data-state='partial']"),
     ).not.toBeNull();
-    expect(container.textContent).toContain("Collection is incomplete");
+    expect(container.textContent).toContain("Updating your collection");
     expect(
       container.querySelectorAll("[role='status'][data-state='partial']"),
     ).toHaveLength(1);
@@ -115,7 +122,7 @@ describe("wallet read states", () => {
 
   it.each([
     ["loading", "loading", "Loading connected collection"],
-    ["blocked", "blocked", "Connect a wallet"],
+    ["blocked", "notice", "Connect a wallet"],
   ] as const)(
     "announces the %s collection state through shared feedback",
     async (status, tone, title) => {
@@ -165,7 +172,7 @@ describe("wallet read states", () => {
     await act(async () => root.render(<AccessNotice />));
 
     const retry = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Retry wallet read",
+      (button) => button.textContent === "Refresh wallet",
     );
     expect(
       container.querySelector("[role='alert'][data-state='error']"),

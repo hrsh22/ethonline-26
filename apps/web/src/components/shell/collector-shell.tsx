@@ -14,7 +14,12 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  MobileActivityIndicator,
+  MobileActivityLink,
+} from "@/components/shell/mobile-activity";
 import { LivePulse } from "@/components/shell/live-pulse";
+import { CollectorActivity } from "@/components/shell/collector-activity";
 import {
   BrandMark,
   ShellRail,
@@ -56,9 +61,9 @@ const icons: NavigationIcons = {
  */
 function StatusStrip() {
   return (
-    <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-canvas px-4 py-1 tablet:px-6">
+    <div className="grid min-h-[5.25rem] content-center gap-1 border-b border-line bg-canvas px-4 py-1 tablet:flex tablet:min-h-8 tablet:flex-wrap tablet:items-center tablet:justify-between tablet:gap-x-4 tablet:px-6">
       <p
-        className="flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase"
+        className="flex flex-col items-start gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase tablet:flex-row tablet:flex-wrap tablet:items-baseline"
         role="status"
       >
         <span className="text-[var(--status-warning-text)]">
@@ -86,6 +91,14 @@ function CollectorFooter({
         </p>
         <nav aria-label={applicationCopy.shell.protocolNavigation}>
           <ul className="flex flex-wrap gap-x-5 gap-y-1">
+            <li>
+              <Link
+                className="flex min-h-11 items-center text-body-sm text-ink-soft hover:text-ink"
+                href="/learn#help"
+              >
+                Help
+              </Link>
+            </li>
             {utility.map((destination) => (
               <li key={destination.href}>
                 <Link
@@ -113,7 +126,7 @@ export function CollectorShell({
 
   return (
     <div
-      className="min-h-dvh laptop:grid laptop:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
+      className="min-h-dvh pb-[calc(4rem+env(safe-area-inset-bottom))] laptop:pb-0 laptop:grid laptop:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]"
       data-shell="collector"
     >
       {/* `contents`: the skip link is fixed-position, and its wrapper must
@@ -136,6 +149,14 @@ export function CollectorShell({
         icons={icons}
         key={pathname}
         navigationId="collector-navigation"
+        mobileDestinations={["/fleet", "/exchange", "/rewards"].flatMap(
+          (href) =>
+            navigation.primary.filter(
+              (destination) => destination.href === href,
+            ),
+        )}
+        mobileActivityIndicator={<MobileActivityIndicator />}
+        mobileActivityLink={<MobileActivityLink />}
         sections={[
           {
             ariaLabel: applicationCopy.shell.collectorNavigation,
@@ -156,6 +177,7 @@ export function CollectorShell({
       </ShellRail>
       <div className="flex min-h-dvh min-w-0 flex-col">
         <StatusStrip />
+        <CollectorActivity />
         <div className="flex-1">{children}</div>
         <CollectorFooter utility={navigation.utility} />
       </div>

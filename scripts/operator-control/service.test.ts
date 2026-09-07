@@ -9,6 +9,7 @@ import { createOperatorCommandMessage } from "@orbit/config/operator-control";
 import {
   applyOperatorControlCommand,
   readOperatorControlState,
+  readPublicDeliveryStatus,
   type OperatorControlDependencies,
 } from "./service.ts";
 import { openOperatorControlStore } from "./store.ts";
@@ -316,6 +317,48 @@ describe("operator control plane", () => {
     expect(readOperatorControlState(deps).service).toBe("degraded");
     now += 600_000;
     expect(readOperatorControlState(deps).service).toBe("offline");
+    deps.store.close();
+  });
+
+  it("separates saved Live and Stop from timestamped public heartbeat evidence", async () => {
+    const deps = dependencies();
+    await applyOperatorControlCommand(deps, actor, {
+      command: "enable-live",
+      commandId: commandId(49),
+      signedCommand: signedCommand("enable-live", commandId(49)),
+    });
+    expect(readPublicDeliveryStatus(deps)).toMatchObject({
+      policy: { mode: "live" },
+      liveness: { state: "offline" },
+      dependencyReadiness: "unknown",
+      workEligibility: "unknown",
+    });
+    deps.store.recordHeartbeat({
+      at: now,
+      observedMode: "live",
+      supervisor: "private-supervisor",
+    });
+    const online = readPublicDeliveryStatus(deps);
+    expect(online).toMatchObject({
+      observedAt: NOW,
+      expiresAt: NOW + 30_000,
+      liveness: { state: "online", heartbeatAt: NOW, expiresAt: NOW + 60_000 },
+    });
+    expect(JSON.stringify(online)).not.toContain("private-supervisor");
+    expect(JSON.stringify(online)).not.toContain(ACTOR);
+    await applyOperatorControlCommand(deps, actor, {
+      command: "stop",
+      commandId: commandId(50),
+    });
+    expect(readPublicDeliveryStatus(deps)).toMatchObject({
+      policy: { mode: "stopped" },
+      liveness: { state: "online" },
+    });
+    now += 120_000;
+    expect(readPublicDeliveryStatus(deps)).toMatchObject({
+      policy: { mode: "stopped" },
+      liveness: { state: "degraded" },
+    });
     deps.store.close();
   });
 

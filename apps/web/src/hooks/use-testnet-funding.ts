@@ -1,12 +1,16 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { usePublicClient, useSignMessage } from "wagmi";
 
 import type { TestnetFundingResponse } from "@orbit/config/testnet-funding";
 import { normalizeProtocolError } from "@orbit/protocol/errors";
 
+import {
+  protocolDeploymentFingerprint,
+  protocolDeploymentManifest,
+} from "@/lib/deployment";
 import { identity } from "@/lib/identity";
 import {
   readTestnetFundingChallenge,
@@ -21,37 +25,103 @@ type ProtocolClient = ReturnType<typeof useProtocolClient>;
 
 class FundingSignatureRejectedError extends Error {}
 
+const fundingQueryKey = (address: ProtocolClient["address"]) =>
+  [
+    "testnet-funding-status",
+    address?.toLowerCase(),
+    protocolDeploymentFingerprint,
+  ] as const;
+
+const newerFundingResponse = (
+  previous: TestnetFundingResponse | undefined,
+  next: TestnetFundingResponse,
+): TestnetFundingResponse => {
+  if (previous === undefined) return next;
+  if (
+    previous.observedAt !== undefined &&
+    next.observedAt !== undefined &&
+    previous.observedAt > next.observedAt
+  )
+    return previous;
+  const priorRequest = previous.request;
+  const nextRequest = next.request;
+  if (
+    priorRequest !== undefined &&
+    nextRequest !== undefined &&
+    priorRequest.id === nextRequest.id &&
+    ["funded", "failed"].includes(priorRequest.state) &&
+    ["pending", "retryable"].includes(nextRequest.state)
+  )
+    return previous;
+  return next;
+};
+
+const validateFundingScope = (
+  response: TestnetFundingResponse,
+  address: NonNullable<ProtocolClient["address"]>,
+) => {
+  if (
+    response.service !== undefined &&
+    protocolDeploymentManifest !== undefined &&
+    response.service.chainId !== protocolDeploymentManifest.chainId
+  )
+    throw new Error("Funding status belongs to another chain");
+  if (
+    response.recipient !== undefined &&
+    response.recipient.address.toLowerCase() !== address.toLowerCase()
+  )
+    throw new Error("Funding status belongs to another wallet");
+};
+const unavailableFundingResponse = (response: TestnetFundingResponse) =>
+  response.recipient === undefined &&
+  response.request === undefined &&
+  ["funding-unavailable", "funding-rpc-unavailable"].includes(
+    response.error?.code ?? "",
+  );
+const fundingMutationFailure = (
+  current: boolean,
+  failed: boolean,
+  resolved: boolean,
+  error: Error | null,
+): "signature-rejected" | "retryable" | undefined => {
+  if (!current || !failed || resolved) return undefined;
+  return error instanceof FundingSignatureRejectedError
+    ? "signature-rejected"
+    : "retryable";
+};
+
 export const useTestnetFundingStatus = (protocol: ProtocolClient) => {
   const ready = protocol.accessState === "ready";
   const address = protocol.address;
+  const queryClient = useQueryClient();
+  const queryKey = fundingQueryKey(address);
   const query = useQuery({
-    queryKey: ["testnet-funding-status", address],
-    queryFn: () => readTestnetFundingStatus(address!),
+    queryKey,
+    queryFn: async ({ signal }) => {
+      const response = await readTestnetFundingStatus(address!, fetch, signal);
+      validateFundingScope(response, address!);
+      const previous =
+        queryClient.getQueryData<TestnetFundingResponse>(queryKey);
+      if (previous !== undefined && unavailableFundingResponse(response))
+        throw new Error("Funding status is temporarily unavailable");
+      return newerFundingResponse(previous, response);
+    },
     enabled: ready && address !== undefined,
-    refetchInterval: false,
+    refetchInterval: (query) =>
+      query.state.data?.request?.state === "pending" ||
+      query.state.data?.request?.state === "retryable" ||
+      query.state.data?.recipient?.state === "pending"
+        ? 5_000
+        : false,
     retry: false,
   });
-  const response = query.isError ? undefined : query.data;
   return {
     failed: query.isError,
     pending: query.isPending,
     refresh: query.refetch,
-    response,
+    response: query.data,
+    updatedAt: query.dataUpdatedAt,
   } as const;
-};
-
-const mutationResponseForAddress = (
-  address: ProtocolClient["address"],
-  mutationAddress: ProtocolClient["address"],
-  response: TestnetFundingResponse | undefined,
-): TestnetFundingResponse | undefined => {
-  if (address === undefined || mutationAddress === undefined) return undefined;
-  if (mutationAddress.toLowerCase() !== address.toLowerCase()) return undefined;
-  const responseAddress = response?.recipient?.address;
-  if (responseAddress === undefined) return response;
-  return responseAddress.toLowerCase() === address.toLowerCase()
-    ? response
-    : undefined;
 };
 
 const mutationMatchesAddress = (
@@ -67,6 +137,7 @@ export const useTestnetFunding = (
   source: TestnetFundingSource,
 ) => {
   const address = protocol.address;
+  const queryClient = useQueryClient();
   const fundingStatus = useTestnetFundingStatus(protocol);
   const publicClient = usePublicClient();
   const { signMessageAsync } = useSignMessage();
@@ -86,17 +157,19 @@ export const useTestnetFunding = (
       );
       return requestTestnetFunding(recipient, source, { message, signature });
     },
-    onSuccess: async () => {
-      // The grant has confirmed. Refresh direct balances at or beyond this
-      // block; permanent holdings may still await indexed evidence and expose
-      // the existing explicit retry if bounded catch-up does not finish.
-      const fundedThroughBlock = await publicClient
-        ?.getBlockNumber()
-        .catch(() => undefined);
-      await Promise.all([
-        fundingStatus.refresh(),
-        protocol.refreshWallet(fundedThroughBlock),
-      ]);
+    onSuccess: async (response, recipient) => {
+      if (
+        response.recipient !== undefined &&
+        response.recipient.address.toLowerCase() !== recipient.toLowerCase()
+      )
+        throw new Error("Funding response belongs to another wallet");
+      const queryKey = fundingQueryKey(recipient);
+      // Cancel older reads before seeding acceptance; newer server evidence wins.
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData<TestnetFundingResponse>(queryKey, (previous) =>
+        newerFundingResponse(previous, response),
+      );
+      await queryClient.invalidateQueries({ queryKey });
     },
   });
   const previousAddress = useRef(address);
@@ -106,27 +179,42 @@ export const useTestnetFunding = (
     fundWallet.reset();
   }, [address, fundWallet]);
 
-  const mutationResponse = mutationResponseForAddress(
-    address,
-    fundWallet.variables,
-    fundWallet.data,
-  );
   const mutationCurrent = mutationMatchesAddress(address, fundWallet.variables);
-  const response = mutationResponse ?? fundingStatus.response;
+  const response = fundingStatus.response;
+  const resolvedFailure =
+    fundingStatus.updatedAt > fundWallet.submittedAt &&
+    response?.recipient?.state !== undefined &&
+    response.recipient.state !== "unavailable";
   const view = createTestnetFundingView({
     accessState: protocol.accessState,
-    hasMutationResponse: mutationResponse !== undefined,
-    mutationFailure:
-      mutationCurrent && fundWallet.isError
-        ? fundWallet.error instanceof FundingSignatureRejectedError
-          ? "signature-rejected"
-          : "retryable"
-        : undefined,
+    hasMutationResponse: response !== undefined,
+    mutationFailure: fundingMutationFailure(
+      mutationCurrent,
+      fundWallet.isError,
+      resolvedFailure,
+      fundWallet.error,
+    ),
     mutationPending: mutationCurrent && fundWallet.isPending,
     queryFailed: fundingStatus.failed,
     queryPending: fundingStatus.pending,
     response,
   });
+  const refreshedGrant = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const state = response?.recipient?.state;
+    if (
+      protocol.accessState !== "ready" ||
+      (state !== "funded" && state !== "already-funded")
+    )
+      return;
+    const grant = `${address}:${response?.request?.id ?? "funded"}`;
+    if (refreshedGrant.current === grant) return;
+    refreshedGrant.current = grant;
+    void (async () => {
+      const block = await publicClient?.getBlockNumber().catch(() => undefined);
+      await protocol.refreshWallet(block);
+    })().catch(() => undefined);
+  }, [address, protocol, publicClient, response]);
   const fund = (): void => {
     if (address !== undefined) fundWallet.mutate(address);
   };

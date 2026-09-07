@@ -30,7 +30,25 @@ describe("versioned testnet funding client", () => {
     });
     expect(fetcher).toHaveBeenCalledWith(
       "http://127.0.0.1:8800/v1/funding/status?recipient=" + address,
+      { signal: expect.any(AbortSignal) },
     );
+  });
+
+  it("aborts a funding status read when the wallet scope is left", async () => {
+    const controller = new AbortController();
+    const fetcher = vi.fn<typeof fetch>(
+      async (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            "abort",
+            () => reject(new Error("scope cancelled")),
+            { once: true },
+          );
+        }),
+    );
+    const read = readTestnetFundingStatus(address, fetcher, controller.signal);
+    controller.abort();
+    await expect(read).rejects.toThrow("scope cancelled");
   });
 
   it("submits the recipient, a non-secret UI source, and the wallet proof", async () => {

@@ -19,6 +19,9 @@ const collectibleState = vi.hoisted(() => ({
   },
 }));
 
+vi.mock("@/hooks/use-delivery-status", () => ({
+  useDeliveryStatus: () => ({ state: "unknown" }),
+}));
 vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => protocolState.protocol,
 }));
@@ -136,6 +139,20 @@ describe("collectible transaction controls", () => {
     },
   );
 
+  it("retains known details but disables Launch while ownership is stale", () => {
+    const stale = protocol("transient");
+    stale.transaction = { status: "idle" } as never;
+    protocolState.protocol = {
+      ...stale,
+      walletRead: { ...stale.walletRead, stale: true },
+    };
+    const html = renderToStaticMarkup(<CraftDetailPanel identityId={42} />);
+    expect(html).toContain("Grounded Craft #42");
+    const button = /<button(?<attributes>[^>]*)>Review Launch/u.exec(html);
+    expect(button?.groups?.attributes).toContain('disabled=""');
+    expect(html).toContain("Checking current ownership");
+  });
+
   it("blocks the launch review when the wallet cannot afford the burn", () => {
     const poor = protocol("transient");
     poor.transaction = { status: "idle" as const, label: "" } as never;
@@ -199,7 +216,7 @@ describe("collectible transaction controls", () => {
     const html = renderToStaticMarkup(<CraftDetailPanel identityId={42} />);
 
     // The failure copy says to retry the read; the page offered no way to.
-    expect(html).toContain("Retry wallet read");
+    expect(html).toContain("Refresh wallet");
   });
 
   it("describes the checkbox-gated irreversible confirmation action", () => {
@@ -261,7 +278,7 @@ describe("collectible transaction controls", () => {
       "This identity is still in the available pool; a Discovery assigns it when a wallet crosses a whole $FUEL.",
     );
     expect(html).toContain('data-state="empty"');
-    expect(html).not.toContain("Retry wallet read");
+    expect(html).not.toContain("Refresh wallet");
     expect(html).not.toContain("Review Launch");
     expect(html).not.toContain("Claim eligible rewards");
     expect(html).not.toContain("Owner actions");

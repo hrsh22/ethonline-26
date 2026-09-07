@@ -2,6 +2,7 @@
 
 import type { TestnetFundingResponse } from "@orbit/config/testnet-funding";
 
+import { CollectorReturnLink } from "@/components/start/collector-return-link";
 import type { StateFeedbackTone } from "@/components/state-feedback";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -321,6 +322,51 @@ function EligibilityBoard({
   );
 }
 
+const requestCopy = (
+  response: TestnetFundingResponse | undefined,
+  state: TestnetFundingView["state"],
+) => {
+  return response?.request?.delayed
+    ? {
+        title: "Your top-up is taking longer than usual",
+        body: "The service is still checking the saved transfers. You can leave this page; no further signature is needed.",
+      }
+    : response?.request?.state === "failed"
+      ? {
+          title: "The previous top-up could not finish",
+          body: "Any received assets remain in your wallet. Check your current eligibility before requesting another top-up.",
+        }
+      : fundingStateCopy(state);
+};
+
+function TransferProgress({
+  response,
+}: {
+  readonly response: TestnetFundingResponse | undefined;
+}) {
+  const request = response?.request;
+  if (request?.transactions === undefined) return null;
+  return (
+    <ul
+      aria-label="Top-up transfer progress"
+      className="grid gap-1 text-body-sm text-ink-soft"
+    >
+      {request.transactions.map((transfer) => (
+        <li key={transfer.kind}>
+          {transfer.kind.toUpperCase()}:{" "}
+          {transfer.state === "confirmed"
+            ? "Received"
+            : transfer.state === "broadcast"
+              ? "Confirming"
+              : request.state === "failed"
+                ? "Not completed"
+                : "Waiting"}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
  * The request. Eligibility is a live reading announced once, in the panel
  * body: failures are alerts, everything else is a status.
@@ -328,13 +374,15 @@ function EligibilityBoard({
 function RequestPanel({
   fund,
   retry,
+  response,
   view,
 }: {
   readonly fund: () => void;
   readonly retry: () => void;
+  readonly response: TestnetFundingResponse | undefined;
   readonly view: TestnetFundingView;
 }) {
-  const copy = fundingStateCopy(view.state);
+  const copy = requestCopy(response, view.state);
   const tone = fundingStateTone(view.state);
   const failure = tone === "error";
   return (
@@ -365,6 +413,7 @@ function RequestPanel({
             {copy.body}
           </p>
         </div>
+        <TransferProgress response={response} />
         <div className="flex flex-wrap items-center gap-2">
           <FaucetAction fund={fund} retry={retry} view={view} />
         </div>
@@ -476,6 +525,7 @@ export function FaucetPanel() {
 
   return (
     <div className="mt-5 grid gap-3">
+      <CollectorReturnLink />
       <EligibilityBoard
         gas={gas}
         response={funding.response}
@@ -484,6 +534,7 @@ export function FaucetPanel() {
       />
       <RequestPanel
         fund={funding.fund}
+        response={funding.response}
         retry={funding.retry}
         view={funding.view}
       />

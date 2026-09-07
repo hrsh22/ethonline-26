@@ -396,7 +396,14 @@ export const baseSepoliaOperatorWatch = Effect.scoped(
           60_000,
         ),
       });
-      if (!supervisor.initialize())
+      const manifest = yield* readLaunchedBaseSepoliaManifest(
+        resolveRepositoryPath(
+          repositoryRoot,
+          process.env.DEPLOYMENT_MANIFEST_PATH,
+          "deployments/84532.json",
+        ),
+      );
+      if (!supervisor.initialize(deploymentManifestFingerprint(manifest)))
         return yield* Effect.fail(
           new Error(
             "Another operator supervisor holds the writer lease; startup refused",

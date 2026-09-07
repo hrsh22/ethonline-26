@@ -292,3 +292,13 @@ select {
   outline: 3px solid var(--ring);
   outline-offset: 3px;
 }
+
+/* Prose stays readable on phones; tabular numbers retain their mono face. */
+@media (width < 780px) {
+  :root {
+    --text-body-sm: 1rem;
+    --text-body-sm--line-height: 1.6;
+    --text-body: 1rem;
+    --text-body--line-height: 1.6;
+  }
+}

@@ -36,7 +36,7 @@ export interface OperatorCycleGrant {
 export interface OperatorSupervisor {
   readonly id: string;
   /** Called once at process startup, before serving commands or scheduling work. */
-  readonly initialize: () => boolean;
+  readonly initialize: (deploymentFingerprint: string) => boolean;
   /** Returns undefined when another supervisor holds the writer lease. */
   readonly beginCycle: () => OperatorCycleGrant | undefined;
   readonly release: () => void;
@@ -62,7 +62,7 @@ export const createOperatorSupervisor = ({
   supervisorId = randomUUID(),
 }: OperatorSupervisorOptions): OperatorSupervisor => ({
   id: supervisorId,
-  initialize: () => {
+  initialize: (deploymentFingerprint) => {
     const at = now();
     if (
       !store.acquireWriterLease({
@@ -73,8 +73,16 @@ export const createOperatorSupervisor = ({
     )
       return false;
     try {
+      // A restart preserves authorization only for the same deployment.
+      // Legacy/unbound ledgers and a changed deployment require a new command.
+      if (
+        store.readPolicyRevision().deploymentFingerprint ===
+        deploymentFingerprint
+      )
+        return true;
       const previous = store.readPolicy();
       store.applyCommand({
+        deploymentFingerprint,
         actor: supervisorId,
         role: "supervisor",
         command: "stop",
@@ -84,7 +92,7 @@ export const createOperatorSupervisor = ({
         previousOneShot: previous.oneShot,
         nextMode: "stopped",
         nextOneShot: "none",
-        result: "supervisor-restarted",
+        result: "deployment-binding-changed",
         transactionHash: undefined,
       });
       return true;

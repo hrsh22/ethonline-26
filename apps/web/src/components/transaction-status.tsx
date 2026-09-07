@@ -9,6 +9,7 @@ const statusLabel = {
   idle: applicationCopy.transaction.idle,
   pending: applicationCopy.transaction.pending,
   simulated: applicationCopy.transaction.simulated,
+  "submission-unknown": "Check your wallet activity",
   submitted: applicationCopy.transaction.submitted,
   "outcome-unknown": applicationCopy.transaction.outcomeUnknown,
   confirmed: applicationCopy.transaction.confirmed,
@@ -20,6 +21,7 @@ const statusTone: Record<TransactionState["status"], string> = {
   idle: "bg-[var(--text-secondary)]",
   pending: "bg-[var(--status-info-text)]",
   simulated: "bg-[var(--status-info-text)]",
+  "submission-unknown": "bg-[var(--status-warning-text)]",
   submitted: "bg-[var(--status-info-text)]",
   "outcome-unknown": "bg-[var(--status-warning-text)]",
   confirmed: "bg-[var(--status-success-text)]",
@@ -85,6 +87,28 @@ function TransactionActions({
   );
 }
 
+const presentationFor = (
+  state: Exclude<TransactionState, { status: "idle" }>,
+  automaticRecovery: boolean,
+) => {
+  if (automaticRecovery && state.status === "outcome-unknown")
+    return {
+      label: "Waiting for transaction confirmation",
+      actionLabel: undefined,
+      message: (
+        <p className="mt-1 text-body-sm text-ink-soft">
+          Your transaction was sent. We are checking its outcome automatically.
+          No new wallet action is needed.
+        </p>
+      ),
+    };
+  return {
+    label: statusLabel[state.status],
+    actionLabel: transactionActionLabel(state),
+    message: transactionMessage(state),
+  };
+};
+
 /**
  * A transaction's progress, from simulation through confirmation.
  *
@@ -94,13 +118,15 @@ function TransactionActions({
 export function TransactionStatus({
   state,
   onRetry,
+  automaticRecovery = false,
 }: {
   readonly state: TransactionState;
   readonly onRetry: () => void;
+  readonly automaticRecovery?: boolean;
 }) {
   if (state.status === "idle") return null;
   const hash = "hash" in state ? state.hash : undefined;
-  const actionLabel = transactionActionLabel(state);
+  const presentation = presentationFor(state, automaticRecovery);
   const failure = state.status === "failed" || state.status === "retriable";
 
   return (
@@ -120,12 +146,12 @@ export function TransactionStatus({
       />
       <div className="min-w-0">
         <strong className="block font-mono text-label font-semibold tracking-[0.1em] text-ink uppercase">
-          {statusLabel[state.status]}
+          {presentation.label}
         </strong>
         <p className="mt-1 text-body-sm text-ink">{state.label}</p>
-        {transactionMessage(state)}
+        {presentation.message}
         <TransactionActions
-          actionLabel={actionLabel}
+          actionLabel={presentation.actionLabel}
           disabled={
             state.status === "outcome-unknown" && state.reconciling === true
           }

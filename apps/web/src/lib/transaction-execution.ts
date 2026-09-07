@@ -2,6 +2,18 @@ import type { Hash } from "viem";
 
 import { advanceTransaction, type TransactionState } from "./transaction-state";
 
+export class ReplacedProtocolTransactionError extends Error {
+  override readonly name = "ReplacedProtocolTransactionError";
+  constructor(
+    readonly hash: Hash,
+    readonly reason: "cancelled" | "replaced",
+  ) {
+    super(
+      `Your wallet ${reason} this transaction. The original action did not complete.`,
+    );
+  }
+}
+
 const GAS_SAFETY_NUMERATOR = 125n;
 const GAS_SAFETY_DENOMINATOR = 100n;
 const MAX_CONFIRMED_BLOCK_READS = 4;
@@ -84,7 +96,13 @@ export const executeProtocolTransaction = async ({
   readonly outcomeUnknownMessage: string;
   readonly simulate: () => Promise<void>;
   readonly submit: (gas: bigint) => Promise<Hash>;
-  readonly waitForReceipt: (hash: Hash) => Promise<{
+  readonly waitForReceipt: (
+    hash: Hash,
+    onReplacement: (
+      hash: Hash,
+      reason: "repriced" | "cancelled" | "replaced",
+    ) => void,
+  ) => Promise<{
     readonly blockNumber: bigint;
     readonly status: "success" | "reverted";
   }>;
@@ -100,7 +118,7 @@ export const executeProtocolTransaction = async ({
   onState(next);
 
   failureStep.current = `${label} wallet submission`;
-  const hash = await submit(gas);
+  let hash = await submit(gas);
   next = advanceTransaction(next, { type: "submit", hash });
   onState(next);
 
@@ -110,7 +128,14 @@ export const executeProtocolTransaction = async ({
     readonly status: "success" | "reverted";
   };
   try {
-    const observedReceipt = await waitForReceipt(hash);
+    const observedReceipt = await waitForReceipt(
+      hash,
+      (replacementHash, reason) => {
+        hash = replacementHash;
+        next = advanceTransaction(next, { type: "replace", hash, reason });
+        onState(next);
+      },
+    );
     const blockNumber = observedReceipt.blockNumber;
     const status = observedReceipt.status;
     if (typeof blockNumber !== "bigint" || blockNumber < 0n) {
@@ -128,6 +153,12 @@ export const executeProtocolTransaction = async ({
     });
     onState(next);
     throw new UnknownProtocolTransactionOutcomeError(hash, cause);
+  }
+  if (
+    (next.status === "submitted" || next.status === "outcome-unknown") &&
+    next.replacement !== undefined
+  ) {
+    throw new ReplacedProtocolTransactionError(hash, next.replacement);
   }
   if (receipt.status === "reverted") {
     throw new RevertedProtocolTransactionError(hash);

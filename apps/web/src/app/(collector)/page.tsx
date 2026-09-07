@@ -1,3 +1,4 @@
+import { PublicGallery } from "@/components/home/public-gallery";
 import {
   FeeRoutingPanel,
   RewardTracksPanel,
@@ -31,6 +32,12 @@ export default function Home() {
             <ButtonLink href="/start" size="lg">
               {applicationCopy.home.primaryAction}
             </ButtonLink>
+            <a
+              href="#explore"
+              className="flex min-h-11 items-center px-3 text-[var(--accent-text)] underline underline-offset-4"
+            >
+              Explore the collection
+            </a>
             <ButtonLink href="/exchange" size="lg" variant="outline">
               {applicationCopy.home.secondaryAction}
             </ButtonLink>
@@ -41,6 +48,7 @@ export default function Home() {
         </div>
       </header>
 
+      <PublicGallery />
       <ProtocolSummary />
 
       <div className="mt-3 grid gap-3 laptop:grid-cols-2">

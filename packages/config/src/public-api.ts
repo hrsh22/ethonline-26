@@ -7,6 +7,7 @@ import {
 import { getAddress, zeroAddress, type Address } from "viem";
 
 export const PUBLIC_API_PATHS = {
+  delivery: { status: "/v1/delivery/status" },
   funding: {
     challenge: "/v1/funding/challenge",
     fund: "/v1/funding/fund",
@@ -20,6 +21,7 @@ export const PUBLIC_API_PATHS = {
     marketFees: "/v1/history/market/fees",
     marketSwaps: "/v1/history/market/swaps",
     operations: "/v1/history/protocol/operations",
+    discoveries: "/v1/history/protocol/discoveries",
     permanentCommitments: "/v1/history/protocol/permanent-commitments",
     protocolLiquidity: "/v1/history/protocol/liquidity-cycles",
     rewards: "/v1/history/protocol/rewards",
@@ -106,3 +108,40 @@ export const normalizePublicApiBaseUrl = (value: string): string => {
 
 export const publicApiEndpoint = (baseUrl: string, path: string): string =>
   normalizePublicApiBaseUrl(baseUrl) + path;
+
+/** Read-only service evidence. Unknown dependency/work state must not be inferred from a heartbeat. */
+const Milliseconds = Schema.Number.pipe(Schema.int(), Schema.nonNegative());
+export const DeliveryStatusSchema = Schema.Struct({
+  apiVersion: Schema.Literal(1),
+  chainId: Schema.Number.pipe(Schema.int(), Schema.positive()),
+  deploymentFingerprint: Schema.String.pipe(Schema.minLength(1)),
+  observedAt: Milliseconds,
+  expiresAt: Milliseconds,
+  policy: Schema.Struct({
+    mode: Schema.Literal("stopped", "dry-run", "live"),
+    oneShot: Schema.Literal("none", "dry-run", "live"),
+  }),
+  liveness: Schema.Struct({
+    state: Schema.Literal("online", "degraded", "offline"),
+    heartbeatAt: Schema.optional(Milliseconds),
+    expiresAt: Schema.optional(Milliseconds),
+  }),
+  dependencyReadiness: Schema.Literal("unknown"),
+  workEligibility: Schema.Literal("unknown"),
+  latestRun: Schema.optional(
+    Schema.Struct({
+      outcome: Schema.Literal(
+        "running",
+        "completed",
+        "failed",
+        "skipped",
+        "unknown",
+      ),
+      startedAt: Milliseconds,
+      finishedAt: Schema.optional(Milliseconds),
+    }),
+  ),
+});
+export type DeliveryStatus = typeof DeliveryStatusSchema.Type;
+export const decodeDeliveryStatus =
+  Schema.decodeUnknownSync(DeliveryStatusSchema);

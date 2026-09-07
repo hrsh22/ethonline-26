@@ -160,30 +160,38 @@ class FakeFundingChain implements TestnetFundingChain {
         `0x${(this.prepared.size + 1).toString(16).padStart(2, "0")}`;
       if (amounts.wethWei > 0n) {
         const rawTransaction = nextRawTransaction();
+        const hash =
+          this.prepared.size < 2
+            ? wethHash
+            : (`0x${rawTransaction.slice(2).padStart(64, "0")}` as Hex);
         this.prepared.set(rawTransaction, {
           amountWei: amounts.wethWei,
-          hash: wethHash,
+          hash,
           kind: "weth",
           recipient: target,
         });
         transfers.push({
           amountWei: amounts.wethWei,
-          hash: wethHash,
+          hash,
           kind: "weth",
           rawTransaction,
         });
       }
       if (amounts.ethWei > 0n) {
         const rawTransaction = nextRawTransaction();
+        const hash =
+          this.prepared.size < 2
+            ? ethHash
+            : (`0x${rawTransaction.slice(2).padStart(64, "0")}` as Hex);
         this.prepared.set(rawTransaction, {
           amountWei: amounts.ethWei,
-          hash: ethHash,
+          hash,
           kind: "eth",
           recipient: target,
         });
         transfers.push({
           amountWei: amounts.ethWei,
-          hash: ethHash,
+          hash,
           kind: "eth",
           rawTransaction,
         });
@@ -213,7 +221,11 @@ class FakeFundingChain implements TestnetFundingChain {
     unknown
   > {
     void hash;
-    return Effect.succeed("confirmed" as const);
+    return Effect.succeed(
+      [...this.broadcasted].some((raw) => this.prepared.get(raw)?.hash === hash)
+        ? ("confirmed" as const)
+        : ("pending" as const),
+    );
   }
 
   signerNonce: TestnetFundingChain["signerNonce"] = () => Effect.succeed(0);
@@ -223,7 +235,9 @@ class PendingFundingChain extends FakeFundingChain {
   readonly settled = new Set<Hex>();
   receiptState: "pending" | "confirmed" = "pending";
 
-  override broadcast = (rawTransaction: Hex) =>
+  override broadcast: TestnetFundingChain["broadcast"] = (
+    rawTransaction: Hex,
+  ) =>
     Effect.sync(() => {
       const transfer = this.prepared.get(rawTransaction);
       if (transfer === undefined) throw new Error("unknown signed transfer");
@@ -238,7 +252,13 @@ class PendingFundingChain extends FakeFundingChain {
     unknown
   > {
     return Effect.sync(() => {
-      if (this.receiptState === "pending") return "pending" as const;
+      if (
+        this.receiptState === "pending" ||
+        ![...this.broadcasted].some(
+          (raw) => this.prepared.get(raw)?.hash === hash,
+        )
+      )
+        return "pending" as const;
       const transfer = [...this.prepared.values()].find(
         (candidate) => candidate.hash === hash,
       );
@@ -424,10 +444,132 @@ const fundWithProof = async (
 };
 
 describe("testnet funding HTTP interface", () => {
+  it("returns the durable acceptance before attempting a broadcast", async () => {
+    const chain = new FakeFundingChain();
+    chain.broadcast = () => Effect.fail(new Error("RPC unavailable"));
+    await withFundingServer(
+      {
+        apiToken: undefined,
+        chain,
+        configuration: configuration({ enabled: true }),
+        databasePath: temporaryDatabasePath(),
+        host: "127.0.0.1",
+        nowMilliseconds: Date.now,
+        port: 0,
+        requestId: () => "accepted-before-broadcast",
+        nonce: nextTestNonce,
+        verifySignature: async () => true,
+        processingIntervalMilliseconds: 60_000,
+      },
+      (server) =>
+        Effect.promise(async () => {
+          const response = await fundWithProof(server, recipient, {});
+          expect(response.status).toBe(202);
+          expect(await response.json()).toMatchObject({
+            request: { id: "accepted-before-broadcast", state: "pending" },
+          });
+          expect(chain.broadcasted.size).toBe(0);
+        }),
+    );
+  });
+
+  it("finishes one accepted grant after a restart without another proof or status-triggered send", async () => {
+    const chain = new PendingFundingChain();
+    const options = {
+      apiToken: undefined,
+      chain,
+      configuration: configuration({ enabled: true }),
+      databasePath: temporaryDatabasePath(),
+      host: "127.0.0.1",
+      nowMilliseconds: Date.now,
+      port: 0,
+      requestId: () => "durable-grant",
+      nonce: nextTestNonce,
+      verifySignature: async () => true,
+      processingIntervalMilliseconds: 20,
+    };
+    await withFundingServer(options, (server) =>
+      Effect.promise(async () => {
+        const accepted = await fundWithProof(server, recipient, {});
+        expect(accepted.status).toBe(202);
+        expect(await accepted.json()).toMatchObject({
+          request: { id: "durable-grant", state: "pending" },
+        });
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      }),
+    );
+    chain.receiptState = "confirmed";
+    await withFundingServer(options, (server) =>
+      Effect.promise(async () => {
+        // No browser request drives the worker.
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const status = await fetch(
+          `${server.url}/v1/status?recipient=${recipient}`,
+        ).then((response) => response.json());
+        expect(status).toMatchObject({
+          request: {
+            id: "durable-grant",
+            state: "funded",
+            transactions: [
+              { kind: "weth", state: "confirmed" },
+              { kind: "eth", state: "confirmed" },
+            ],
+          },
+        });
+        expect(chain.broadcasted.size).toBe(2);
+        expect(chain.prepared.size).toBe(2);
+      }),
+    );
+  });
+
+  it("reconciles a persisted prepared hash before rebroadcasting after a lost send response", async () => {
+    const chain = new PendingFundingChain();
+    let sends = 0;
+    const broadcast = chain.broadcast;
+    chain.broadcast = (raw) =>
+      broadcast(raw).pipe(
+        Effect.flatMap(() => {
+          sends += 1;
+          return Effect.fail(new Error("lost broadcast response"));
+        }),
+      );
+    const options = {
+      apiToken: undefined,
+      chain,
+      configuration: configuration({ enabled: true }),
+      databasePath: temporaryDatabasePath(),
+      host: "127.0.0.1",
+      nowMilliseconds: Date.now,
+      port: 0,
+      requestId: () => "lost-response-grant",
+      nonce: nextTestNonce,
+      verifySignature: async () => true,
+      processingIntervalMilliseconds: 20,
+      receiptSettleMilliseconds: 0,
+    };
+    await withFundingServer(options, (server) =>
+      Effect.promise(async () => {
+        expect((await fundWithProof(server, recipient, {})).status).toBe(202);
+      }),
+    );
+    chain.receiptState = "confirmed";
+    await withFundingServer(options, (server) =>
+      Effect.promise(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const status = await fetch(
+          `${server.url}/v1/status?recipient=${recipient}`,
+        ).then((response) => response.json());
+        expect(status).toMatchObject({ request: { state: "funded" } });
+        expect(sends).toBe(2);
+      }),
+    );
+  });
+
   it("reports the emergency-disabled state without touching the signer or exposing the service token", async () => {
     const secret = "funding-service-secret";
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: secret,
         chain: unavailableChain,
         configuration: configuration(),
@@ -474,6 +616,7 @@ describe("testnet funding HTTP interface", () => {
     const chain = new FakeFundingChain();
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: undefined,
         chain,
         configuration: configuration({ enabled: true }),
@@ -532,6 +675,7 @@ describe("testnet funding HTTP interface", () => {
     const chain = new FakeFundingChain();
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: undefined,
         chain,
         configuration: configuration({ enabled: true }),
@@ -551,6 +695,7 @@ describe("testnet funding HTTP interface", () => {
           expect(response.status).toBe(200);
           expect(yield* Effect.promise(() => response.json())).toEqual({
             apiVersion: 1,
+            observedAt: 1_700_000_000_000,
             service: {
               state: "ready",
               chainId: 84_532,
@@ -616,6 +761,7 @@ describe("testnet funding HTTP interface", () => {
     };
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: undefined,
         chain,
         configuration: configuration({ enabled: true }),
@@ -654,6 +800,7 @@ describe("testnet funding HTTP interface", () => {
     const chain = new FakeFundingChain();
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: secret,
         chain,
         configuration: configuration({ enabled: true }),
@@ -736,6 +883,7 @@ describe("testnet funding HTTP interface", () => {
       inspect: () => Effect.succeed(inspection({ deploymentSender: signer })),
     };
     const serverOptions = (chain: TestnetFundingChain) => ({
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -782,6 +930,7 @@ describe("testnet funding HTTP interface", () => {
     let now = 1_700_000_000_000;
     let requestNumber = 0;
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -900,6 +1049,7 @@ describe("testnet funding HTTP interface", () => {
     let now = 1_700_000_000_000;
     let requestNumber = 0;
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -973,6 +1123,7 @@ describe("testnet funding HTTP interface", () => {
     const databasePath = temporaryDatabasePath();
     let requestNumber = 0;
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -1045,6 +1196,7 @@ describe("testnet funding HTTP interface", () => {
     let requestNumber = 0;
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: undefined,
         chain,
         configuration: configuration({ enabled: true }),
@@ -1080,6 +1232,7 @@ describe("testnet funding HTTP interface", () => {
   it("keeps confirmed transfers retryable without calling an RPC outage transaction-pending", async () => {
     const chain = new FinalInspectionOutageChain();
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -1128,6 +1281,7 @@ describe("testnet funding HTTP interface", () => {
   it("reconciles confirmed transfers after the final balance read catches up", async () => {
     const chain = new FinalBalanceLagChain();
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -1204,6 +1358,7 @@ describe("testnet funding HTTP interface", () => {
     const chain = new DrainingRecipientChain(recipient);
     let now = 1_700_000_000_000;
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({
@@ -1260,6 +1415,7 @@ describe("testnet funding HTTP interface", () => {
     let now = 1_700_000_000_000;
     let requestNumber = 0;
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({
@@ -1370,6 +1526,7 @@ describe("testnet funding HTTP interface", () => {
     }
 
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain: new StrandedChain(),
       configuration: configuration({ enabled: true }),
@@ -1459,6 +1616,7 @@ describe("testnet funding HTTP interface", () => {
     let now = 1_700_000_000_000;
     let requestNumber = 0;
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -1515,6 +1673,7 @@ describe("testnet funding HTTP interface", () => {
   it("distinguishes receipt RPC outages from onchain-pending transactions and resumes safely", async () => {
     const chain = new ReceiptRpcOutageChain();
     const options = {
+      receiptSettleMilliseconds: 0,
       apiToken: undefined,
       chain,
       configuration: configuration({ enabled: true }),
@@ -1560,6 +1719,7 @@ describe("testnet funding HTTP interface", () => {
     const chain = new LostBroadcastResponseChain();
     await withFundingServer(
       {
+        receiptSettleMilliseconds: 0,
         apiToken: undefined,
         chain,
         configuration: configuration({ enabled: true }),
@@ -1670,6 +1830,7 @@ describe("public funding abuse controls", () => {
   const abuseOptions = (
     overrides: Partial<Parameters<typeof withFundingServer>[0]> = {},
   ) => ({
+    receiptSettleMilliseconds: 0,
     apiToken: secret,
     chain: new FakeFundingChain(),
     configuration: configuration({ enabled: true }),

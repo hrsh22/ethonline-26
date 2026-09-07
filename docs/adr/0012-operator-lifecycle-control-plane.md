@@ -42,8 +42,11 @@ so. Liveness is never inferred from policy.
 
 ## Safety properties
 
-- **Fail closed.** A fresh store, a wiped store, and a restart all read
-  `stopped`. Nothing signs until an operator asks for it.
+- **Durable authorization.** A restart resumes the last authorized policy for
+  the same deployment. Live continues processing and an explicit Stop stays
+  stopped. A fresh, wiped, legacy unbound, or differently bound store starts
+  stopped and requires a new signed live command. Deployment binding and any
+  required reset are recorded atomically.
 - **Durable single-writer lease.** Only the lease holder may cross a signing
   boundary, so two supervisors sharing a ledger cannot both broadcast. The lease
   survives a restart, so a crash cannot double-broadcast.
@@ -70,6 +73,12 @@ mid-cycle cannot replay it on restart. The policy revision is captured _after_
 that consumption, so claiming a pass is not mistaken for an operator's later
 stop.
 
+On 2026-09-06, restart behavior changed from unconditional Stop to resuming the
+saved policy. Unconditional Stop had left a verified Discovery Draw undelivered
+until someone manually enabled the operator. Unclaimed one-shot work now also
+survives restart; claimed passes remain consumed. The existing outbox reconciles
+pending signed transactions before any new work can sign.
+
 ## Consequences
 
 - `OPERATOR_EXECUTE` becomes a startup default rather than the authority. The
@@ -79,3 +88,8 @@ stop.
   only after its own session, role, and CSRF checks.
 - Truthful reporting can now be worse-looking than before: an operator that is
   not running will say so instead of appearing green. That is the point.
+
+The read-only delivery projection added to ADR 0010 on 6 September 2026 is a separate
+allowlisted data-plane response. Its loopback route shares authentication with this listener,
+but excludes administrative state and commands. Public delivery reads do not authorize runs,
+change the saved setting, or weaken the session, role, CSRF, and signature requirements on controls.

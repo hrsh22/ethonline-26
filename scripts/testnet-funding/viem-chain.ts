@@ -63,9 +63,9 @@ export const createViemTestnetFundingChain = (
 ): TestnetFundingChain => {
   const account = privateKeyToAccount(options.privateKey);
   const transport = http(options.rpcUrl, {
-    retryCount: 3,
+    retryCount: 0,
     retryDelay: 250,
-    timeout: 15_000,
+    timeout: 5_000,
   });
   const publicClient = createPublicClient({ chain: baseSepolia, transport });
   const walletClient = createWalletClient({

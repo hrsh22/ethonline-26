@@ -548,8 +548,9 @@ export class ProtocolQueryError extends Error {
   constructor(
     readonly operation: string,
     readonly domainError: DomainProtocolError,
+    cause?: unknown,
   ) {
-    super(domainError.message);
+    super(domainError.message, { cause });
   }
 }
 
@@ -565,6 +566,7 @@ const successful = <Value>(
         result?.status === "failure" ? result.error : undefined,
         identity,
       ),
+      result?.status === "failure" ? result.error : undefined,
     );
   }
   return result.value as Value;
@@ -597,6 +599,7 @@ const executeRead = async <Value>(
     throw new ProtocolQueryError(
       operation,
       normalizeProtocolError(cause, identity),
+      cause,
     );
   }
 };
@@ -634,6 +637,8 @@ export interface ProtocolReaderOptions {
 }
 
 export interface ProtocolHealthReadOptions {
+  /** The full deployment inventory belongs to diagnostics, not collector reads. */
+  readonly includeBytecodeInventory?: boolean;
   readonly includeOperationalHistory?: boolean;
   readonly includeRewardHistory?: boolean;
 }
@@ -747,7 +752,11 @@ export const createProtocolReader = ({
     identityId: number,
   ) => {
     if (result?.status === "success") {
-      return { active: result.value === true, partialFailures: [] as string[] };
+      return {
+        active: result.value === true,
+        partialFailures: [] as string[],
+        unavailableClaimEligibilityIdentityIds: new Set<number>(),
+      };
     }
     const failure = failureFor(
       result,
@@ -756,6 +765,7 @@ export const createProtocolReader = ({
     );
     return {
       active: false,
+      unavailableClaimEligibilityIdentityIds: new Set([identityId]),
       partialFailures: failure === undefined ? [] : [failure],
     };
   };
@@ -775,7 +785,42 @@ export const createProtocolReader = ({
     return actual;
   };
 
-  const readWallet = async (owner: Address) => {
+  const walletHoldingsEvidence = (
+    identityCount: number,
+    balance: ContractReadResult | undefined,
+    ownershipAvailable: boolean,
+    block: { readonly number: bigint; readonly timestamp: bigint },
+  ) => {
+    const complete =
+      ownershipAvailable &&
+      balance?.status === "success" &&
+      balance.value === BigInt(identityCount);
+    return {
+      holdings: {
+        permanentHoldingsStatus: complete
+          ? ("complete" as const)
+          : ("unavailable" as const),
+        ...(complete
+          ? {
+              permanentObservedBlock: block.number,
+              permanentObservedAt: Number(block.timestamp),
+            }
+          : {}),
+      },
+      partialFailures:
+        !complete && ownershipAvailable
+          ? [copy.reader.walletCollectionUpdating]
+          : [],
+    };
+  };
+
+  const readWallet = async (
+    owner: Address,
+    knownIdentityIds: readonly number[] = [],
+  ) => {
+    if (knownIdentityIds.length > 4_444)
+      throw new RangeError("Too many known collectibles");
+    knownIdentityIds.forEach(validateCollectibleIdentityId);
     await verifyChain();
     const latestBlock = await executeRead(
       copy.reader.walletBlock,
@@ -783,7 +828,7 @@ export const createProtocolReader = ({
       identity,
     );
     const launchBlock = BigInt(manifest.launch.blockNumber);
-    const [candidateWindow, base] = await Promise.all([
+    const [indexedCandidates, base] = await Promise.all([
       readWithRetry(async () => {
         if (permanentIdentityCandidateReader === undefined) {
           throw new Error("Indexed permanent identity history is unavailable");
@@ -800,25 +845,8 @@ export const createProtocolReader = ({
         ) {
           throw new Error("Indexed permanent identity coverage is invalid");
         }
-        return {
-          ...window,
-          indexedThroughTime: window.indexedThroughTime,
-        };
-      }).then(
-        (window) => ({
-          status: "complete" as const,
-          window,
-          permanentObservation: {
-            permanentObservedBlock: window.throughBlock,
-            permanentObservedAt: Number(window.indexedThroughTime),
-          },
-        }),
-        (cause: unknown) => ({
-          failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
-          status: "unavailable" as const,
-          permanentObservation: {},
-        }),
-      ),
+        return window.identityIds;
+      }).catch(() => [] as readonly number[]),
       executeRead(
         copy.reader.walletSummary,
         () =>
@@ -840,6 +868,11 @@ export const createProtocolReader = ({
                 functionName: "pendingDiscoveryCount",
                 args: [owner],
               },
+              {
+                contract: "fuelMirror",
+                functionName: "balanceOf",
+                args: [owner],
+              },
             ],
             latestBlock.number,
           ),
@@ -847,13 +880,11 @@ export const createProtocolReader = ({
       ),
     ]);
     const block = latestBlock;
-    const permanentBlock =
-      candidateWindow.status === "complete"
-        ? {
-            number: candidateWindow.window.throughBlock,
-            timestamp: candidateWindow.window.indexedThroughTime,
-          }
-        : latestBlock;
+    // History supplies candidates, never current ownership. Known IDs bridge
+    // a just-confirmed Launch until the index records its Committed event.
+    const permanentCandidates = [
+      ...new Set([...knownIdentityIds, ...indexedCandidates]),
+    ];
     const liquidBalanceWei = successful<bigint>(
       base[0],
       identity.liquidToken.displayName,
@@ -1006,30 +1037,20 @@ export const createProtocolReader = ({
           () => transport.readMany(transientReads, block.number),
           identity,
         ),
-        candidateWindow.status === "unavailable"
-          ? {
-              failure: candidateWindow.failure,
+        transport
+          .permanentIdentityIds(owner, permanentCandidates, block.number)
+          .then(
+            (identityIds) => ({
+              identityIds: [...identityIds],
+              status: "complete" as const,
+            }),
+            (cause: unknown) => ({
+              failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
               identityIds: [] as number[],
               status: "unavailable" as const,
-            }
-          : readWithRetry(() =>
-              transport.permanentIdentityIds(
-                owner,
-                candidateWindow.window.identityIds,
-                permanentBlock.number,
-              ),
-            ).then(
-              (identityIds) => ({
-                identityIds: [...identityIds],
-                status: "complete" as const,
-              }),
-              (cause: unknown) => ({
-                failure: `${copy.reader.walletPermanentCollectibles}: ${normalizeProtocolError(cause, identity).message}`,
-                identityIds: [] as number[],
-                status: "unavailable" as const,
-              }),
-            ),
-        readClaimAllowed(owner, permanentBlock.number),
+            }),
+          ),
+        readClaimAllowed(owner, block.number),
       ]);
     const transientIdentityIds = transientResults.map((result, index) =>
       Number(
@@ -1042,6 +1063,12 @@ export const createProtocolReader = ({
     );
     const permanentIdentityIds = permanentHoldings.identityIds;
     const allIdentityIds = [...transientIdentityIds, ...permanentIdentityIds];
+    const permanentObservation = walletHoldingsEvidence(
+      allIdentityIds.length,
+      base[4],
+      permanentHoldings.status === "complete",
+      block,
+    );
     const detailReads = allIdentityIds.flatMap(
       (identityId): ContractReadRequest[] => [
         {
@@ -1061,26 +1088,11 @@ export const createProtocolReader = ({
         },
       ],
     );
-    const detailResults = (
-      await Promise.all(
-        [
-          {
-            reads: detailReads.slice(0, transientIdentityIds.length * 3),
-            blockNumber: block.number,
-          },
-          {
-            reads: detailReads.slice(transientIdentityIds.length * 3),
-            blockNumber: permanentBlock.number,
-          },
-        ].map(({ reads, blockNumber }) =>
-          executeRead(
-            copy.reader.walletCollectibleDetails,
-            () => transport.readMany(reads, blockNumber),
-            identity,
-          ),
-        ),
-      )
-    ).flat();
+    const detailResults = await executeRead(
+      copy.reader.walletCollectibleDetails,
+      () => transport.readMany(detailReads, block.number),
+      identity,
+    );
     const attributesByIdentity: Record<number, IdentityAttributes> = {};
     const pendingRewardsByIdentity: WalletSnapshotInput["pendingRewardsByIdentity"] =
       {};
@@ -1089,6 +1101,7 @@ export const createProtocolReader = ({
         ? []
         : [pendingDiscoveryFailure]),
       ...("failure" in permanentHoldings ? [permanentHoldings.failure] : []),
+      ...permanentObservation.partialFailures,
     ];
     const unavailablePendingRewardIdentityIds = new Set<number>();
     allIdentityIds.forEach((identityId, index) => {
@@ -1124,6 +1137,7 @@ export const createProtocolReader = ({
       }
     });
     const claimableIdentityIds = new Set<number>();
+    const unavailableClaimEligibilityIdentityIds = new Set<number>();
     permanentIdentityIds.forEach((identityId) => {
       const detailIndex = allIdentityIds.indexOf(identityId);
       const activeResult = detailResults[detailIndex * 3 + 2];
@@ -1132,6 +1146,7 @@ export const createProtocolReader = ({
           claimableIdentityIds.add(identityId);
         }
       } else {
+        unavailableClaimEligibilityIdentityIds.add(identityId);
         const failure = failureFor(
           activeResult,
           copy.reader.identityRewardActivation(identityId),
@@ -1146,7 +1161,8 @@ export const createProtocolReader = ({
         settlementBalanceWei,
         transientIdentityIds,
         permanentIdentityIds,
-        permanentHoldingsStatus: permanentHoldings.status,
+        permanentHoldingsStatus:
+          permanentObservation.holdings.permanentHoldingsStatus,
         pendingDiscoveryCount,
         ...(pendingDiscoveryBatch === undefined
           ? {}
@@ -1154,6 +1170,7 @@ export const createProtocolReader = ({
         attributesByIdentity,
         pendingRewardsByIdentity,
         unavailablePendingRewardIdentityIds,
+        unavailableClaimEligibilityIdentityIds,
         claimableIdentityIds,
       },
       identity,
@@ -1162,7 +1179,7 @@ export const createProtocolReader = ({
       ...snapshot,
       collectibles: {
         ...snapshot.collectibles,
-        ...candidateWindow.permanentObservation,
+        ...permanentObservation.holdings,
       },
       observedBlock: block.number,
       observedAt: Number(block.timestamp),
@@ -1267,6 +1284,8 @@ export const createProtocolReader = ({
       pendingRewardsByIdentity: { [identityId]: pending.pendingRewards },
       unavailablePendingRewardIdentityIds:
         pending.unavailablePendingRewardIdentityIds,
+      unavailableClaimEligibilityIdentityIds:
+        activation.unavailableClaimEligibilityIdentityIds,
       claimableIdentityIds: claimAllowed ? new Set([identityId]) : new Set(),
     };
     return {
@@ -2541,6 +2560,7 @@ export const createProtocolReader = ({
   };
   const assembleHealthSnapshot = async ({
     block,
+    includeBytecodeInventory,
     connectedWallet,
     currentTime,
     decoded,
@@ -2550,6 +2570,7 @@ export const createProtocolReader = ({
     rewardHistory,
   }: {
     readonly block: { readonly number: bigint; readonly timestamp: bigint };
+    readonly includeBytecodeInventory: boolean;
     readonly connectedWallet: Address | undefined;
     readonly currentTime: number;
     readonly decoded: ReturnType<typeof decodeHealthResults>;
@@ -2578,7 +2599,7 @@ export const createProtocolReader = ({
       ),
     );
     const bytecode = await mapWithConcurrency(
-      Object.entries(contracts),
+      includeBytecodeInventory ? Object.entries(contracts) : [],
       BYTECODE_READ_CONCURRENCY,
       async ([name, contract]) => {
         const displayName =
@@ -4029,6 +4050,7 @@ export const createProtocolReader = ({
     const decoded = decodeHealthResults(definitions, results);
     return assembleHealthSnapshot({
       block,
+      includeBytecodeInventory: options.includeBytecodeInventory !== false,
       connectedWallet,
       currentTime,
       decoded,

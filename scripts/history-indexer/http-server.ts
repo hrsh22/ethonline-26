@@ -75,6 +75,11 @@ const keeperFailureClasses = new Set<KeeperAttemptFailureClass>([
 ]);
 
 const routeEvents: Readonly<Record<string, readonly HistoryEventName[]>> = {
+  "/v1/protocol/discoveries": [
+    "discovery-requested",
+    "discovery-fulfilled",
+    "discovery-cancelled",
+  ],
   "/v1/market/swaps": ["swap"],
   "/v1/market/fees": ["fee-accrued"],
   "/v1/protocol/liquidity-cycles": ["protocol-liquidity-added"],
@@ -203,8 +208,12 @@ const queryFrom = (
     throw new RangeError("fromBlock must not be greater than toBlock");
   }
   const cursor = url.searchParams.get("cursor") ?? undefined;
+  const account = url.searchParams.get("account");
+  if (account !== null && !/^0x[0-9a-fA-F]{40}$/.test(account))
+    throw new RangeError("Invalid discovery account");
   return {
     eventNames,
+    ...(account === null ? {} : { account }),
     fromBlock,
     toBlock,
     limit: pageLimit(url, options.configuration),

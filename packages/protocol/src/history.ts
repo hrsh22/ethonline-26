@@ -96,6 +96,7 @@ const HistoryManifest = Schema.Struct({
 export type IndexedHistoryManifest = typeof HistoryManifest.Type;
 
 export interface IndexedHistoryRequest {
+  readonly account?: Address;
   readonly fromBlock: bigint;
   readonly toBlock: bigint;
   readonly limit: number;
@@ -221,6 +222,11 @@ export interface MarketHistoryReader {
 }
 
 export interface ProtocolHistoryReader {
+  readonly discoveries: (
+    account: Address,
+    fromBlock: bigint,
+    toBlock: bigint,
+  ) => Promise<DiscoveryHistoryWindow>;
   readonly liquidityCycles: (
     request: IndexedHistoryRequest,
   ) => Promise<IndexedHistoryPage>;
@@ -816,6 +822,7 @@ const queryString = (request: IndexedHistoryRequest): string => {
     limit: request.limit.toString(),
     ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
     ...(request.order === undefined ? {} : { order: request.order }),
+    ...(request.account === undefined ? {} : { account: request.account }),
   });
   return parameters.toString();
 };
@@ -1387,6 +1394,18 @@ export const createIndexedHistoryReaders = ({
       fees: read("market/fees"),
     },
     protocol: {
+      discoveries: async (account, fromBlock, toBlock) =>
+        discoveryHistoryFrom(
+          await read("protocol/discoveries")({
+            account,
+            fromBlock,
+            toBlock,
+            limit: 100,
+            order: "desc",
+          }),
+          account,
+          manifest.contracts.fuelCore as Address,
+        ),
       liquidityCycles: read("protocol/liquidity-cycles"),
       operations,
       permanentIdentityCandidates: async (fromBlock, toBlock) => {
@@ -1518,3 +1537,97 @@ export const createIndexedHistoryReaders = ({
     },
   };
 };
+
+export interface DiscoveryHistoryRequest {
+  readonly requestId: Hex;
+  readonly acquisitionHash?: Hex;
+  readonly requestedAt?: bigint;
+  readonly outcome: "pending" | "delivered" | "cancelled";
+  readonly identityId?: number;
+  readonly outcomeHash?: Hex;
+}
+export interface DiscoveryHistoryWindow {
+  readonly requests: readonly DiscoveryHistoryRequest[];
+  readonly truncated: boolean;
+  readonly coverage: IndexedHistoryState;
+  readonly observedAt: bigint | undefined;
+  readonly throughBlock: bigint | undefined;
+}
+const discoveryHash = (value: unknown): Hex => {
+  if (typeof value !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(value))
+    throw new TypeError("Invalid discovery reference");
+  return value as Hex;
+};
+function discoveryEvent(
+  item: IndexedHistoryItem,
+  account: Address,
+  fuelCore: Address,
+) {
+  if (
+    item.removed ||
+    item.sourceAddress.toLowerCase() !== fuelCore.toLowerCase() ||
+    String(item.payload.account).toLowerCase() !== account.toLowerCase()
+  )
+    throw new TypeError(
+      "Discovery evidence does not match the canonical wallet source",
+    );
+  return discoveryHash(item.payload.requestId);
+}
+function discoveryOutcome(
+  item: IndexedHistoryItem,
+  prior: DiscoveryHistoryRequest,
+): DiscoveryHistoryRequest {
+  if (item.eventName === "discovery-requested")
+    return {
+      ...prior,
+      acquisitionHash: item.transactionHash,
+      requestedAt: item.blockTimestamp,
+    };
+  if (item.eventName === "discovery-cancelled")
+    return {
+      ...prior,
+      outcome: "cancelled",
+      outcomeHash: item.transactionHash,
+    };
+  if (item.eventName !== "discovery-fulfilled")
+    throw new TypeError("Unexpected discovery event");
+  const identityId = Number(item.payload.identityId);
+  if (!Number.isSafeInteger(identityId) || identityId < 1 || identityId > 4444)
+    throw new TypeError("Invalid delivered identity");
+  return {
+    ...prior,
+    outcome: "delivered",
+    identityId,
+    outcomeHash: item.transactionHash,
+  };
+}
+/** Canonical event correlation; delivery evidence never substitutes for current ownership. */
+export function discoveryHistoryFrom(
+  page: IndexedHistoryPage,
+  account: Address,
+  fuelCore: Address,
+): DiscoveryHistoryWindow {
+  const requests = new Map<Hex, DiscoveryHistoryRequest>();
+  const items = [...page.items].sort(
+    (left, right) =>
+      Number(left.blockNumber - right.blockNumber) ||
+      left.logIndex - right.logIndex,
+  );
+  for (const item of items) {
+    const requestId = discoveryEvent(item, account, fuelCore);
+    const prior = requests.get(requestId) ?? {
+      requestId,
+      outcome: "pending" as const,
+    };
+    if (prior.outcome !== "pending")
+      throw new TypeError("Conflicting discovery outcomes");
+    requests.set(requestId, discoveryOutcome(item, prior));
+  }
+  return {
+    requests: [...requests.values()].reverse(),
+    truncated: page.page.hasMore,
+    coverage: page.status.state,
+    observedAt: page.status.coverage.indexedThroughTime,
+    throughBlock: page.status.coverage.indexedThroughBlock,
+  };
+}

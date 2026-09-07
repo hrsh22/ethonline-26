@@ -1,3 +1,14 @@
+import { CollectorFixture } from "./collector-fixture.ts";
+import {
+  checkLaunchJourney,
+  checkTradeStagesJourney,
+  checkApprovalReloadJourney,
+  checkPartialRewardsJourney,
+  checkReceiptRecoveryJourney,
+  checkQuoteRecoveryJourney,
+  checkFundingDiscoveryJourney,
+} from "./collector-journeys.ts";
+import { checkPublicCollection } from "./public-collection.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -41,6 +52,13 @@ export interface MatrixOptions {
 }
 
 export interface MatrixCaseResult {
+  readonly collector?: {
+    readonly rpcRequests: number;
+    readonly quoteRequests: number;
+    readonly quoteAborts: number;
+    readonly submissions: number;
+    readonly fundingRequests: number;
+  };
   readonly failures: readonly BrowserFailure[];
   readonly label: string;
 }
@@ -67,7 +85,11 @@ export const awaitHydration = async (page: Page): Promise<void> => {
   const connect = page
     .getByRole("button", { name: "Connect wallet", exact: true })
     .first();
-  const dialog = page.getByRole("alertdialog");
+  const dialog = page
+    .getByRole("button", { name: "Continue with a wallet", exact: true })
+    .or(page.getByText("Browser Matrix Wallet", { exact: true }))
+    .or(page.getByText("Connect Wallet", { exact: true }))
+    .first();
   const deadline = Date.now() + 15_000;
   while (!(await dialog.isVisible())) {
     // A click before hydration is discarded by the browser. Retry the user
@@ -81,11 +103,7 @@ export const awaitHydration = async (page: Page): Promise<void> => {
         if (Date.now() >= deadline) throw error;
       });
   }
-  await page
-    .getByRole("button", { name: "Not now", exact: true })
-    .or(page.getByRole("button", { name: "Close", exact: true }))
-    .first()
-    .click();
+  await page.keyboard.press("Escape");
   await dialog.waitFor({ state: "hidden" });
 };
 
@@ -98,21 +116,11 @@ const connectWallet = async (
     .getByRole("button", { name: "Connect wallet", exact: true })
     .first()
     .click();
-  const continueChoice = page.getByRole("button", {
-    name: "Choose wallet",
-    exact: true,
-  });
   const walletChoice = page.getByText("Browser Matrix Wallet", { exact: true });
   const walletMenu = page.getByRole("button", {
     name: "Continue with a wallet",
     exact: true,
   });
-  await continueChoice
-    .or(walletChoice)
-    .or(walletMenu)
-    .first()
-    .waitFor({ state: "visible", timeout: 15_000 });
-  if (await continueChoice.isVisible()) await continueChoice.click();
   await walletChoice
     .or(walletMenu)
     .first()
@@ -140,7 +148,8 @@ const connectWallet = async (
       });
     });
   }
-  const expected = wallet === "ordinary" ? "connected" : wallet;
+  const expected =
+    wallet === "ordinary" || wallet === "transacting" ? "connected" : wallet;
   await page
     .locator(`[data-wallet-state="${expected}"]`)
     .first()
@@ -236,7 +245,7 @@ interface VisitInput {
   readonly viewport: Viewport;
   readonly wallet: WalletFixture;
   readonly idleWindowMilliseconds?: number;
-  readonly verifyIdleTraffic?: boolean;
+  readonly backgroundTraffic?: "idle" | "recovering";
 }
 
 const requestCount = (counts: {
@@ -263,6 +272,26 @@ const awaitApplicationTrafficQuiet = async (
     if (Date.now() - quietSince >= 4_000) return;
   }
   throw new Error("Application requests did not settle before the idle audit");
+};
+
+const inspectBackgroundTraffic = async (
+  page: Page,
+  traffic: ReturnType<typeof observeApplicationRequests>,
+  input: VisitInput,
+): Promise<BrowserFailure | undefined> => {
+  await awaitApplicationTrafficQuiet(page, traffic);
+  const initialRequests = requestCount(traffic.snapshot());
+  traffic.reset();
+  await page.waitForTimeout(input.idleWindowMilliseconds!);
+  const requests = traffic.snapshot();
+  if (input.backgroundTraffic === "idle")
+    return idleRequestFailure(input.label, requests);
+  if (requests.jsonRpc === 0 || requestCount(requests) > initialRequests) {
+    throw new Error(
+      "Failed wallet reads must recover automatically with a bounded background read",
+    );
+  }
+  return undefined;
 };
 
 const landingFailure = (
@@ -428,6 +457,8 @@ const inspectAdminInputs = async (
 const visit = async (
   browser: Browser,
   input: VisitInput,
+  // The shared case runner dispatches the bounded journey/route checks.
+  // eslint-disable-next-line complexity
 ): Promise<MatrixCaseResult> => {
   const context = await browser.newContext({
     colorScheme: "dark",
@@ -437,9 +468,25 @@ const visit = async (
   const observer = observePage(page);
   const traffic = observeApplicationRequests(page);
   const failures: BrowserFailure[] = [];
+  const collector = input.label.startsWith("collector-journey:")
+    ? new CollectorFixture()
+    : undefined;
   try {
     await installWalletFixture(page, input.wallet);
     await installDataFixture(page, input.data);
+    if (collector !== undefined && input.label.endsWith("partial-rewards")) {
+      collector.permanent = true;
+      collector.indexed = true;
+      collector.partialRewards = true;
+      collector.identityIds.push(43, 45);
+    }
+    if (collector !== undefined && input.label.endsWith("receipt-recovery"))
+      collector.receiptFailures = 2;
+    if (collector !== undefined && input.label.endsWith("funding-discovery")) {
+      collector.funded = false;
+      collector.delivered = false;
+    }
+    await collector?.install(page);
     await page.goto(`${input.options.origin}${input.path}`, {
       waitUntil: "commit",
     });
@@ -452,6 +499,24 @@ const visit = async (
       await awaitHydration(page);
     }
     await connectWallet(page, input.wallet);
+    if (collector !== undefined) {
+      if (input.label.endsWith("partial-rewards"))
+        await checkPartialRewardsJourney(page, collector);
+      else if (input.label.endsWith("receipt-recovery"))
+        await checkReceiptRecoveryJourney(page, collector);
+      else if (input.label.endsWith("quote-recovery"))
+        await checkQuoteRecoveryJourney(page, collector);
+      else if (input.label.endsWith("funding-discovery"))
+        await checkFundingDiscoveryJourney(page, collector);
+      else if (input.label.endsWith("approval-reload"))
+        await checkApprovalReloadJourney(page, collector);
+      else if (input.label.endsWith("trade-stages"))
+        await checkTradeStagesJourney(page, collector);
+      else await checkLaunchJourney(page, collector);
+    }
+    if (input.label === "public-collection:explore-and-share") {
+      await checkPublicCollection(page, input.options.origin);
+    }
     if (input.data === "admin-inputs") {
       observer.allowProtectedRequests();
       await inspectAdminInputs(page, input);
@@ -494,12 +559,9 @@ const visit = async (
         .locator('time[datetime="2023-11-14T22:13:20.000Z"]')
         .waitFor({ state: "visible" });
     }
-    if (input.verifyIdleTraffic === true) {
-      await awaitApplicationTrafficQuiet(page, traffic);
-      traffic.reset();
-      await page.waitForTimeout(input.idleWindowMilliseconds!);
-      const idleFailure = idleRequestFailure(input.label, traffic.snapshot());
-      if (idleFailure !== undefined) failures.push(idleFailure);
+    if (input.backgroundTraffic !== undefined) {
+      const failure = await inspectBackgroundTraffic(page, traffic, input);
+      if (failure !== undefined) failures.push(failure);
     }
     failures.push(...(await inspectPage(page, input)));
   } catch (error) {
@@ -509,7 +571,7 @@ const visit = async (
       .catch(() => "");
     failures.push({
       kind: "state-not-reached",
-      detail: `${input.label}: ${String(error)}\n${visibleState.slice(-4000)}`,
+      detail: `${input.label}: ${String(error)}\n${collector === undefined ? "" : [...collector.unsupported].join("\n")}\n${visibleState.slice(-4000)}`,
     });
   } finally {
     await context.close();
@@ -517,6 +579,17 @@ const visit = async (
   return {
     failures: [...observer.failures, ...failures],
     label: input.label,
+    ...(collector === undefined
+      ? {}
+      : {
+          collector: {
+            rpcRequests: collector.rpcRequests,
+            quoteRequests: collector.quoteRequests,
+            quoteAborts: collector.quoteAborts,
+            submissions: collector.submissions.length,
+            fundingRequests: collector.fundingRequests,
+          },
+        }),
   };
 };
 
@@ -634,7 +707,7 @@ const adminInputPlan = (options: MatrixOptions): readonly VisitInput[] => [
   },
 ];
 
-/** Exercises the former 15-second and 30-second read owners without input. */
+/** Settled views stay idle; failed wallet reads recover without input. */
 const idleTrafficPlan = (options: MatrixOptions): readonly VisitInput[] => [
   {
     axe: false,
@@ -645,18 +718,18 @@ const idleTrafficPlan = (options: MatrixOptions): readonly VisitInput[] => [
     path: "/fleet/42",
     viewport: RELEASE_VIEWPORTS[3] as Viewport,
     wallet: "disconnected",
-    verifyIdleTraffic: true,
+    backgroundTraffic: "idle",
   },
   {
     axe: false,
     data: "stubbed",
-    label: "idle-network:connected-faucet",
+    label: "read-recovery:connected-faucet",
     idleWindowMilliseconds: 31_000,
     options,
     path: "/faucet",
     viewport: RELEASE_VIEWPORTS[3] as Viewport,
     wallet: "ordinary",
-    verifyIdleTraffic: true,
+    backgroundTraffic: "recovering",
   },
 ];
 
@@ -670,6 +743,84 @@ export const runBrowserMatrix = async (
     ...adminPlan(options),
     ...adminInputPlan(options),
     ...idleTrafficPlan(options),
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/exchange",
+      label: "collector-journey:approval-reload",
+      options,
+      path: "/exchange",
+      viewport: RELEASE_VIEWPORTS[3] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/exchange",
+      label: "collector-journey:trade-stages",
+      options,
+      path: "/exchange",
+      viewport: RELEASE_VIEWPORTS[3] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/fleet",
+      label: "collector-journey:funding-discovery",
+      options,
+      path: "/faucet",
+      viewport: RELEASE_VIEWPORTS[3] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/fleet",
+      label: "collector-journey:quote-recovery",
+      options,
+      path: "/exchange",
+      viewport: RELEASE_VIEWPORTS[3] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      label: "collector-journey:receipt-recovery",
+      options,
+      path: "/fleet/42",
+      viewport: RELEASE_VIEWPORTS[0] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      label: "collector-journey:partial-rewards",
+      options,
+      path: "/rewards",
+      viewport: RELEASE_VIEWPORTS[0] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/fleet",
+      label: "collector-journey:launch-reload",
+      options,
+      path: "/fleet/42",
+      viewport: RELEASE_VIEWPORTS[0] as Viewport,
+      wallet: "transacting" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/fleet/42",
+      label: "public-collection:explore-and-share",
+      options,
+      path: "/",
+      viewport: RELEASE_VIEWPORTS[0] as Viewport,
+      wallet: "disconnected" as const,
+    },
   ].filter((entry) => selected(options, entry.label));
   const cases: MatrixCaseResult[] = selected(
     options,

@@ -18,12 +18,19 @@ const decodeResponse = async (
 export const readTestnetFundingStatus = async (
   recipient: Address,
   fetcher: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<TestnetFundingResponse> =>
   decodeResponse(
     await fetcher(
       publicApiUrl(PUBLIC_API_PATHS.funding.status) +
         "?recipient=" +
         String(recipient),
+      {
+        signal:
+          signal === undefined
+            ? AbortSignal.timeout(10_000)
+            : AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+      },
     ),
   );
 

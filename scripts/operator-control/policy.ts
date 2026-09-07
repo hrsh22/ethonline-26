@@ -21,8 +21,8 @@ export interface OperatorExecutionPolicy {
 }
 
 /**
- * Fail closed. A fresh install, a wiped store, and a restart all start here,
- * so nothing signs until an operator deliberately asks for it.
+ * A fresh or wiped store starts stopped. Restarts preserve the last authorized
+ * policy for the same deployment; an explicit Stop remains stopped.
  */
 export const CLOSED_POLICY: OperatorExecutionPolicy = {
   mode: "stopped",

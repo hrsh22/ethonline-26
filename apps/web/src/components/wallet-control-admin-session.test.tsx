@@ -10,13 +10,14 @@ const state = vi.hoisted(() => ({
     chainId: 84_532,
     status: "connected" as "connected" | "disconnected",
   },
+  open: vi.fn(),
   disconnect: vi.fn(),
   disconnectStatus: "idle" as "idle" | "pending" | "error" | "success",
   endSession: vi.fn(),
 }));
 
 vi.mock("@reown/appkit/react", () => ({
-  modal: { open: vi.fn() },
+  modal: { open: state.open },
 }));
 
 vi.mock("@/lib/wagmi", () => ({
@@ -49,6 +50,7 @@ describe("admin wallet disconnect", () => {
         IS_REACT_ACT_ENVIRONMENT?: boolean;
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
+    state.open.mockReset();
     state.disconnect.mockReset();
     state.disconnectStatus = "idle";
     state.endSession.mockReset();
@@ -67,6 +69,34 @@ describe("admin wallet disconnect", () => {
     act(() => root.unmount());
     container.remove();
   });
+
+  it.each(["throw", "reject"])(
+    "explains a wallet chooser %s and allows another attempt",
+    async (failure) => {
+      state.connection = { ...state.connection, status: "disconnected" };
+      if (failure === "throw")
+        state.open.mockImplementationOnce(() => {
+          throw new Error("provider unavailable");
+        });
+      else state.open.mockRejectedValueOnce(new Error("provider unavailable"));
+      await act(async () => root.render(<WalletControl />));
+      const connect = [
+        ...container.querySelectorAll<HTMLButtonElement>("button"),
+      ].find((button) => button.textContent === "Connect wallet");
+      await act(async () => connect?.click());
+      expect(state.open).toHaveBeenCalledWith({ view: "Connect" });
+      expect(container.textContent).toContain(
+        "Wallet connection not completed",
+      );
+      expect(connect?.disabled).toBe(false);
+      await act(async () => connect?.click());
+      expect(state.open).toHaveBeenCalledTimes(2);
+      expect(container.textContent).not.toContain(
+        "Wallet connection not completed",
+      );
+      expect(state.disconnect).not.toHaveBeenCalled();
+    },
+  );
 
   it("ends the server session before disconnecting the operator wallet", async () => {
     await act(async () => root.render(<WalletControl />));
