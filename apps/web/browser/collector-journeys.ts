@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { toFunctionSelector } from "viem";
 import type { Page } from "playwright";
-import { CollectorFixture, COLLECTOR_HASH } from "./collector-fixture.ts";
+import {
+  CollectorFixture,
+  COLLECTOR_HASH,
+  COLLECTOR_VRF_REQUEST,
+} from "./collector-fixture.ts";
+
+import { assertMobileCollectionText } from "./mobile-accessibility.ts";
 
 async function submitLaunch(page: Page) {
   await page
@@ -37,6 +43,7 @@ export async function checkLaunchJourney(
     .first()
     .waitFor({ timeout: 20_000 });
   assert.ok((await page.locator("main").innerText()).includes("42"));
+  await assertMobileCollectionText(page, true);
   assert.equal(fixture.submissions.length, 1);
   await page
     .getByRole("link", { name: "View Orbiter #42", exact: true })
@@ -212,6 +219,11 @@ export async function checkFundingDiscoveryJourney(
   assert.ok(
     !(await page.locator("main").innerText()).includes("No collectibles yet"),
   );
+  await page
+    .getByText(`Discovery request ${COLLECTOR_VRF_REQUEST}`, { exact: false })
+    .first()
+    .waitFor();
+  await assertMobileCollectionText(page, false);
   fixture.pending = false;
   fixture.delivered = true;
   fixture.blockNumber += 1n;

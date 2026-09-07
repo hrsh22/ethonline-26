@@ -18,6 +18,7 @@ const manifest = protocolDeploymentManifests.staging;
 const contracts = createProtocolContracts(manifest);
 export const COLLECTOR_WALLET = "0x2000000000000000000000000000000000000002";
 export const COLLECTOR_HASH = `0x${"d".repeat(64)}` as Hex;
+export const COLLECTOR_VRF_REQUEST = 10n ** 76n + 42n;
 const HASH = `0x${"a".repeat(64)}`;
 const unit = 10n ** 18n;
 type RpcCall = { id: number; method: string; params?: unknown[] };
@@ -87,8 +88,8 @@ export class CollectorFixture {
         : 0n;
     if (fn === "pendingDiscoveryCount") return this.pending ? 1n : 0n;
     if (fn === "pendingDiscoveryAt") return COLLECTOR_HASH;
-    if (fn === "vrfRequestForProtocolRequest" || fn === "requestSequence")
-      return 1n;
+    if (fn === "vrfRequestForProtocolRequest") return COLLECTOR_VRF_REQUEST;
+    if (fn === "requestSequence") return 1n;
     if (fn === "isDelayed") return true;
     if (fn === "requestStatus")
       return [1, this.timestamp - 3600n, 0n, 1n, 0n, true];

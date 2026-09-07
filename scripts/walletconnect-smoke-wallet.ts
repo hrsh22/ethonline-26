@@ -39,6 +39,7 @@ const WalletEnvironmentSchema = Schema.Struct({
   NEXT_PUBLIC_REOWN_PROJECT_ID: NonEmptyString,
   WALLETCONNECT_URI: NonEmptyString,
   SMOKE_WALLET_PRIVATE_KEY: Schema.optional(NonEmptyString),
+  SMOKE_WALLET_TRANSFER_RECIPIENT: Schema.optional(NonEmptyString),
   SMOKE_WALLET_CHAIN_ID: Schema.optionalWith(NonEmptyString, {
     default: () => "84532",
   }),
@@ -90,6 +91,21 @@ const errorMessage = (error: unknown) =>
 const valueOrFallback = <Value>(value: Value | undefined, fallback: Value) =>
   value === undefined ? fallback : value;
 
+const parseTransferRecipient = (
+  configured: string | undefined,
+  required: boolean,
+): Address | undefined => {
+  if (configured === undefined) {
+    if (required) throw new Error("Transfer recipient is required");
+    return undefined;
+  }
+  const recipient = getAddress(configured);
+  if (required && /^0x0{40}$/i.test(recipient)) {
+    throw new Error("Transfer recipient must be nonzero");
+  }
+  return recipient;
+};
+
 runMain(
   Effect.gen(function* () {
     const environment = yield* decodeEnvironment(
@@ -118,6 +134,7 @@ runMain(
       | "trade"
       | "commit"
       | "claim"
+      | "transfer"
       | "open-epoch"
       | "execute-track"
       | "pol";
@@ -131,6 +148,7 @@ runMain(
       "trade",
       "commit",
       "claim",
+      "transfer",
       "open-epoch",
       "execute-track",
       "pol",
@@ -175,6 +193,15 @@ runMain(
       "SMOKE_WALLET_PRIVATE_KEY must be a 32-byte hex value",
     );
 
+    const transferRecipient = yield* validate(
+      "Transfer-enabled smoke wallets require a valid nonzero SMOKE_WALLET_TRANSFER_RECIPIENT",
+      () =>
+        parseTransferRecipient(
+          environment.SMOKE_WALLET_TRANSFER_RECIPIENT,
+          allowedActions.has("transfer"),
+        ),
+    );
+
     const account = yield* validate("Smoke wallet private key is invalid", () =>
       privateKeyToAccount(selectPrivateKey(requestedPrivateKey) as Hex),
     );
@@ -197,6 +224,7 @@ runMain(
           "canonicalRouter",
           "epochConverter",
           "fuelCore",
+          "fuelMirror",
           "protocolLiquidityVault",
           "rewardLedger",
           "weth",
@@ -233,6 +261,9 @@ runMain(
       "function swapExactInput((bool fuelForWeth,uint256 amountIn,uint256 amountOutMinimum,address recipient,uint256 deadline,bool useNative) params) payable returns (uint256 amountOut)",
     ]);
     const fuelAbi = parseAbi(["function commit(uint16 identityId)"]);
+    const mirrorAbi = parseAbi([
+      "function safeTransferFrom(address from,address to,uint256 identityId)",
+    ]);
     const ledgerAbi = parseAbi(["function claim(uint16[] identityIds)"]);
     const converterAbi = parseAbi([
       "function openRewardEpoch() returns (uint256)",
@@ -414,6 +445,27 @@ runMain(
       }
       return transaction;
     };
+    const validateTransfer = (transaction: SmokeTransaction) => {
+      requireAction("transfer");
+      const decoded = decodeFunctionData({
+        abi: mirrorAbi,
+        data: transaction.data,
+      });
+      const [from, to, identityId] = decoded.args;
+      if (
+        decoded.functionName !== "safeTransferFrom" ||
+        !sameAddress(from, account.address) ||
+        !sameAddress(to, transferRecipient) ||
+        identityId < 1n ||
+        identityId > 4444n ||
+        transactionValue(transaction) !== 0n
+      ) {
+        throw new Error(
+          "Smoke wallet rejected unsafe collectible transfer parameters",
+        );
+      }
+      return transaction;
+    };
     const validateClaim = (transaction: SmokeTransaction) => {
       requireAction("claim");
       const decoded = decodeFunctionData({
@@ -480,6 +532,7 @@ runMain(
       { address: contracts.canonicalRouter, validate: validateTrade },
       { address: contracts.fuelCore, validate: validateCommit },
       { address: contracts.rewardLedger, validate: validateClaim },
+      { address: contracts.fuelMirror, validate: validateTransfer },
       { address: contracts.epochConverter, validate: validateConverterAction },
       {
         address: contracts.protocolLiquidityVault,

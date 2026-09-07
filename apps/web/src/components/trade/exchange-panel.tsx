@@ -28,6 +28,7 @@ import {
   ExchangeTradeEvidence,
 } from "@/components/trade/exchange-review-checklist";
 import { Button } from "@/components/ui/button";
+import { Amount } from "@/components/ui/value";
 import { Panel } from "@/components/ui/panel";
 import {
   deriveExchangeIntent,
@@ -264,9 +265,9 @@ function DiscoveryShortfall({
   if (next === undefined) return null;
   return (
     <p className="text-body-sm text-ink-soft">
-      {formatUnits(next.remainingWei, 18)} $FUEL to the next discovery.
-      Estimated output can change; use the protected minimum received below when
-      checking the threshold.
+      <Amount rounding="ceil" value={next.remainingWei} /> $FUEL to the next
+      discovery. Estimated output can change; use the protected minimum received
+      below when checking the threshold.
     </p>
   );
 }

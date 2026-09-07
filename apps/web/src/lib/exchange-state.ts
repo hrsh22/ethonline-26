@@ -410,7 +410,7 @@ const buyBoundarySentence = (
   if (count > 0) {
     return `Buying this amount schedules ${count} random ${discoveryLabel(count)}.`;
   }
-  return `After this trade, ${validation.walletImpact.projectedNextDiscoveryDraw.remainingFormatted} ${applicationCopy.exchange.token} remains before the next random ${identity.terms.discoveryDraw}.`;
+  return `After this trade, ${formatTokenAmount(validation.walletImpact.projectedNextDiscoveryDraw.remainingWei, { rounding: "ceil" }).display} ${applicationCopy.exchange.token} remains before the next random ${identity.terms.discoveryDraw}.`;
 };
 
 const buyWarning = (discoveryCount: number) =>

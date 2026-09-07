@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import type { Page } from "playwright";
 import { overflowFailure, pageOverflow } from "./failure-detectors.ts";
 
-async function assertNoOverflow(page: Page, label: string) {
+export async function assertNoOverflow(page: Page, label: string) {
   const failure = overflowFailure(label, await pageOverflow(page));
   if (failure === undefined) return;
   const overflowing = await page.evaluate(() =>
@@ -124,4 +124,57 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     .getByRole("region", { name: "Explore the collection" })
     .scrollIntoViewIfNeeded();
   await assertNoOverflow(page, "Public gallery at 200% root text");
+}
+
+/** Measure text ink too: overflow-hidden can conceal a broken segmented label. */
+export async function assertFleetFiltersReadable(page: Page) {
+  const controls = page
+    .getByRole("group", { name: "Filter collection" })
+    .getByRole("button");
+  assert.equal(await controls.count(), 3);
+  for (const button of await controls.all()) {
+    const bounds = await button.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const box = element.getBoundingClientRect();
+      return {
+        label: element.textContent,
+        box: box.toJSON(),
+        text: [...range.getClientRects()].map((rect) => rect.toJSON()),
+      };
+    });
+    assert.ok(
+      bounds.text.every(
+        (rect) =>
+          rect.left >= bounds.box.left - 1 &&
+          rect.right <= bounds.box.right + 1 &&
+          rect.top >= bounds.box.top - 1 &&
+          rect.bottom <= bounds.box.bottom + 1,
+      ),
+      `Fleet filter text must remain fully visible: ${JSON.stringify(bounds)}`,
+    );
+  }
+}
+
+export async function assertMobileCollectionText(page: Page, filters: boolean) {
+  const viewport = page.viewportSize();
+  const previousSize = await page.evaluate(
+    () => document.documentElement.style.fontSize,
+  );
+  try {
+    await page.setViewportSize({ width: 375, height: 812 });
+    for (const size of ["100%", "200%"]) {
+      await page.evaluate((value) => {
+        document.documentElement.style.fontSize = value;
+      }, size);
+      await page.evaluate(() => document.fonts.ready);
+      if (filters) await assertFleetFiltersReadable(page);
+      await assertNoOverflow(page, `Fleet at375px and ${size} text`);
+    }
+  } finally {
+    await page.evaluate((value) => {
+      document.documentElement.style.fontSize = value;
+    }, previousSize);
+    if (viewport !== null) await page.setViewportSize(viewport);
+  }
 }

@@ -119,11 +119,14 @@ const collectionProgress = (metrics: CollectorJourneyMetrics): string => {
   return applicationCopy.onboarding.noCraft;
 };
 
-const fuelValue = (value: bigint | undefined): React.ReactElement =>
+const fuelValue = (
+  value: bigint | undefined,
+  rounding: "half-up" | "ceil" = "half-up",
+): React.ReactElement =>
   value === undefined ? (
     <Unavailable reason={applicationCopy.common.notObserved} />
   ) : (
-    <Amount minimumFractionDigits={4} value={value} />
+    <Amount minimumFractionDigits={4} rounding={rounding} value={value} />
   );
 
 const phaseCell = (journey: CollectorJourneyView) => {
@@ -219,7 +222,7 @@ function JourneyBoard({ journey }: { readonly journey: CollectorJourneyView }) {
         />
         <Metric
           label={applicationCopy.onboarding.remaining}
-          value={fuelValue(metrics.remainingWei)}
+          value={fuelValue(metrics.remainingWei, "ceil")}
         />
         <Metric
           label={applicationCopy.onboarding.nextThreshold}
