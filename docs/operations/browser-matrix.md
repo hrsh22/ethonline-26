@@ -170,7 +170,12 @@ extension installation, credential handling, or transaction approvals.
    from the current Chrome plugin root. It selects the extension-enabled profile.
    Wait two seconds, reconnect once, and verify a real page through the plugin.
 4. Use the Computer Use skill for native UI fallback. If it reports
-   `cgWindowNotFound`, retry after opening that profile window. Leave user-owned
+   `cgWindowNotFound`, compare `sky.get_app_state({ app: "com.apple.finder" })`.
+   If Finder works, use `sky.press_key({ app: "com.google.Chrome", key: "super+n" })`
+   to create a native Chrome window, then retry `get_app_state`. Verify navigation
+   and screenshot capture before declaring recovery. This recovered Chrome on
+   2026-09-07 when the profile-launch helper alone had not produced a capturable
+   window; no new permission or service restart was needed. Leave user-owned
    Chrome windows open after testing. Request user action only if the remaining
    recovery requires a new grant, reinstall, or another restricted action.
 

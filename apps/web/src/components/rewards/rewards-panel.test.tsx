@@ -137,7 +137,7 @@ describe("rewards transaction controls", () => {
       const html = renderToStaticMarkup(<RewardsPanel />);
       expect(html).toContain(
         hasOrbiter
-          ? "Your Orbiter is eligible, but no rewards have accrued to it yet"
+          ? "Your Orbiter is eligible, but no rewards are currently available to claim"
           : "Launch a Grounded Craft to make it permanent and reward-eligible",
       );
       expect(html).toContain("Queued conversions are shared protocol funds");

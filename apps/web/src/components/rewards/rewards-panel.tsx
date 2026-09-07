@@ -117,7 +117,7 @@ const rewardWalletView = (walletRead: WalletRead) => {
                     : walletRead.snapshot.collectibles.permanent.some(
                           (craft) => craft.claimEligible,
                         )
-                      ? "Your Orbiter is eligible, but no rewards have accrued to it yet. Rewards depend on market activity and completed conversions; there is no guaranteed amount or payout time."
+                      ? "Your Orbiter is eligible, but no rewards are currently available to claim. Rewards depend on market activity and completed conversions; there is no guaranteed amount or payout time."
                       : "No rewards are currently claimable. Reward activation and the current owner determine whether an identity can claim.",
                 title: "No claimable rewards",
                 tone: "empty",

@@ -1,7 +1,7 @@
 import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
 import { chmodSync } from "node:fs";
 
-import { Effect, Scope } from "effect";
+import { Effect, Scope, Schema } from "effect";
 import { keccak256, parseTransaction, type Hex } from "viem";
 
 import type {
@@ -30,7 +30,24 @@ export interface PendingKeeperAttemptDelivery {
   readonly attempt: PendingKeeperAttemptMilestone;
 }
 
+export interface KeeperReplacementEvidence {
+  readonly transactionHash: Hex;
+  readonly replacementHash: Hex;
+  readonly blockNumber: bigint;
+}
+const replacementRecords = Schema.decodeUnknownSync(
+  Schema.Array(
+    Schema.Struct({
+      transactionHash: Schema.String,
+      replacementHash: Schema.String,
+      blockNumber: Schema.String,
+    }),
+  ),
+);
+
 export interface KeeperAttemptOutbox {
+  readonly recordReplacement: (proof: KeeperReplacementEvidence) => void;
+  readonly replacements: () => readonly KeeperReplacementEvidence[];
   readonly enqueueLocalSubmission: (rawTransaction: Hex) => void;
   readonly localSubmissions: () => readonly {
     readonly transactionHash: Hex;
@@ -380,7 +397,59 @@ export const openKeeperAttemptOutbox = (
       );
     }
   };
+  const replacements = (): readonly KeeperReplacementEvidence[] => {
+    const row = database
+      .prepare(
+        "SELECT value FROM outbox_metadata WHERE key = 'canonical_replacements'",
+      )
+      .get();
+    if (row === undefined) return [];
+    const records = replacementRecords(
+      JSON.parse(text(row.value, "canonical_replacements")),
+    );
+    if (records.length > 20)
+      throw new Error("Replacement evidence exceeds its bound");
+    return records.map((record) => {
+      const blockNumber = BigInt(record.blockNumber);
+      databaseInteger(blockNumber, "replacement block");
+      return {
+        transactionHash: requireHash(record.transactionHash, "original hash"),
+        replacementHash: requireHash(
+          record.replacementHash,
+          "replacement hash",
+        ),
+        blockNumber,
+      };
+    });
+  };
   return {
+    replacements,
+    recordReplacement: (proof) => {
+      const record = {
+        transactionHash: requireHash(proof.transactionHash, "original hash"),
+        replacementHash: requireHash(proof.replacementHash, "replacement hash"),
+        blockNumber: BigInt(
+          databaseInteger(proof.blockNumber, "replacement block"),
+        ),
+      };
+      if (record.transactionHash === record.replacementHash)
+        throw new Error("Replacement must be a different transaction");
+      const records = [
+        ...replacements().filter(
+          (item) => item.transactionHash !== record.transactionHash,
+        ),
+        record,
+      ].slice(-20);
+      database
+        .prepare(
+          "INSERT INTO outbox_metadata(key,value) VALUES ('canonical_replacements',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        )
+        .run(
+          JSON.stringify(records, (_key, value) =>
+            typeof value === "bigint" ? value.toString() : value,
+          ),
+        );
+    },
     enqueueLocalSubmission: (rawTransaction) => {
       const hash = keccak256(rawTransaction);
       validateTransaction(rawTransaction, hash);

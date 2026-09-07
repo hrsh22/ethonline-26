@@ -1,0 +1,455 @@
+{
+  "setup": {
+    "account": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "transactions": [
+      {
+        "label": "approve exact 0.3 WETH",
+        "hash": "0x2177f7b4ee2ce8ca40f14cb3faf9f2bc4547fd3e4a9621c6c71fe8545bb88b05",
+        "nonce": 1418,
+        "status": "success",
+        "block": "46507033",
+        "gasUsed": "46194"
+      },
+      {
+        "label": "buy 0.3 WETH FUEL",
+        "hash": "0x62b228e8ea6b5a971d8c743cc068ef7edcad5adce9175afa359ef01a7a18f0b2",
+        "nonce": 1419,
+        "status": "success",
+        "block": "46507035",
+        "gasUsed": "10772875"
+      },
+      {
+        "label": "approve exact newly bought FUEL",
+        "hash": "0x5395275e80d998d29e36f07126b9ae00a42acb0ae4655d5b74dc821a8396c6c0",
+        "nonce": 1420,
+        "status": "success",
+        "block": "46507037",
+        "gasUsed": "66825"
+      },
+      {
+        "label": "sell newly bought FUEL",
+        "hash": "0x754f00746d079247d748a8220a7f45859db25edafaf79b8dbf78292ed7410662",
+        "nonce": 1421,
+        "status": "success",
+        "block": "46507039",
+        "gasUsed": "2017338"
+      },
+      {
+        "label": "approve exact 0.3 WETH",
+        "hash": "0x0054f6828eaa55ec22ad02c7c4b38f45b946371df913db4e4cf50447223fb20d",
+        "nonce": 1422,
+        "status": "success",
+        "block": "46507042",
+        "gasUsed": "46194"
+      },
+      {
+        "label": "buy 0.3 WETH FUEL",
+        "hash": "0x5924845eaa8dc325f036aa3d7b740b528e37b8a2aded86199c6f94f7865bcaaf",
+        "nonce": 1423,
+        "status": "success",
+        "block": "46507044",
+        "gasUsed": "10772875"
+      },
+      {
+        "label": "approve exact newly bought FUEL",
+        "hash": "0x59f7f1447fa63c8622fc28a4b19c39a564d56ffcc717729993f632a2d26b2bcd",
+        "nonce": 1424,
+        "status": "success",
+        "block": "46507046",
+        "gasUsed": "66825"
+      },
+      {
+        "label": "sell newly bought FUEL",
+        "hash": "0x81ce9d92e6485f1e75788ca29af328ca2d45e1f8c57f4ffc8f6eb7aa0ab80d35",
+        "nonce": 1425,
+        "status": "success",
+        "block": "46507048",
+        "gasUsed": "2017338"
+      },
+      {
+        "label": "approve exact 0.3 WETH",
+        "hash": "0xff24974016cbffb20314c94a454db73b3501be978936c0467ce1db4f8f4134ae",
+        "nonce": 1426,
+        "status": "success",
+        "block": "46507051",
+        "gasUsed": "46194"
+      },
+      {
+        "label": "buy 0.3 WETH FUEL",
+        "hash": "0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1",
+        "nonce": 1427,
+        "status": "success",
+        "block": "46507053",
+        "gasUsed": "10772875"
+      },
+      {
+        "label": "approve exact newly bought FUEL",
+        "hash": "0x54731316d96a9a90c45c0ae4138e82c1ec401b9bb172336a14f26001e3a6ea31",
+        "nonce": 1428,
+        "status": "success",
+        "block": "46507055",
+        "gasUsed": "66825"
+      },
+      {
+        "label": "sell newly bought FUEL",
+        "hash": "0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01",
+        "nonce": 1429,
+        "status": "success",
+        "block": "46507057",
+        "gasUsed": "2017338"
+      },
+      {
+        "label": "approve exact 0.3 WETH",
+        "hash": "0x16b9df308d809216a4b19f1748f31fdd32f6307391aab08509387446579be05c",
+        "nonce": 1430,
+        "status": "success",
+        "block": "46507060",
+        "gasUsed": "46194"
+      },
+      {
+        "label": "buy 0.3 WETH FUEL",
+        "hash": "0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662",
+        "nonce": 1431,
+        "status": "success",
+        "block": "46507062",
+        "gasUsed": "10772875"
+      },
+      {
+        "label": "approve exact newly bought FUEL",
+        "hash": "0x765b0c2028a0b27a799d366d2ce3f7370fe18a56dfa339874a4b6b23d80a1f24",
+        "nonce": 1432,
+        "status": "success",
+        "block": "46507064",
+        "gasUsed": "66825"
+      },
+      {
+        "label": "sell newly bought FUEL",
+        "hash": "0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a",
+        "nonce": 1433,
+        "status": "success",
+        "block": "46507066",
+        "gasUsed": "2017338"
+      }
+    ],
+    "rounds": [
+      {
+        "sell": false,
+        "amount": "300000000000000000",
+        "quote": "49650902897932807501",
+        "minimumOutput": "49154393868953479425",
+        "block": "46507033"
+      },
+      {
+        "sell": true,
+        "amount": "49650902897932807501",
+        "quote": "282270000000000000",
+        "minimumOutput": "279447300000000000",
+        "block": "46507036"
+      },
+      {
+        "sell": false,
+        "amount": "300000000000000000",
+        "quote": "49650902897932807501",
+        "minimumOutput": "49154393868953479425",
+        "block": "46507041"
+      },
+      {
+        "sell": true,
+        "amount": "49650902897932807501",
+        "quote": "282270000000000000",
+        "minimumOutput": "279447300000000000",
+        "block": "46507046"
+      },
+      {
+        "sell": false,
+        "amount": "300000000000000000",
+        "quote": "49650902897932807501",
+        "minimumOutput": "49154393868953479425",
+        "block": "46507051"
+      },
+      {
+        "sell": true,
+        "amount": "49650902897932807501",
+        "quote": "282270000000000000",
+        "minimumOutput": "279447300000000000",
+        "block": "46507055"
+      },
+      {
+        "sell": false,
+        "amount": "300000000000000000",
+        "quote": "49650902897932807501",
+        "minimumOutput": "49154393868953479425",
+        "block": "46507060"
+      },
+      {
+        "sell": true,
+        "amount": "49650902897932807501",
+        "quote": "282270000000000000",
+        "minimumOutput": "279447300000000000",
+        "block": "46507063"
+      }
+    ],
+    "before": {
+      "weth": "999966117668766594024707",
+      "fuel": "16688317788946932838",
+      "pot": "2398805030711308",
+      "epoch": "0"
+    },
+    "after": {
+      "weth": "999966046748766594024707",
+      "fuel": "16688317788946932838",
+      "pot": "49678805030711304",
+      "epoch": "0"
+    },
+    "finished": true,
+    "claimBefore": {
+      "blockNumber": "46507039",
+      "owner": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+      "mockAaplc": "0",
+      "mockGooglc": "0",
+      "mockMetac": "0",
+      "mockNvdac": "0",
+      "pending": ["0", "0", "0", "0"]
+    },
+    "delivery": {
+      "blockNumber": "46507082",
+      "epoch": "0",
+      "pot": "49678805030711304",
+      "pending": ["0", "0", "0", "0"],
+      "queues": ["0", "0", "0", "0"]
+    }
+  },
+  "conversion": {
+    "blockNumber": "46508012",
+    "owner": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+    "epoch": "1",
+    "pot": "0",
+    "pending": ["0", "0", "0", "229153130954477008"],
+    "queues": ["0", "0", "0", "0"],
+    "balances": {
+      "mockAaplc": "0",
+      "mockGooglc": "0",
+      "mockMetac": "0",
+      "mockNvdac": "0"
+    },
+    "operator": {
+      "mode": "execute",
+      "replacements": [
+        {
+          "transactionHash": "0x42965601b62f5aa13ab14d169df37b6efaeb273da5ace309e9e85f757e81f478",
+          "replacementHash": "0x0054f6828eaa55ec22ad02c7c4b38f45b946371df913db4e4cf50447223fb20d",
+          "blockNumber": "46507042"
+        }
+      ],
+      "actions": [
+        {
+          "kind": "reward-epoch",
+          "planningBlock": {
+            "number": "46507973",
+            "hash": "0x0e9b47d81ce4d164a447c71c254433e46085355b3608049f4d9a7cab2808d342",
+            "timestamp": "1788784234"
+          },
+          "preflightBlock": {
+            "number": "46507974",
+            "hash": "0x82608f86faa8eb266b488fd6c3b218689eb6ee38ff75455dd84534b67bc4829d",
+            "timestamp": "1788784236"
+          },
+          "status": "confirmed",
+          "reason": "Simulation passed and the transaction confirmed.",
+          "transactionHash": "0x51ab127c163c6c37b4530eb00bf8795f07367eb9409d6130ec31d3990e045c4e",
+          "blockNumber": "46507976"
+        },
+        {
+          "kind": "reward-track-or-retry",
+          "track": 1,
+          "quotedOutput": "1208062517354625799",
+          "minimumOutput": "1195981892181079541",
+          "planningBlock": {
+            "number": "46507976",
+            "hash": "0xf7956add74f0294b73d4fdda90dd36d2e43e08c83df227a8d8967ec4f6963580",
+            "timestamp": "1788784240"
+          },
+          "quoteBlock": {
+            "number": "46507976",
+            "hash": "0xf7956add74f0294b73d4fdda90dd36d2e43e08c83df227a8d8967ec4f6963580",
+            "timestamp": "1788784240"
+          },
+          "preflightBlock": {
+            "number": "46507977",
+            "hash": "0x3853cbb2622289068ab1593b5ea925b075fa46da1f0fcb20d8033a8cdf6d5475",
+            "timestamp": "1788784242"
+          },
+          "status": "confirmed",
+          "reason": "Simulation passed and the transaction confirmed.",
+          "transactionHash": "0xb7da7af1038027fa6a49caad9135583da1ead2ba7b432a7f9f9e7f9a95b9cb73",
+          "blockNumber": "46507980"
+        },
+        {
+          "kind": "reward-track-or-retry",
+          "track": 2,
+          "quotedOutput": "1206582435706955271",
+          "minimumOutput": "1194516611349885718",
+          "planningBlock": {
+            "number": "46507981",
+            "hash": "0x9388c62b7557ccb0444a76b18910a0770dc61cca1a8723c29e76331ff96b5b78",
+            "timestamp": "1788784250"
+          },
+          "quoteBlock": {
+            "number": "46507981",
+            "hash": "0x9388c62b7557ccb0444a76b18910a0770dc61cca1a8723c29e76331ff96b5b78",
+            "timestamp": "1788784250"
+          },
+          "preflightBlock": {
+            "number": "46507981",
+            "hash": "0x9388c62b7557ccb0444a76b18910a0770dc61cca1a8723c29e76331ff96b5b78",
+            "timestamp": "1788784250"
+          },
+          "status": "confirmed",
+          "reason": "Simulation passed and the transaction confirmed.",
+          "transactionHash": "0x0d813cfb686a7c70389cc541b65c3a0e2d8b427c8079ec0a454ff005e5df8345",
+          "blockNumber": "46507984"
+        },
+        {
+          "kind": "reward-track-or-retry",
+          "track": 3,
+          "quotedOutput": "1205106919939488332",
+          "minimumOutput": "1193055850740093448",
+          "planningBlock": {
+            "number": "46507985",
+            "hash": "0xd01dcaba69a18f4513e41fc3681cb52f919d82814582b7f5b0a3b8c984d3b54d",
+            "timestamp": "1788784258"
+          },
+          "quoteBlock": {
+            "number": "46507985",
+            "hash": "0xd01dcaba69a18f4513e41fc3681cb52f919d82814582b7f5b0a3b8c984d3b54d",
+            "timestamp": "1788784258"
+          },
+          "preflightBlock": {
+            "number": "46507985",
+            "hash": "0xd01dcaba69a18f4513e41fc3681cb52f919d82814582b7f5b0a3b8c984d3b54d",
+            "timestamp": "1788784258"
+          },
+          "status": "confirmed",
+          "reason": "Simulation passed and the transaction confirmed.",
+          "transactionHash": "0xba09641aaa5d4ec34842a12d967d078f8b6d468aec559e22d8f9a810776963bf",
+          "blockNumber": "46507988"
+        },
+        {
+          "kind": "reward-track-or-retry",
+          "track": 4,
+          "quotedOutput": "1203632607033616613",
+          "minimumOutput": "1191596280963280446",
+          "planningBlock": {
+            "number": "46507989",
+            "hash": "0x4086e08ac6d94d7116182290519eebdab6558ef475b03636430b055c1dae9adb",
+            "timestamp": "1788784266"
+          },
+          "quoteBlock": {
+            "number": "46507989",
+            "hash": "0x4086e08ac6d94d7116182290519eebdab6558ef475b03636430b055c1dae9adb",
+            "timestamp": "1788784266"
+          },
+          "preflightBlock": {
+            "number": "46507990",
+            "hash": "0x57b0bffd4584e61d8ebbca7ab476fd604b2d3df7f14763da8e6edf1e6ad4da2a",
+            "timestamp": "1788784268"
+          },
+          "status": "confirmed",
+          "reason": "Simulation passed and the transaction confirmed.",
+          "transactionHash": "0x6def163335e7118661c8a167e004d39bcca13e5e79d9d02693ce0bf1c6bd1987",
+          "blockNumber": "46507993"
+        },
+        {
+          "kind": "protocol-liquidity",
+          "planningBlock": {
+            "number": "46507994",
+            "hash": "0x8686394885c1604fb7ec64f387c0da8e2b307ad66092a8a43f319eb83c11b76c",
+            "timestamp": "1788784276"
+          },
+          "preflightBlock": {
+            "number": "46507994",
+            "hash": "0x8686394885c1604fb7ec64f387c0da8e2b307ad66092a8a43f319eb83c11b76c",
+            "timestamp": "1788784276"
+          },
+          "status": "confirmed",
+          "reason": "Simulation passed and the transaction confirmed.",
+          "transactionHash": "0x31ee4d351ec7b5f1d2e048875db484ee9ab74ccb5d118ec87ddf21a5a6edcb6c",
+          "blockNumber": "46507997",
+          "liquidityPlan": {
+            "status": "ready",
+            "type": "execute-pol",
+            "availableWeth": "21113492138052302",
+            "selectedBudgetWeth": "21113492138052302",
+            "estimatedCyclesRemaining": "1",
+            "minimumQueueWeth": "5000000000000000",
+            "targetWethPerCycle": "25000000000000000",
+            "maximumWethPerCycle": "50000000000000000",
+            "roundingToleranceWeth": "0",
+            "simulationToleranceWeth": "0",
+            "tickLower": -52140,
+            "tickUpper": -51540,
+            "liquidity": "9398948326675313424",
+            "maximumWeth": "21113492138052302",
+            "deadline": "1788784576",
+            "expectedConsumptionWeth": "21113492138052302",
+            "estimatedRemainderWeth": "0",
+            "budgetRemainderWeth": "0"
+          },
+          "simulatedConsumptionWeth": "21113492138052302"
+        }
+      ]
+    }
+  },
+  "claim": {
+    "hash": "0x92a92512b8c8ecf9bef85f7ad4c5ead977d15a80a8a6d904cd73a3b9e10ac460",
+    "receipt": {
+      "status": "success",
+      "block": "46508045",
+      "blockHash": "0xe58b13272e9417f48859df82c20036dcd6b69a7588ea0e5bb13d4f5b656f6548",
+      "canonical": true,
+      "confirmations": "23"
+    },
+    "observedBlock": "46508067",
+    "owner": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+    "permanent": true,
+    "pending": ["0", "0", "0", "0"],
+    "balances": {
+      "mockAaplc": "0",
+      "mockGooglc": "0",
+      "mockMetac": "0",
+      "mockNvdac": "229153130954477008"
+    },
+    "deltas": {
+      "mockAaplc": "0",
+      "mockGooglc": "0",
+      "mockMetac": "0",
+      "mockNvdac": "229153130954477008"
+    },
+    "logs": [
+      {
+        "eventName": "IdentityCheckpointed",
+        "args": {
+          "identityId": 4179,
+          "accruedReward": "229153130954477008"
+        }
+      },
+      {
+        "eventName": "RewardClaimed",
+        "args": {
+          "owner": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+          "identityId": 4179,
+          "track": 4,
+          "amount": "229153130954477008"
+        }
+      },
+      {
+        "eventName": "Transfer",
+        "args": {
+          "from": "0xE70E620E5A280e87923c6C2466986ae5C4326C13",
+          "to": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+          "value": "229153130954477008"
+        }
+      }
+    ]
+  }
+}

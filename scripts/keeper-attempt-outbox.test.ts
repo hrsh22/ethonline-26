@@ -64,6 +64,37 @@ const recorder = (
 });
 
 describe("keeper-attempt durable outbox", () => {
+  it("bounds retained replacement evidence to the latest twenty proofs", () => {
+    const outbox = openKeeperAttemptOutbox(temporaryDatabasePath(), identity);
+    for (let id = 1; id <= 21; id += 1)
+      outbox.recordReplacement({
+        transactionHash: `0x${id.toString(16).padStart(64, "0")}`,
+        replacementHash: `0x${"7".repeat(64)}`,
+        blockNumber: BigInt(id),
+      });
+    expect(outbox.replacements()).toHaveLength(20);
+    expect(outbox.replacements()[0]?.blockNumber).toBe(2n);
+    outbox.close();
+  });
+
+  it("retains canonical replacement proof across row resolution and restart", () => {
+    const path = temporaryDatabasePath();
+    const proof = {
+      transactionHash: milestone.transactionHash,
+      replacementHash: `0x${"7".repeat(64)}` as const,
+      blockNumber: 120n,
+    };
+    const outbox = openKeeperAttemptOutbox(path, identity);
+    outbox.enqueue(delivery, 1000n);
+    outbox.recordReplacement(proof);
+    outbox.resolve(milestone.attemptId, milestone.transactionHash);
+    outbox.close();
+    const restarted = openKeeperAttemptOutbox(path, identity);
+    expect(restarted.unresolved()).toEqual([]);
+    expect(restarted.replacements()).toEqual([proof]);
+    restarted.close();
+  });
+
   it("recovers the exact signed transaction after a crash before broadcast", async () => {
     const path = temporaryDatabasePath();
     const rawTransaction = await privateKeyToAccount(

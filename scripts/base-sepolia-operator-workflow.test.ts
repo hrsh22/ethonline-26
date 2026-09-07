@@ -165,6 +165,10 @@ const scriptedWorkflow = (input: {
   >;
   readonly reconciliations?: readonly OperatorSubmissionResolution[];
   readonly failPendingJournal?: boolean;
+  readonly failReplacementProof?: boolean;
+  readonly retainedReplacementProofs?: ReturnType<
+    KeeperAttemptOutbox["replacements"]
+  >;
 }) => {
   const observations = [...input.observations];
   const attempts = [...input.attempts];
@@ -174,6 +178,8 @@ const scriptedWorkflow = (input: {
   const planningStates: OperatorState[] = [];
   const reconciliations = [...(input.reconciliations ?? [])];
   const unresolved = [...(input.unresolved ?? [])];
+  const localSubmissions = [...(input.localSubmissions ?? [])];
+  const reconciledBytes: Array<Hex | undefined> = [];
   const resolvedSubmissions: Array<readonly [string, Hex]> = [];
   const submittedDeliveries: Array<
     Parameters<KeeperAttemptOutbox["enqueue"]>[0]
@@ -195,10 +201,24 @@ const scriptedWorkflow = (input: {
       trace.push(`recorder:complete:${milestone.observedBlock}`);
     },
   };
+  const replacementProofs: Parameters<
+    KeeperAttemptOutbox["recordReplacement"]
+  >[0][] = [...(input.retainedReplacementProofs ?? [])];
   const outbox: KeeperAttemptOutbox = {
+    recordReplacement: (proof) => {
+      if (input.failReplacementProof)
+        throw new Error("replacement proof persistence failed");
+      replacementProofs.push(proof);
+    },
+    replacements: () => replacementProofs,
     enqueueLocalSubmission: () => undefined,
-    localSubmissions: () => input.localSubmissions ?? [],
-    resolveLocalSubmission: () => undefined,
+    localSubmissions: () => localSubmissions,
+    resolveLocalSubmission: (hash) => {
+      const index = localSubmissions.findIndex(
+        (item) => item.transactionHash === hash,
+      );
+      if (index >= 0) localSubmissions.splice(index, 1);
+    },
     enqueue: (delivery) => {
       submittedDeliveries.push(delivery);
     },
@@ -228,7 +248,8 @@ const scriptedWorkflow = (input: {
       trace.push("chain:get-chain-id");
       return 84_532;
     },
-    reconcileSubmission: async (hash) => {
+    reconcileSubmission: async (hash, rawTransaction) => {
+      reconciledBytes.push(rawTransaction);
       trace.push(`chain:reconcile:${hash}`);
       const resolution = reconciliations.shift();
       if (resolution === undefined) {
@@ -274,6 +295,8 @@ const scriptedWorkflow = (input: {
 
   return {
     trace,
+    reconciledBytes,
+    remainingLocalSubmissions: () => [...localSubmissions],
     intents,
     planningStates,
     submittedDeliveries,
@@ -300,6 +323,74 @@ const scriptedWorkflow = (input: {
 };
 
 describe("Base Sepolia operator workflow", () => {
+  it("records a proven local replacement and replans at its block before any new intent", async () => {
+    const replacementHash = transactionHashFor("77");
+    const workflow = scriptedWorkflow({
+      execute: true,
+      localSubmissions: [{ transactionHash, rawTransaction: "0x0102" }],
+      reconciliations: [
+        { status: "replaced", blockNumber: 925n, replacementHash },
+      ],
+      observations: [
+        { state: operatorState({ observedBlock: 930n }), minimumBlock: 925n },
+        { state: operatorState({ observedBlock: 931n }), minimumBlock: 925n },
+      ],
+      attempts: [],
+    });
+    const evidence = await workflow.run();
+    expect(workflow.reconciledBytes).toEqual(["0x0102"]);
+    expect(workflow.remainingLocalSubmissions()).toEqual([]);
+    expect(workflow.intents).toEqual([]);
+    expect(evidence.replacements).toEqual([
+      { transactionHash, replacementHash, blockNumber: 925n },
+    ]);
+    expect(
+      workflow.trace.some((event) => event.startsWith("chain:rebroadcast:")),
+    ).toBe(false);
+  });
+
+  it("keeps the exact local signing gate when replacement evidence cannot be persisted", async () => {
+    const retained = { transactionHash, rawTransaction: "0x0102" as const };
+    const workflow = scriptedWorkflow({
+      execute: true,
+      failReplacementProof: true,
+      localSubmissions: [retained],
+      reconciliations: [
+        {
+          status: "replaced",
+          blockNumber: 925n,
+          replacementHash: transactionHashFor("77"),
+        },
+      ],
+      observations: [],
+      attempts: [],
+    });
+    await expect(workflow.run()).rejects.toThrow(
+      "replacement proof persistence failed",
+    );
+    expect(workflow.remainingLocalSubmissions()).toEqual([retained]);
+    expect(workflow.intents).toEqual([]);
+  });
+
+  it("preserves the replacement block floor after a crash following row resolution", async () => {
+    const proof = {
+      transactionHash,
+      replacementHash: transactionHashFor("77"),
+      blockNumber: 925n,
+    };
+    const workflow = scriptedWorkflow({
+      retainedReplacementProofs: [proof],
+      observations: [
+        { state: operatorState({ observedBlock: 930n }), minimumBlock: 925n },
+        { state: operatorState({ observedBlock: 931n }), minimumBlock: 925n },
+      ],
+      attempts: [],
+    });
+    const evidence = await workflow.run();
+    expect(workflow.reconciledBytes).toEqual([]);
+    expect(evidence.replacements).toEqual([proof]);
+  });
+
   it("does not begin Keeper work while a discovery transaction is unresolved", async () => {
     const workflow = scriptedWorkflow({
       execute: true,
@@ -429,7 +520,10 @@ describe("Base Sepolia operator workflow", () => {
         currentTimestamp: 1_800_000_031n,
       });
       const workflow = scriptedWorkflow({
-        observations: [{ state: fresh }, { state: final }],
+        observations: [
+          { state: fresh, minimumBlock: 925n },
+          { state: final, minimumBlock: 925n },
+        ],
         attempts: [],
         unresolved: [delivery],
         reconciliations: [{ status, blockNumber: 925n }],
@@ -445,8 +539,8 @@ describe("Base Sepolia operator workflow", () => {
       expect(workflow.trace).toEqual([
         "chain:get-chain-id",
         `chain:reconcile:${hash}`,
-        "chain:observe:unpinned-floor",
-        "chain:observe:unpinned-floor",
+        "chain:observe:925",
+        "chain:observe:925",
         "recorder:complete:931",
       ]);
     },
@@ -473,8 +567,8 @@ describe("Base Sepolia operator workflow", () => {
 
     const recovered = scriptedWorkflow({
       observations: [
-        { state: operatorState({ observedBlock: 940n }) },
-        { state: operatorState({ observedBlock: 941n }) },
+        { state: operatorState({ observedBlock: 940n }), minimumBlock: 935n },
+        { state: operatorState({ observedBlock: 941n }), minimumBlock: 935n },
       ],
       attempts: [],
       unresolved: reorged.unresolvedSubmissions(),
