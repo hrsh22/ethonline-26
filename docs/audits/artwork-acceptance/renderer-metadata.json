@@ -1,0 +1,149 @@
+{
+  "checkedAt": "2026-09-07T13:22:20.551Z",
+  "block": "46509525",
+  "launched": true,
+  "renderer": "0xb466c469b161149E7AFA4A357d7fC47867bB3429",
+  "scope": "Renderer output for hypothetical permanent identities, not proof that these Relics are currently held",
+  "metadata": [
+    {
+      "id": 4441,
+      "metadata": {
+        "name": "Station 1",
+        "description": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+        "image": "placeholder://orbit-4444/station",
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Identity ID",
+            "value": 4441
+          },
+          {
+            "trait_type": "State",
+            "value": "Orbiter"
+          },
+          {
+            "trait_type": "Reward Track",
+            "value": "All Reward Tracks"
+          },
+          {
+            "trait_type": "Rarity Tier",
+            "value": "Special"
+          },
+          {
+            "trait_type": "Reward Weight",
+            "value": 0
+          },
+          {
+            "trait_type": "Collectible Kind",
+            "value": "Station"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4442,
+      "metadata": {
+        "name": "Station 2",
+        "description": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+        "image": "placeholder://orbit-4444/station",
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Identity ID",
+            "value": 4442
+          },
+          {
+            "trait_type": "State",
+            "value": "Orbiter"
+          },
+          {
+            "trait_type": "Reward Track",
+            "value": "All Reward Tracks"
+          },
+          {
+            "trait_type": "Rarity Tier",
+            "value": "Special"
+          },
+          {
+            "trait_type": "Reward Weight",
+            "value": 0
+          },
+          {
+            "trait_type": "Collectible Kind",
+            "value": "Station"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4443,
+      "metadata": {
+        "name": "Station 3",
+        "description": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+        "image": "placeholder://orbit-4444/station",
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Identity ID",
+            "value": 4443
+          },
+          {
+            "trait_type": "State",
+            "value": "Orbiter"
+          },
+          {
+            "trait_type": "Reward Track",
+            "value": "All Reward Tracks"
+          },
+          {
+            "trait_type": "Rarity Tier",
+            "value": "Special"
+          },
+          {
+            "trait_type": "Reward Weight",
+            "value": 0
+          },
+          {
+            "trait_type": "Collectible Kind",
+            "value": "Station"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4444,
+      "metadata": {
+        "name": "Observatory",
+        "description": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+        "image": "placeholder://orbit-4444/observatory",
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Identity ID",
+            "value": 4444
+          },
+          {
+            "trait_type": "State",
+            "value": "Orbiter"
+          },
+          {
+            "trait_type": "Reward Track",
+            "value": "All Reward Tracks"
+          },
+          {
+            "trait_type": "Rarity Tier",
+            "value": "Special"
+          },
+          {
+            "trait_type": "Reward Weight",
+            "value": 0
+          },
+          {
+            "trait_type": "Collectible Kind",
+            "value": "Observatory"
+          }
+        ]
+      }
+    }
+  ]
+}

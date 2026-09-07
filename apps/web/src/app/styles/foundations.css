@@ -293,6 +293,20 @@ select {
   outline-offset: 3px;
 }
 
+@media (width < 1023px) {
+  html:has([data-mobile-navigation]) {
+    /* Native focus scrolling leaves room for the header, navigation and ring. */
+    scroll-padding-top: 4rem;
+    scroll-padding-bottom: calc(5rem + 1px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Prose stays readable on phones; tabular numbers retain their mono face. */
 @media (width < 780px) {
   :root {

@@ -15,6 +15,10 @@ describe("Learn and verify route", () => {
     expect(html).toContain("Verify deployment contracts");
     expect(html).toContain("Protocol history");
     expect(html).toContain("Report a problem");
+    expect(html).toContain(
+      "no units are currently attached to that identity for claiming",
+    );
+    expect(html).not.toContain("no units have accrued");
     expect(html).toContain("sepolia.basescan.org/address/");
     expect(html).toContain("github.com/hrsh22/ethonline-26/issues");
     expect(html).toContain("All 27 deployed contracts");

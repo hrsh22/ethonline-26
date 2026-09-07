@@ -98,7 +98,7 @@ function CollectorHelpTopics() {
     {
       id: "rewards",
       title: "Why are there no rewards to claim?",
-      body: `${terms.commitment} makes an ordinary collectible permanent and reward-eligible. Rewards still require market activity and completed conversions. A confirmed zero means no units have accrued to that identity; unavailable means the amount could not be checked. Queued conversion funds are not your wallet balance. Relic pots may accrue before ${terms.commitment}, but become claimable only afterward. Each token is shown separately and these Base Sepolia assets have no value.`,
+      body: `${terms.commitment} makes an ordinary collectible permanent and reward-eligible. Rewards still require market activity and completed conversions. A confirmed zero means no units are currently attached to that identity for claiming; unavailable means the amount could not be checked. Queued conversion funds are not your wallet balance. Relic pots may accrue before ${terms.commitment}, but become claimable only afterward. Each token is shown separately and these Base Sepolia assets have no value.`,
     },
   ];
   return (

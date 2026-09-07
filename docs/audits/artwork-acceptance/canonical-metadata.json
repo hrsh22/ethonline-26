@@ -1,0 +1,98 @@
+{
+  "checkedAt": "2026-09-07T13:21:04.258Z",
+  "chainId": 84532,
+  "block": "46509487",
+  "mirror": "0x441F6f786c8E9d3EEc16748e55Ee32626d1F93DA",
+  "metadata": [
+    {
+      "id": 1639,
+      "metadata": {
+        "name": "Orbiter #1639",
+        "description": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+        "image": "placeholder://orbit-4444/orbiter",
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Identity ID",
+            "value": 1639
+          },
+          {
+            "trait_type": "State",
+            "value": "Orbiter"
+          },
+          {
+            "trait_type": "Reward Track",
+            "value": "METAc"
+          },
+          {
+            "trait_type": "Rarity Tier",
+            "value": "I"
+          },
+          {
+            "trait_type": "Reward Weight",
+            "value": 1
+          },
+          {
+            "trait_type": "Collectible Kind",
+            "value": "Ordinary"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4179,
+      "metadata": {
+        "name": "Orbiter #4179",
+        "description": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+        "image": "placeholder://orbit-4444/orbiter",
+        "attributes": [
+          {
+            "display_type": "number",
+            "trait_type": "Identity ID",
+            "value": 4179
+          },
+          {
+            "trait_type": "State",
+            "value": "Orbiter"
+          },
+          {
+            "trait_type": "Reward Track",
+            "value": "NVDAc"
+          },
+          {
+            "trait_type": "Rarity Tier",
+            "value": "II"
+          },
+          {
+            "trait_type": "Reward Weight",
+            "value": 1.5
+          },
+          {
+            "trait_type": "Collectible Kind",
+            "value": "Ordinary"
+          }
+        ]
+      }
+    },
+    {
+      "id": 4441,
+      "status": "unavailable",
+      "error": "The contract function \"tokenURI\" reverted with the following signature:\n0x77be306f"
+    },
+    {
+      "id": 4442,
+      "status": "unavailable",
+      "error": "The contract function \"tokenURI\" reverted with the following signature:\n0x77be306f"
+    },
+    {
+      "id": 4443,
+      "status": "unavailable",
+      "error": "The contract function \"tokenURI\" reverted with the following signature:\n0x77be306f"
+    },
+    {
+      "id": 4444,
+      "status": "unavailable",
+      "error": "The contract function \"tokenURI\" reverted with the following signature:\n0x77be306f"
+    }
+  ]
+}
