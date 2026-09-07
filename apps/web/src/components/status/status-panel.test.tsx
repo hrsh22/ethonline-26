@@ -18,6 +18,8 @@ vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => protocolState.protocol,
 }));
 
+vi.mock("./delivery-status-panel", () => ({ DeliveryStatusPanel: () => null }));
+
 import { StatusPanel } from "./status-panel";
 
 const hash = (value: number) =>

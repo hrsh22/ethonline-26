@@ -1,8 +1,10 @@
 "use client";
 
+import { runPublicRead } from "@orbit/protocol/read-lifetime";
 import { useQuery } from "@tanstack/react-query";
 
-import { protocolDeploymentManifest } from "@/lib/deployment";
+import { protocolDeploymentFingerprint } from "@/lib/deployment";
+import { refetchUntilObservedBlock } from "@/lib/transaction-execution";
 import { webProtocolQueryRetryCount } from "@/lib/web-rpc-policy";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
 
@@ -24,19 +26,39 @@ export const useCollectibleRead = (
   useQuery({
     queryKey: [
       "protocol-collectible",
-      protocolDeploymentManifest?.launch.transactionHash,
+      protocolDeploymentFingerprint,
       identityId,
+      protocol.minimumCollectibleBlock?.toString(),
     ],
-    queryFn: () => {
-      if (protocol.reader === undefined) {
-        throw new Error("Collectible reader unavailable");
-      }
-      return protocol.reader.readCollectible(identityId);
-    },
+    queryFn: ({ signal }) =>
+      runPublicRead(
+        async (readSignal) => {
+          const reader = protocol.readerForSignal(readSignal);
+          if (reader === undefined)
+            throw new Error("Collectible reader unavailable");
+          const minimumBlock = protocol.minimumCollectibleBlock;
+          if (minimumBlock === undefined)
+            return reader.readCollectible(identityId);
+          const observed = await refetchUntilObservedBlock({
+            minimumBlock,
+            refetch: () => {
+              readSignal.throwIfAborted();
+              return reader.readCollectible(identityId);
+            },
+          });
+          if (observed.status !== "caught-up")
+            throw new Error(
+              "Checking identity ownership after the confirmed transaction.",
+            );
+          return observed.snapshot;
+        },
+        { signal },
+      ),
     // Known-token ownership and metadata are public chain state. Requiring a
     // connected wallet here left shared NFT links permanently loading even
     // though the reader was available; only mutations remain wallet-gated.
     enabled: protocol.deploymentAvailable && protocol.reader !== undefined,
-    refetchInterval: false,
+    refetchInterval: (query) =>
+      query.state.status === "error" ? 30_000 : false,
     retry: webProtocolQueryRetryCount,
   });

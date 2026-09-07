@@ -191,13 +191,28 @@ describe("public admin sign-in", () => {
     expect(
       container.querySelector("[data-wallet-state='connecting']"),
     ).not.toBeNull();
-    expect(button?.hasAttribute("disabled")).toBe(true);
+    expect(button?.getAttribute("aria-disabled")).toBe("true");
     expect(button?.textContent).toContain("Connecting wallet");
     expect(button?.textContent).not.toContain("Restoring wallet");
     expect(reasonId).toBe("admin-wallet-connection-reason");
     expect(container.querySelector(`#${reasonId}`)?.textContent).toContain(
       "connection finishes",
     );
+  });
+
+  it("keeps the connection action focusable but inert during a late pending update", async () => {
+    await render();
+    const button = container.querySelector("button")!;
+    button.focus();
+    state.connection = { ...state.connection, status: "connecting" };
+    await render();
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    button.blur();
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    await act(async () => button.click());
+    expect(state.modalOpen).not.toHaveBeenCalled();
+    expect(state.sign).not.toHaveBeenCalled();
   });
 
   it("labels restoration separately from a new wallet connection", async () => {
@@ -230,6 +245,7 @@ describe("public admin sign-in", () => {
       }),
     );
 
+    expect(document.activeElement).toBe(button);
     expect(state.modalOpen).toHaveBeenCalledWith({ view: "Connect" });
     expect(
       container.querySelector("[data-wallet-state='rejected']"),

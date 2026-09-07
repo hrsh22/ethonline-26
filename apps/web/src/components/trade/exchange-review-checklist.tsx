@@ -7,7 +7,10 @@ import { DataList, DataRow } from "@/components/ui/data-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Well } from "@/components/ui/panel";
 import { Amount, Count } from "@/components/ui/value";
-import { protocolDeploymentManifest } from "@/lib/deployment";
+import {
+  deploymentEnvironment,
+  protocolDeploymentManifest,
+} from "@/lib/deployment";
 import {
   deriveExchangeTradeTerms,
   type deriveExchangeReviewState,
@@ -285,6 +288,19 @@ interface ReviewFeedback {
 
 /* Every blocked, stale, or loading state keeps the role grammar the intent
  * derivation expects: errors are alerts, waiting states are polite statuses. */
+const accessQuoteMessages: Partial<
+  Record<ExchangeReviewState["status"], string>
+> = {
+  disconnected:
+    "Connect your wallet to get a live quote. Your amount will stay here.",
+  "wrong-network": `Switch to ${deploymentEnvironment.chainLabel} to get a live quote. Your amount will stay here.`,
+  "deployment-pending":
+    "Trading is not available for this deployment yet. Your amount will stay here.",
+};
+export const exchangeAccessQuoteMessage = (
+  status: ExchangeReviewState["status"],
+): string | undefined => accessQuoteMessages[status];
+
 const staticReviewFeedback: Partial<
   Record<ExchangeReviewState["status"], ReviewFeedback>
 > = {
@@ -313,8 +329,11 @@ const staticReviewFeedback: Partial<
 
 const reviewFeedbackFor = (
   reviewState: ExchangeReviewState,
-): ReviewFeedback | undefined =>
-  reviewState.status === "discovery-limit"
+): ReviewFeedback | undefined => {
+  const accessMessage = exchangeAccessQuoteMessage(reviewState.status);
+  if (accessMessage !== undefined)
+    return { message: accessMessage, role: "status" };
+  return reviewState.status === "discovery-limit"
     ? {
         message: applicationCopy.exchange.discoveryLimit(
           reviewState.mutations,
@@ -324,6 +343,7 @@ const reviewFeedbackFor = (
         role: "alert",
       }
     : staticReviewFeedback[reviewState.status];
+};
 
 /**
  * The decision a trader must understand before submission, in a recessed well
@@ -364,7 +384,7 @@ export function ExchangeDecisionReview({
       </Well>
     );
   }
-  /* A state with nothing of its own to say (blocked access, an amount the
+  /* A state with nothing of its own to say (an amount the
    * field is already rejecting) keeps the well's promise visible instead of
    * leaving an empty box above the button. */
   const feedback = reviewFeedbackFor(reviewState) ?? staticReviewFeedback.empty;

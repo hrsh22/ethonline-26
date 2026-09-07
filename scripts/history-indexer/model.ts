@@ -1,6 +1,9 @@
 import type { Address, Hex } from "viem";
 
 export const historyEventNames = [
+  "discovery-requested",
+  "discovery-fulfilled",
+  "discovery-cancelled",
   "swap",
   "fee-accrued",
   "protocol-liquidity-added",
@@ -39,6 +42,7 @@ export interface HistoryCheckpoint extends CanonicalHeader {
 }
 
 export interface HistoryQuery {
+  readonly account?: string;
   readonly eventNames: readonly HistoryEventName[];
   readonly fromBlock: bigint;
   readonly toBlock: bigint;

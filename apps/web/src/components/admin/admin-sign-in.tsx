@@ -179,6 +179,10 @@ function DisconnectedAdminWalletControl({
   readonly onConnect: () => void;
   readonly status: ConnectionStatus;
 }) {
+  const connectButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (connectionRejected) connectButton.current?.focus();
+  }, [connectionRejected]);
   const pendingCopy = pendingAdminConnectionCopy(status);
   const connectionReason =
     pendingCopy !== undefined
@@ -189,12 +193,14 @@ function DisconnectedAdminWalletControl({
   return (
     <>
       <Button
+        ref={connectButton}
         aria-describedby={
           connectionReason === undefined
             ? undefined
             : "admin-wallet-connection-reason"
         }
         disabled={connectionReason !== undefined}
+        focusableWhenDisabled
         onClick={onConnect}
         size="lg"
         type="button"

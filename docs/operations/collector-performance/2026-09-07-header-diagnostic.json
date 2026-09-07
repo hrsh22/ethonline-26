@@ -1,0 +1,195 @@
+{
+  "origin": "http://127.0.0.1:3132",
+  "browserVersion": "151.0.7922.34",
+  "recordedAt": "2026-09-07T07:02:58.007Z",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh disconnected browser context; HTTP cache disabled",
+  "results": [
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 1,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 674.6999999880791,
+      "cls": 0.2976019639722714,
+      "fcp": 764,
+      "lcp": 764,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1102.5999999940395,
+          "score": 0.2976019639722714,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 149,
+                "width": 375,
+                "height": 663,
+                "top": 149,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 56,
+                "width": 375,
+                "height": 756,
+                "top": 56,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 56,
+                "width": 343,
+                "height": 92,
+                "top": 56,
+                "right": 359,
+                "bottom": 148,
+                "left": 16
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 17,
+                "y": 709.328125,
+                "width": 341,
+                "height": 102.671875,
+                "top": 709.328125,
+                "right": 358,
+                "bottom": 812,
+                "left": 17
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 0,
+                "width": 40,
+                "height": 44,
+                "top": 0,
+                "right": 56,
+                "bottom": 44,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 5.5,
+                "width": 40,
+                "height": 44,
+                "top": 5.5,
+                "right": 56,
+                "bottom": 49.5,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-h-dvh min-w-0 flex-col\"><div class=\"grid min-h-[5.25rem] content-center gap-1 border-b border-line bg-canvas px-4 py-1 tablet:flex tablet:min-h-8 tablet:flex-wrap tablet:items-center tablet:justify-between tablet:gap-x-4 tablet:px-6\"><p class=\"flex flex-col items-start gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft",
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnecte",
+            "<div class=\"flex-1 p-4 grid gap-3 compact:grid-cols-2\"><figure class=\"flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-control)] border border-line bg-canvas p-3\"><svg aria-hidden=\"true\" class=\"size-28 tablet:size-36\" fill=\"none\" stroke-linejoin=\"round\" stroke-width=\"1.5\" vector-effect=\"non-scaling-stroke\" viewBox=\"0 0 120 120\" xmlns=",
+            "<a aria-label=\"ORBIT 4444: Protocol overview\" class=\"flex min-h-11 items-center gap-3 laptop:shrink-0 mr-auto min-w-0 [&amp;_[data-brand-mark]]:hidden compact:[&amp;_[data-brand-mark]]:block laptop:mr-0 laptop:border-b laptop:border-line laptop:px-4 laptop:py-3\" href=\"/\"><span aria-hidden=\"true\" class=\"grid size-7 flex-none place-items-center round"
+          ]
+        }
+      ],
+      "elapsed": 15003.59999999404,
+      "headerTrace": [
+        {
+          "at": 755.0999999940395,
+          "height": 149,
+          "text": "O\nCONNECT WALLET",
+          "rootFontSize": "16px",
+          "fontsStatus": "loading",
+          "button": {
+            "fontSize": "16px",
+            "fontFamily": "\"JetBrains Mono\", \"JetBrains Mono Fallback\"",
+            "lineHeight": "25.6px",
+            "letterSpacing": "0.96px",
+            "padding": "8px 16px",
+            "width": "244.828px"
+          },
+          "walletWrap": "wrap",
+          "wallet": "<div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div class=\"relative flex min-w-0 max-w-full flex-wrap items-center gap-1\"><button type=\"button\" tabindex=\"0\" data-slot=\"button\" aria-haspopup=\"dialog\" class=\"group/button inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-clip-padding font-mono text-body-sm font-semibold tracking-[0.06em] uppercase transition-[background-color,border-color,color,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 motion-reduce:transition-none motion-reduce:active:scale-100 bg-primary text-primary-foreground hover:brightness-110 disabled:border-[var(--border-subtle)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-tertiary)] px-4 py-2 h-auto max-w-full whitespace-normal wallet-button\">Connect wallet</button><details class=\"text-body-sm text-ink-soft\"><summary aria-label=\"What does connecting allow?\" class=\"flex size-11 cursor-pointer list-none items-center justify-center rounded border border-line-strong text-ink-soft [&amp;::-webkit-details-marker]:hidden\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark size-5\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg></summary><p class=\"absolute top-full left-0 z-50 mt-2 w-[min(20rem,calc(100vw-4rem))] [header.sticky_&amp;]:right-0 [header.sticky_&amp;]:left-auto [header.sticky_&amp;]:w-[min(20rem,calc(100vw-6rem))] rounded border border-line bg-surface-1 p-4 text-body shadow-[var(--shadow-overlay)] laptop:[header.sticky_&amp;]:right-auto laptop:[header.sticky_&amp;]:left-0 laptop:[header.sticky_&amp;]:top-auto laptop:[header.sticky_&amp;]:bottom-full laptop:[header.sticky_&amp;]:mt-0 laptop:[header.sticky_&amp;]:mb-2\">ORBIT 4444<!-- --> reads your public collection. Connecting does not submit a transaction or give permission to spend. You approve each action in your wallet. This app uses valueless Base Sepolia test assets.</p></details></div></div>"
+        },
+        {
+          "at": 1102.699999988079,
+          "height": 56,
+          "text": "O\nCONNECT WALLET",
+          "rootFontSize": "16px",
+          "fontsStatus": "loaded",
+          "button": {
+            "fontSize": "16px",
+            "fontFamily": "\"JetBrains Mono\", \"JetBrains Mono Fallback\"",
+            "lineHeight": "25.6px",
+            "letterSpacing": "0.96px",
+            "padding": "8px 16px",
+            "width": "181.844px"
+          },
+          "walletWrap": "wrap",
+          "wallet": "<div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div class=\"relative flex min-w-0 max-w-full flex-wrap items-center gap-1\"><button type=\"button\" tabindex=\"0\" data-slot=\"button\" aria-haspopup=\"dialog\" class=\"group/button inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-clip-padding font-mono text-body-sm font-semibold tracking-[0.06em] uppercase transition-[background-color,border-color,color,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive [&amp;_svg]:pointer-events-none [&amp;_svg]:shrink-0 [&amp;_svg:not([class*='size-'])]:size-4 motion-reduce:transition-none motion-reduce:active:scale-100 bg-primary text-primary-foreground hover:brightness-110 disabled:border-[var(--border-subtle)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-tertiary)] px-4 py-2 h-auto max-w-full whitespace-normal wallet-button\">Connect wallet</button><details class=\"text-body-sm text-ink-soft\"><summary aria-label=\"What does connecting allow?\" class=\"flex size-11 cursor-pointer list-none items-center justify-center rounded border border-line-strong text-ink-soft [&amp;::-webkit-details-marker]:hidden\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-circle-question-mark size-5\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"></circle><path d=\"M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3\"></path><path d=\"M12 17h.01\"></path></svg></summary><p class=\"absolute top-full left-0 z-50 mt-2 w-[min(20rem,calc(100vw-4rem))] [header.sticky_&amp;]:right-0 [header.sticky_&amp;]:left-auto [header.sticky_&amp;]:w-[min(20rem,calc(100vw-6rem))] rounded border border-line bg-surface-1 p-4 text-body shadow-[var(--shadow-overlay)] laptop:[header.sticky_&amp;]:right-auto laptop:[header.sticky_&amp;]:left-0 laptop:[header.sticky_&amp;]:top-auto laptop:[header.sticky_&amp;]:bottom-full laptop:[header.sticky_&amp;]:mt-0 laptop:[header.sticky_&amp;]:mb-2\">ORBIT 4444<!-- --> reads your public collection. Connecting does not submit a transaction or give permission to spend. You approve each action in your wallet. This app uses valueless Base Sepolia test assets.</p></details></div></div>"
+        }
+      ]
+    }
+  ]
+}

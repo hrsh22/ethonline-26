@@ -614,6 +614,59 @@ describe("operator control proxy", () => {
 });
 
 describe("VM-owned public API", () => {
+  it("exposes only read-only delivery evidence without requiring an admin session", async () => {
+    const delivery = {
+      apiVersion: 1,
+      chainId: 84532,
+      deploymentFingerprint: `0x${"f".repeat(64)}`,
+      observedAt: 1_800_000_000_000,
+      expiresAt: 1_800_000_030_000,
+      policy: { mode: "live", oneShot: "none" },
+      liveness: { state: "offline" },
+      dependencyReadiness: "unknown",
+      workEligibility: "unknown",
+    };
+    const requests: string[] = [];
+    await withServer(
+      {
+        configuration: {
+          ...configuration(),
+          operatorControl: {
+            token: "secret-control-token",
+            url: new URL("http://127.0.0.1:8791"),
+          },
+        },
+        fetcher: (async (input, init) => {
+          requests.push(String(input));
+          expect(init?.method).toBe("GET");
+          return jsonResponse({
+            ...delivery,
+            audit: [{ actor: "private-actor" }],
+            key: "private-key",
+            command: "enable-live",
+            diagnostic: "https://rpc.invalid/secret",
+          });
+        }) as typeof fetch,
+      },
+      async (url) => {
+        const response = await fetch(`${url}/v1/delivery/status`);
+        expect(response.status).toBe(200);
+        expect(await response.json()).toEqual(delivery);
+        expect(
+          (await fetch(`${url}/v1/delivery/status`, { method: "POST" })).status,
+        ).toBe(405);
+        expect(
+          (await fetch(`${url}/v1/delivery/status?command=enable-live`)).status,
+        ).toBe(400);
+        expect(
+          (await fetch(`${url}/v1/delivery/command`, { method: "POST" }))
+            .status,
+        ).toBe(404);
+      },
+    );
+    expect(requests).toEqual(["http://127.0.0.1:8791/v1/delivery-status"]);
+  });
+
   it("serves liveness without touching a dependency", async () => {
     const fetcher = vi.fn<typeof fetch>();
     await withServer(
@@ -1857,6 +1910,11 @@ describe("VM-owned public API", () => {
         expect(response.headers.get("cache-control")).toBe("no-store");
         await expect(response.json()).resolves.toEqual({
           apiVersion: 1,
+          request: {
+            id: "internal-request-id",
+            state: "pending",
+            transactions: [{ kind: "weth", state: "prepared" }],
+          },
           recipient: {
             address: recipient,
             balances: {
@@ -1884,7 +1942,7 @@ describe("VM-owned public API", () => {
     );
   });
 
-  it("projects a confirmed fund result without its worker command record", async () => {
+  it("projects a confirmed grant identity and safe per-asset progress", async () => {
     const recipient = "0x2000000000000000000000000000000000000002";
     const fetcher = (async () =>
       jsonResponse({
@@ -1936,6 +1994,18 @@ describe("VM-owned public API", () => {
         expect(response.headers.get("cache-control")).toBe("no-store");
         await expect(response.json()).resolves.toEqual({
           apiVersion: 1,
+          request: {
+            id: "internal-request-id",
+            state: "funded",
+            transactions: [
+              {
+                kind: "weth",
+                hash: `0x${"22".repeat(32)}`,
+                state: "confirmed",
+              },
+              { kind: "eth", hash: `0x${"33".repeat(32)}`, state: "confirmed" },
+            ],
+          },
           recipient: {
             address: recipient,
             balances: {
@@ -1949,7 +2019,7 @@ describe("VM-owned public API", () => {
     );
   });
 
-  it("preserves a pending faucet outcome without exposing unbroadcast state", async () => {
+  it("preserves accepted progress without exposing unbroadcast transaction hashes", async () => {
     const recipient = "0x2000000000000000000000000000000000000002";
     const fetcher = (async () =>
       jsonResponse(
@@ -1995,6 +2065,18 @@ describe("VM-owned public API", () => {
         expect(response.status).toBe(202);
         await expect(response.json()).resolves.toEqual({
           apiVersion: 1,
+          request: {
+            id: "internal-request-id",
+            state: "pending",
+            transactions: [
+              {
+                kind: "weth",
+                hash: `0x${"44".repeat(32)}`,
+                state: "broadcast",
+              },
+              { kind: "eth", state: "prepared" },
+            ],
+          },
           recipient: { address: recipient, state: "pending" },
         });
       },

@@ -26,6 +26,8 @@ export interface FormattedValue {
 }
 
 export interface TokenAmountOptions {
+  /** Round required amounts upward so the display never understates a threshold. */
+  readonly rounding?: "half-up" | "ceil";
   /** Base-unit exponent of the token. Defaults to 18. */
   readonly decimals?: number;
   /**
@@ -48,8 +50,14 @@ const TEN = 10n;
 
 const power = (exponent: number): bigint => TEN ** BigInt(exponent);
 
-/** Round-half-up division, exact in bigint space at any magnitude. */
-const divideRounded = (value: bigint, divisor: bigint): bigint => {
+/** Explicit display rounding, exact in bigint space at any magnitude. */
+const divideRounded = (
+  value: bigint,
+  divisor: bigint,
+  rounding: "half-up" | "ceil",
+): bigint => {
+  if (rounding === "ceil")
+    return value > 0n ? (value + divisor - 1n) / divisor : value / divisor;
   const negative = value < 0n;
   const magnitude = negative ? -value : value;
   const rounded = (magnitude * 2n + divisor) / (divisor * 2n);
@@ -93,6 +101,7 @@ const trimTrailingZeros = (fraction: string, minimum: number): string => {
 };
 
 interface ResolvedOptions {
+  readonly rounding: "half-up" | "ceil";
   readonly decimals: number;
   readonly significantDigits: number;
   readonly fractionDigits: number;
@@ -104,6 +113,7 @@ const resolveOptions = (options: TokenAmountOptions): ResolvedOptions => {
   const decimals = options.decimals ?? 18;
   return {
     decimals,
+    rounding: options.rounding ?? "half-up",
     significantDigits: options.significantDigits ?? 5,
     fractionDigits: options.fractionDigits ?? 4,
     minimumFractionDigits: options.minimumFractionDigits ?? 0,
@@ -185,7 +195,11 @@ export const formatTokenAmount = (
     resolved.decimals,
   );
 
-  const scaled = divideRounded(value, power(resolved.decimals - width));
+  const scaled = divideRounded(
+    value,
+    power(resolved.decimals - width),
+    resolved.rounding,
+  );
   if (scaled === 0n) return formattedBound(exact, width);
 
   const decimal = composeDecimal(

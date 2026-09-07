@@ -5,10 +5,11 @@ import { collectionManifestArtifact } from "@orbit/config/collection-manifest";
 import { useState } from "react";
 import { getAddress, isAddress } from "viem";
 
+import { CollectorHelp } from "@/components/collector-help";
+import { ClaimReview } from "@/components/rewards/rewards-panel";
 import { CollectibleExplorerLinks } from "@/components/fleet/collectible-explorer-links";
 import { trackIndexFor } from "@/components/fleet/fleet-craft-card";
 import { DisabledReason, StateFeedback } from "@/components/state-feedback";
-import { TransactionStatus } from "@/components/transaction-status";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink, buttonVariants } from "@/components/ui/button";
 import { CraftArt } from "@/components/ui/craft-art";
@@ -192,6 +193,12 @@ const transactionControlDisabledReason = (
   if (isTransactionInFlight(protocol.transaction)) {
     return "Wait for the current transaction to finish before using this action.";
   }
+  if (
+    !directStateObserved &&
+    (protocol.walletRead.status === "failed" ||
+      (protocol.walletRead.status === "loaded" && protocol.walletRead.stale))
+  )
+    return "Checking current ownership before another action.";
   if (protocol.walletSynchronizing && !directStateObserved) {
     return applicationCopy.transaction.synchronizing;
   }
@@ -348,6 +355,7 @@ function MissingCraft({
             <ManifestPortrait facts={facts} identityId={identityId} />
           )}
           <CollectibleExplorerLinks identityId={identityId} />
+          <CollectorHelp topic="wallet-artwork" />
         </div>
         <div className="grid gap-3 laptop:col-span-7">
           <StateFeedback
@@ -412,6 +420,21 @@ function LaunchDialog({
         <AlertDialog.Description className={dialogDescriptionClassName}>
           {applicationCopy.launch.introduction}
         </AlertDialog.Description>
+        <DataList className="mt-4">
+          <DataRow
+            label="Collectible"
+            value={`Grounded Craft #${identityId}`}
+          />
+          <DataRow label="Network" value="Base Sepolia · chain 84532" />
+          <DataRow
+            label="After Launch"
+            value={`Permanent Orbiter #${identityId}`}
+          />
+          <DataRow
+            label="Cost"
+            value="Burns exactly 1 $FUEL forever, plus network gas"
+          />
+        </DataList>
         <Well className="mt-4 border-[var(--status-warning-text)]">
           <p className="text-body-sm font-semibold text-ink" role="note">
             {applicationCopy.launch.warning}
@@ -444,7 +467,7 @@ function LaunchDialog({
             onClick={() =>
               protocol.execute(
                 { type: "commit-collectible", identityId },
-                applicationCopy.launch.title,
+                `${applicationCopy.launch.title} #${identityId}`,
               )
             }
           >
@@ -544,6 +567,7 @@ function LaunchSlot({
   }
   return (
     <LaunchControl
+      key={`${protocol.address}:${protocol.chainId}:${identityId}:${wallet?.liquidToken.rawWei}`}
       disabledReason={launchDisabledReason(controlsDisabledReason, wallet)}
       fuelBalance={
         wallet === undefined
@@ -557,6 +581,7 @@ function LaunchSlot({
 }
 
 function TransferControl({
+  permanent,
   disabledReason,
   identityId,
   owner,
@@ -568,8 +593,10 @@ function TransferControl({
   readonly owner: string | undefined;
   readonly protocol: ProtocolClient;
   readonly visible: boolean;
+  readonly permanent: boolean;
 }) {
   const [recipient, setRecipient] = useState("");
+  const [reviewedScope, setReviewedScope] = useState<string | null>(null);
   if (!visible) return null;
   const candidate = recipient.trim();
   const validAddress = isAddress(candidate);
@@ -579,6 +606,8 @@ function TransferControl({
     owner,
   );
   const actionDisabledReason = disabledReason ?? recipientReason;
+  const scope = `${protocol.address}:${protocol.chainId}:${identityId}:${permanent}:${candidate}`;
+  const reviewChanged = reviewedScope !== scope;
   return (
     <Well className="grid gap-2">
       <h3
@@ -620,23 +649,81 @@ function TransferControl({
               : "craft-transfer-disabled-reason"
           }
           disabled={actionDisabledReason !== undefined}
-          onClick={() => {
-            if (!validAddress || actionDisabledReason !== undefined) return;
-            void protocol.execute(
-              {
-                type: "direct-collectible-transfer",
-                identityId,
-                recipient: getAddress(candidate),
-              },
-              applicationCopy.craft.transferAction,
-            );
-          }}
+          onClick={() => setReviewedScope(scope)}
           type="button"
           variant="outline"
         >
-          {applicationCopy.craft.transferAction}
+          Review transfer
         </Button>
       </div>
+      <AlertDialog.Root
+        open={reviewedScope !== null}
+        onOpenChange={(open) => !open && setReviewedScope(null)}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop className={dialogBackdropClassName} />
+          <AlertDialog.Popup className={dialogPopupClassName}>
+            <AlertDialog.Title className={dialogTitleClassName}>
+              Review transfer
+            </AlertDialog.Title>
+            <AlertDialog.Description className={dialogDescriptionClassName}>
+              Check the full recipient. Confirming opens your wallet for this
+              transfer.
+            </AlertDialog.Description>
+            <DataList className="mt-4">
+              <DataRow
+                label="Collectible"
+                value={`${permanent ? "Orbiter" : "Grounded Craft"} #${identityId}`}
+              />
+              <DataRow
+                label="Recipient"
+                value={<span className="break-all font-mono">{candidate}</span>}
+              />
+              <DataRow label="Network" value="Base Sepolia · chain 84532" />
+            </DataList>
+            <p className="mt-4 text-body">
+              {permanent
+                ? "The Orbiter and its attached Pending Rewards move to the recipient. No backing $FUEL moves with a permanent Orbiter."
+                : "This Grounded Craft and its backing 1 $FUEL move to the recipient. Your $FUEL balance decreases by 1. This transfer does not Launch the craft."}
+            </p>
+            {reviewChanged ? (
+              <p role="alert" className="mt-3 text-body">
+                The wallet or transfer details changed. Go back and review them
+                again.
+              </p>
+            ) : null}
+            <div className={dialogActionsClassName}>
+              <AlertDialog.Close
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Back
+              </AlertDialog.Close>
+              <AlertDialog.Close
+                className={buttonVariants()}
+                disabled={reviewChanged || actionDisabledReason !== undefined}
+                onClick={() => {
+                  if (
+                    reviewChanged ||
+                    !validAddress ||
+                    actionDisabledReason !== undefined
+                  )
+                    return;
+                  void protocol.execute(
+                    {
+                      type: "direct-collectible-transfer",
+                      identityId,
+                      recipient: getAddress(candidate),
+                    },
+                    `${applicationCopy.craft.transferAction} #${identityId}`,
+                  );
+                }}
+              >
+                Confirm transfer
+              </AlertDialog.Close>
+            </div>
+          </AlertDialog.Popup>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       {actionDisabledReason === undefined ? null : (
         <DisabledReason id="craft-transfer-disabled-reason">
           {actionDisabledReason}
@@ -661,30 +748,22 @@ function ClaimControl({
 }) {
   if (craft?.claimEligible !== true || rewards.length === 0) return null;
   return (
-    <div>
-      <Button
-        aria-describedby={
-          disabledReason === undefined
-            ? undefined
-            : "craft-claim-disabled-reason"
-        }
-        disabled={disabledReason !== undefined}
-        onClick={() =>
-          protocol.execute(
-            { type: "claim", identityIds: [identityId] },
-            applicationCopy.rewards.claim,
-          )
-        }
-        type="button"
-      >
-        {applicationCopy.rewards.claim}
-      </Button>
-      {disabledReason === undefined ? null : (
-        <DisabledReason id="craft-claim-disabled-reason">
-          {disabledReason}
-        </DisabledReason>
-      )}
-    </div>
+    <ClaimReview
+      batch={[identityId]}
+      rewarded={[craft]}
+      disabledReason={
+        craft.pendingRewardsStatus === "unavailable" ||
+        craft.claimEligibilityStatus === "unavailable"
+          ? "Reward details are updating. Wait for a current read before claiming."
+          : disabledReason
+      }
+      onConfirm={() =>
+        void protocol.execute(
+          { type: "claim", identityIds: [identityId] },
+          applicationCopy.rewards.claim,
+        )
+      }
+    />
   );
 }
 
@@ -841,7 +920,10 @@ function CraftPortrait({
           className="h-auto w-full max-w-[16rem]"
           decorative
           identityId={identityId}
-          kind={permanent ? "permanent" : "transient"}
+          kind={
+            identityId > 4440 ? "relic" : permanent ? "permanent" : "transient"
+          }
+          lit={permanent}
           track={trackIndexFor(craft.rewardTrack)}
         />
         <figcaption className="font-mono text-caption text-ink-soft tabular-nums">
@@ -868,7 +950,7 @@ export function CraftDetailPanel({
   );
   const controlsDisabledReason = transactionControlDisabledReason(
     protocol,
-    directRead.data !== undefined,
+    directRead.data !== undefined && !directRead.isError,
   );
 
   if (craft === undefined) {
@@ -907,6 +989,7 @@ export function CraftDetailPanel({
             permanent={isPermanent}
           />
           <CollectibleExplorerLinks identityId={identityId} />
+          <CollectorHelp topic="wallet-artwork" />
         </div>
 
         <div className="grid gap-3 laptop:col-span-7">
@@ -949,15 +1032,12 @@ export function CraftDetailPanel({
                 rewards={rewards}
               />
               <TransferControl
+                permanent={isPermanent}
                 disabledReason={controlsDisabledReason}
                 identityId={identityId}
                 owner={directOwner(directRead.data) ?? protocol.address}
                 protocol={protocol}
                 visible={currentOwner}
-              />
-              <TransactionStatus
-                onRetry={() => void protocol.retry()}
-                state={protocol.transaction}
               />
             </div>
           </Panel>

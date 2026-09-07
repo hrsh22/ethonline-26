@@ -109,7 +109,7 @@ describe("identity configuration", () => {
       "whole-unit Assignment",
     );
     expect(neutralCopy.onboarding.discoveryDisclosure).toContain(
-      "independently verified callback",
+      "verified randomness arrives and the delivery service completes the onchain result",
     );
     expect(neutralCopy.onboarding.discoveryDisclosure).not.toMatch(
       /immediate|block-derived/iu,

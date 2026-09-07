@@ -11,7 +11,7 @@
     "test:production": "pnpm test:release",
     "test:browser": "node ../../scripts/staging-web.ts browser",
     "test:browser:self": "node ../../scripts/staging-web.ts browser:self",
-    "test:release": "NEXT_PUBLIC_APP_URL=https://orbit.test NEXT_PUBLIC_REOWN_PROJECT_ID=00000000000000000000000000000000 pnpm build && pnpm test:browser",
+    "test:release": "NEXT_PUBLIC_API_URL=http://127.0.0.1:18800 NEXT_PUBLIC_APP_URL=https://orbit.test NEXT_PUBLIC_REOWN_PROJECT_ID=00000000000000000000000000000000 pnpm build && pnpm test:browser",
     "lint": "eslint --max-warnings=0",
     "test": "vitest run",
     "typecheck": "node ../../scripts/staging-web.ts typecheck"

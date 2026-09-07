@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { parseUnits } from "viem";
 import { describe, expect, it } from "vitest";
 
-import { CraftArt } from "./craft-art";
+import { CraftArt, craftGeometry } from "./craft-art";
 import { Amount, Rate, Unavailable } from "./value";
 
 const markup = (element: React.ReactElement) => renderToStaticMarkup(element);
@@ -49,6 +49,19 @@ describe("craft art", () => {
     expect(beside).toContain('aria-hidden="true"');
     expect(beside).not.toContain('role="img"');
     expect(beside).not.toContain("aria-label");
+  });
+
+  it("keeps every ordinary Orbiter plume inside the artwork canvas", () => {
+    for (let identityId = 1; identityId <= 4440; identityId += 1) {
+      const coordinates = craftGeometry(identityId, 1)
+        .plume.match(/-?\d+(?:\.\d+)?/gu)!
+        .map(Number);
+      const heights = coordinates.filter((_value, index) => index % 2 === 1);
+      expect(
+        Math.max(...heights),
+        `Orbiter #${identityId} plume is clipped`,
+      ).toBeLessThanOrEqual(120);
+    }
   });
 
   it("draws the same geometry for an identity every time", () => {

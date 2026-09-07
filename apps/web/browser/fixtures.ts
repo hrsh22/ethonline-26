@@ -14,7 +14,7 @@ import { adminRpcResponse } from "./admin-fixture.ts";
  * failure state in a browser run.
  */
 export type WalletFixture =
-  "disconnected" | "connecting" | "wrong-network" | "ordinary";
+  "disconnected" | "connecting" | "wrong-network" | "ordinary" | "transacting";
 
 export type DataFixture =
   /** No interception. Reserved for a run against a real worker. */
@@ -84,6 +84,8 @@ export const installWalletFixture = async (
         listeners.get(event)?.forEach((handler) => handler(value));
       const provider = {
         isMetaMask: true,
+        // Keep the isolated EIP-1193 method allowlist auditable in one place.
+        // eslint-disable-next-line complexity
         request: async ({
           method,
           params,
@@ -110,7 +112,23 @@ export const installWalletFixture = async (
             return null;
           }
           if (method === "wallet_getCapabilities") return {};
-          // No fixture can sign or broadcast. The matrix tests reads and UI only.
+          if (mode === "transacting" && method === "personal_sign")
+            return `0x${"1".repeat(130)}`;
+          if (mode === "transacting" && method === "eth_sendTransaction") {
+            const response = await fetch(
+              "https://browser-matrix.invalid/transaction",
+              { method: "POST", body: JSON.stringify(params?.[0]) },
+            );
+            if (!response.ok)
+              throw new Error("Test transaction handler unavailable");
+            const result = await response.json();
+            if (result.error)
+              throw Object.assign(new Error(result.error.message), {
+                code: result.error.code,
+              });
+            return result.hash;
+          }
+          // Only the isolated controller above accepts transactions. No real broadcast.
           throw Object.assign(
             new Error(`Unsupported wallet method: ${method}`),
             { code: 4200 },
@@ -247,6 +265,7 @@ export const historyFixtureResponse = (
       "/v1/history/market/fees",
       "/v1/history/protocol/liquidity-cycles",
       "/v1/history/protocol/permanent-commitments",
+      "/v1/history/protocol/discoveries",
       "/v1/history/protocol/rewards",
     ].includes(url.pathname)
   )
@@ -324,7 +343,7 @@ export const installDataFixture = async (
           entries.set(key, value);
         },
       },
-      manifest.launch.transactionHash,
+      deploymentManifestFingerprint(manifest),
       cachedPublicSnapshot,
       1_700_000_005_000,
     );
@@ -335,6 +354,28 @@ export const installDataFixture = async (
       [...entries],
     );
   }
+
+  await page.route("**/v1/delivery/status", async (route) => {
+    const now = Date.now();
+    await route.fulfill({
+      status: 200,
+      json: {
+        apiVersion: 1,
+        chainId: manifest.chainId,
+        deploymentFingerprint: deploymentManifestFingerprint(manifest),
+        observedAt: now,
+        expiresAt: now + 30_000,
+        policy: { mode: "live", oneShot: "none" },
+        liveness: {
+          state: "online",
+          heartbeatAt: now,
+          expiresAt: now + 30_000,
+        },
+        dependencyReadiness: "unknown",
+        workEligibility: "unknown",
+      },
+    });
+  });
 
   // Wallet discovery is local EIP-6963; CI needs no Reown account or directory.
   await page.route("https://api.web3modal.org/**", async (route) => {
@@ -462,6 +503,7 @@ export const walletFixtureLabels: Readonly<Record<WalletFixture, string>> = {
   disconnected: "disconnected wallet",
   connecting: "connecting wallet",
   "wrong-network": "wallet on another chain",
+  transacting: "isolated transaction wallet",
   ordinary: "ordinary connected wallet",
 };
 

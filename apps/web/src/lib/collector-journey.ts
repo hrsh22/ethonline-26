@@ -42,6 +42,10 @@ export interface CollectorJourneyMetrics {
 
 interface JourneyCollectible {
   readonly identityId: number;
+  readonly claimEligible?: boolean;
+  readonly pendingRewardsStatus?: "observed" | "unavailable";
+  readonly claimEligibilityStatus?: "observed" | "unavailable";
+  readonly pendingRewards?: readonly { readonly rawTokenUnits: bigint }[];
 }
 
 interface JourneyWalletSnapshot {
@@ -57,6 +61,7 @@ interface JourneyWalletSnapshot {
   };
   readonly collectibles: {
     readonly pendingDiscovery: { readonly count: number };
+    readonly permanentHoldingsStatus?: "complete" | "partial" | "unavailable";
     readonly transient: readonly JourneyCollectible[];
     readonly permanent: readonly JourneyCollectible[];
   };
@@ -69,7 +74,11 @@ type JourneyWalletRead =
     }
   | { readonly status: "loading" }
   | { readonly status: "failed"; readonly error: Error }
-  | { readonly status: "loaded"; readonly snapshot: JourneyWalletSnapshot };
+  | {
+      readonly status: "loaded";
+      readonly snapshot: JourneyWalletSnapshot;
+      readonly stale?: boolean;
+    };
 
 interface CollectorJourneyInput {
   readonly accessState: CollectorAccessState;
@@ -82,10 +91,13 @@ interface CollectorJourneyInput {
  * Distinguishes progress that is still arriving from progress that cannot be
  * read at all, so the view never renders an ambiguous placeholder glyph.
  */
-export type CollectorProgressState = "loading" | "unavailable" | "ready";
+export type CollectorProgressState =
+  "loading" | "unavailable" | "partial" | "ready" | "disconnected";
 
 export interface CollectorJourneyView {
   readonly complete: boolean;
+  readonly fundingPending: boolean;
+  readonly hasClaimableRewards: boolean;
   readonly currentPhase: CollectorJourneyPhase | undefined;
   readonly metrics: CollectorJourneyMetrics;
   readonly progressState: CollectorProgressState;
@@ -177,7 +189,17 @@ const launchPhase = (
 const progressState = (
   walletRead: JourneyWalletRead,
 ): CollectorProgressState => {
-  if (walletRead.status === "loaded") return "ready";
+  if (
+    walletRead.status === "blocked" &&
+    walletRead.accessState === "disconnected"
+  )
+    return "disconnected";
+  if (walletRead.status === "loaded") {
+    return walletRead.stale !== true &&
+      walletRead.snapshot.collectibles.permanentHoldingsStatus === "complete"
+      ? "ready"
+      : "partial";
+  }
   return walletRead.status === "loading" ? "loading" : "unavailable";
 };
 
@@ -205,6 +227,24 @@ const hasTradeAssets = (
   return canPayNatively || canPayWithWeth;
 };
 
+const fundingIsPending = (
+  response: TestnetFundingResponse | undefined,
+): boolean =>
+  response?.recipient?.state === "pending" ||
+  response?.request?.state === "pending" ||
+  response?.request?.state === "retryable";
+
+const hasClaimableRewards = (
+  snapshot: JourneyWalletSnapshot | undefined,
+): boolean =>
+  snapshot?.collectibles.permanent.some(
+    (craft) =>
+      craft.claimEligible === true &&
+      craft.claimEligibilityStatus !== "unavailable" &&
+      craft.pendingRewardsStatus !== "unavailable" &&
+      craft.pendingRewards?.some((reward) => reward.rawTokenUnits > 0n),
+  ) === true;
+
 export const createCollectorJourneyView = ({
   accessState,
   fundingResponse,
@@ -222,12 +262,18 @@ export const createCollectorJourneyView = ({
     isTestnetFundingComplete(fundingResponse) ||
     hasTradeAssets(snapshot, nativeBalanceWei, fundingResponse);
   const phases = [
-    fundPhase(accessState, tradeReady, journeyAdvanced),
+    accessState === "ready" &&
+    !journeyAdvanced &&
+    progressState(walletRead) !== "ready"
+      ? phase("fund", "waiting", "none")
+      : fundPhase(accessState, tradeReady, journeyAdvanced),
     discoveryPhase(metrics),
     launchPhase(metrics, primaryTransientId),
   ] as const;
   return {
     complete: metrics.permanent > 0,
+    fundingPending: fundingIsPending(fundingResponse),
+    hasClaimableRewards: hasClaimableRewards(snapshot),
     currentPhase: phases.find((entry) => entry.status === "current"),
     metrics,
     phases,

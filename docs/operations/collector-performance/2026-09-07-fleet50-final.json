@@ -1,0 +1,290 @@
+{
+  "origin": "http://127.0.0.1:3132",
+  "browserVersion": "151.0.7922.34",
+  "recordedAt": "2026-09-07T07:09:04.000Z",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh browser context; HTTP cache disabled; wallet storage restored",
+  "results": [
+    {
+      "route": "/fleet",
+      "scenario": "fleet-50",
+      "run": 1,
+      "heldIdentities": 50,
+      "renderedInspectLinks": 25,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6794.199999988079,
+      "cls": 0.0039142905675944575,
+      "fcp": 752,
+      "lcp": 6796,
+      "lcpElement": "<p class=\"mt-0.5 max-w-[65ch] text-body-sm text-ink-soft\">Launch is optional. It burns exactly one $FUEL forever and makes this craft a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1106.800000011921,
+          "score": 0.00017895362663495837,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 179.59375,
+                "width": 343,
+                "height": 40,
+                "top": 179.59375,
+                "right": 359,
+                "bottom": 219.59375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 176.59375,
+                "width": 343,
+                "height": 40,
+                "top": 176.59375,
+                "right": 359,
+                "bottom": 216.59375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": ["unknown"]
+        },
+        {
+          "at": 5865,
+          "score": 0.0039142905675944575,
+          "bounds": [
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\">"
+          ]
+        }
+      ],
+      "elapsed": 15002.699999988079
+    },
+    {
+      "route": "/fleet",
+      "scenario": "fleet-50",
+      "run": 2,
+      "heldIdentities": 50,
+      "renderedInspectLinks": 25,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6785.9000000059605,
+      "cls": 0.0039142905675944575,
+      "fcp": 760,
+      "lcp": 6776,
+      "lcpElement": "<p class=\"mt-0.5 max-w-[65ch] text-body-sm text-ink-soft\">Launch is optional. It burns exactly one $FUEL forever and makes this craft a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1107.4000000059605,
+          "score": 0.00017895362663495837,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 179.59375,
+                "width": 343,
+                "height": 40,
+                "top": 179.59375,
+                "right": 359,
+                "bottom": 219.59375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 176.59375,
+                "width": 343,
+                "height": 40,
+                "top": 176.59375,
+                "right": 359,
+                "bottom": 216.59375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": ["unknown"]
+        },
+        {
+          "at": 5863.4000000059605,
+          "score": 0.0039142905675944575,
+          "bounds": [
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\">"
+          ]
+        }
+      ],
+      "elapsed": 15004.300000011921
+    },
+    {
+      "route": "/fleet",
+      "scenario": "fleet-50",
+      "run": 3,
+      "heldIdentities": 50,
+      "renderedInspectLinks": 25,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6786.799999982119,
+      "cls": 0.0039142905675944575,
+      "fcp": 756,
+      "lcp": 6784,
+      "lcpElement": "<p class=\"mt-0.5 max-w-[65ch] text-body-sm text-ink-soft\">Launch is optional. It burns exactly one $FUEL forever and makes this craft a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1105.9000000059605,
+          "score": 0.00017895362663495837,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 179.59375,
+                "width": 343,
+                "height": 40,
+                "top": 179.59375,
+                "right": 359,
+                "bottom": 219.59375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 176.59375,
+                "width": 343,
+                "height": 40,
+                "top": 176.59375,
+                "right": 359,
+                "bottom": 216.59375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": ["unknown"]
+        },
+        {
+          "at": 5863.0999999940395,
+          "score": 0.0039142905675944575,
+          "bounds": [
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\">"
+          ]
+        }
+      ],
+      "elapsed": 15004.199999988079
+    }
+  ],
+  "productSource": "60c43eab6e24f8c86f5b3151d68beb5b831cfae1",
+  "productionBuildId": "VUTjVKCEc76BibtbJ3qU-"
+}

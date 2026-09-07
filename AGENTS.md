@@ -16,3 +16,7 @@ This repository uses the single-context domain-doc layout. See `docs/agents/doma
 
 When preview is unavailable, use the Chrome plugin, then macOS Computer Use as needed.
 Before reporting a connection blocker, follow [Chrome connection recovery](docs/operations/browser-matrix.md#chrome-connection-recovery), including the user's standing permission to reopen the test profile.
+
+### General
+
+If my instructions are ambiguous, ask me to clarify before proceeding.

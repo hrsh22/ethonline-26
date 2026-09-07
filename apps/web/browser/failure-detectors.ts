@@ -261,14 +261,34 @@ export const collectorHeaderCollisionFailure = async (
         top: rect.top,
       };
     };
+    const visibleLinkBox = (element: Element) => {
+      const result = box(element);
+      for (
+        let ancestor = element.parentElement;
+        ancestor !== null && ancestor !== header;
+        ancestor = ancestor.parentElement
+      ) {
+        const style = getComputedStyle(ancestor);
+        const clip = box(ancestor);
+        if (/auto|scroll|hidden|clip/.test(style.overflowY)) {
+          result.top = Math.max(result.top, clip.top);
+          result.bottom = Math.min(result.bottom, clip.bottom);
+        }
+        if (/auto|scroll|hidden|clip/.test(style.overflowX)) {
+          result.left = Math.max(result.left, clip.left);
+          result.right = Math.min(result.right, clip.right);
+        }
+      }
+      return result;
+    };
     const links = [...navigation.querySelectorAll<HTMLElement>("a")].filter(
       (link) => link.getBoundingClientRect().width > 0,
     );
     return {
       actions: box(actions),
       brand: box(brand),
-      first: box(links.at(0) ?? brand),
-      last: box(links.at(-1) ?? brand),
+      first: visibleLinkBox(links.at(0) ?? brand),
+      last: visibleLinkBox(links.at(-1) ?? brand),
       // The responsive menu hides an ancestor, so the nav's own display
       // value can remain block while none of its links have a rendered box.
       navigationVisible: links.length > 0,
@@ -316,16 +336,37 @@ export const focusFailure = async (
   page: Page,
   label: string,
 ): Promise<BrowserFailure | undefined> => {
-  await page.keyboard.press("Tab");
-  const focused = await page.evaluate(() => {
+  const startedOnControl = await page.evaluate(() => {
     const active = document.activeElement;
-    if (active === null || active === document.body) return undefined;
-    const rectangle = active.getBoundingClientRect();
-    return {
-      tag: active.tagName.toLowerCase(),
-      visible: rectangle.width > 0 && rectangle.height > 0,
-    };
+    return (
+      active instanceof HTMLElement &&
+      active !== document.body &&
+      active.tabIndex >= 0
+    );
   });
+  await page.keyboard.press("Tab");
+  const readFocus = () =>
+    page.evaluate(() => {
+      const active = document.activeElement;
+      if (active === null || active === document.body) return undefined;
+      const rectangle = active.getBoundingClientRect();
+      return {
+        tag: active.tagName.toLowerCase(),
+        visible: rectangle.width > 0 && rectangle.height > 0,
+      };
+    });
+  let focused = await readFocus();
+  // A final control can tab into browser chrome. Its forward tab-cycle length
+  // varies by platform; reverse that one traversal only when focus really left
+  // the document. BODY focus loss inside the page remains a failure.
+  if (
+    focused === undefined &&
+    startedOnControl &&
+    !(await page.evaluate(() => document.hasFocus()))
+  ) {
+    await page.keyboard.press("Shift+Tab");
+    focused = await readFocus();
+  }
   if (focused === undefined) {
     return { kind: "focus-broken", detail: `${label}: Tab reached no control` };
   }

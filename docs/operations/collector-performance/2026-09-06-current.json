@@ -1,0 +1,996 @@
+{
+  "origin": "http://127.0.0.1:3110",
+  "browserVersion": "151.0.7922.34",
+  "recordedAt": "2026-09-06T12:45:04.136Z",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh browser context; HTTP cache disabled; wallet storage restored",
+  "results": [
+    {
+      "route": "/fleet",
+      "run": 1,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6825.300000011921,
+      "cls": 0.0039142905675944575,
+      "fcp": 788,
+      "lcp": 6772,
+      "lcpElement": "<p class=\"mt-0.5 max-w-[65ch] text-body-sm text-ink-soft\">Launch is optional. It burns exactly one $FUEL forever and makes this craft a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1113.5999999940395,
+          "score": 0.003619909334126041,
+          "bounds": [
+            {
+              "before": {
+                "x": 62.40625,
+                "y": 5.5,
+                "width": 296.59375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 62.40625
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div cla",
+            "unknown"
+          ]
+        },
+        {
+          "at": 5877.9000000059605,
+          "score": 0.0039142905675944575,
+          "bounds": [
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\"><span aria-"
+          ]
+        }
+      ],
+      "elapsed": 15003
+    },
+    {
+      "route": "/fleet",
+      "run": 2,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6820.299999982119,
+      "cls": 0.0039142905675944575,
+      "fcp": 796,
+      "lcp": 6764,
+      "lcpElement": "<p class=\"mt-0.5 max-w-[65ch] text-body-sm text-ink-soft\">Launch is optional. It burns exactly one $FUEL forever and makes this craft a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1115,
+          "score": 0.003619909334126041,
+          "bounds": [
+            {
+              "before": {
+                "x": 62.40625,
+                "y": 5.5,
+                "width": 296.59375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 62.40625
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div cla",
+            "unknown"
+          ]
+        },
+        {
+          "at": 5878,
+          "score": 0.0039142905675944575,
+          "bounds": [
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\"><span aria-"
+          ]
+        }
+      ],
+      "elapsed": 15002.799999982119
+    },
+    {
+      "route": "/fleet",
+      "run": 3,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6837.299999982119,
+      "cls": 0.0039142905675944575,
+      "fcp": 784,
+      "lcp": 6760,
+      "lcpElement": "<p class=\"mt-0.5 max-w-[65ch] text-body-sm text-ink-soft\">Launch is optional. It burns exactly one $FUEL forever and makes this craft a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1109.0999999940395,
+          "score": 0.003619909334126041,
+          "bounds": [
+            {
+              "before": {
+                "x": 62.40625,
+                "y": 5.5,
+                "width": 296.59375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 62.40625
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div cla",
+            "unknown"
+          ]
+        },
+        {
+          "at": 5872.5,
+          "score": 0.0039142905675944575,
+          "bounds": [
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\"><span aria-"
+          ]
+        }
+      ],
+      "elapsed": 15003.899999976158
+    },
+    {
+      "route": "/exchange",
+      "run": 1,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6822.5,
+      "cls": 0.03734382431629014,
+      "fcp": 792,
+      "lcp": 792,
+      "lcpElement": "<p class=\"mt-2 text-body text-ink-soft\">Buy and sell $FUEL for ETH or WETH with a live balance-checked quote.</p>",
+      "shifts": [
+        {
+          "at": 1116.3999999761581,
+          "score": 0.03734382431629014,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 333.96875,
+                "width": 343,
+                "height": 478.03125,
+                "top": 333.96875,
+                "right": 359,
+                "bottom": 812,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 308.375,
+                "width": 343,
+                "height": 503.625,
+                "top": 308.375,
+                "right": 359,
+                "bottom": 812,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 62.40625,
+                "y": 5.5,
+                "width": 296.59375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 62.40625
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": [
+            "<div class=\"mt-4 grid gap-3 laptop:grid-cols-12\"><div class=\"laptop:col-span-12\"><!--$!--><template data-dgst=\"BAILOUT_TO_CLIENT_SIDE_RENDERING\"></template><!--/$--></div><div class=\"flex min-w-0 flex-col rounded-[var(--radius-surface)] border bg-surface-1 border-line laptop:col-span-7\" data-panel=\"true\"><div class=\"flex min-h-9 items-center justif",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div cla",
+            "unknown"
+          ]
+        },
+        {
+          "at": 5900.0999999940395,
+          "score": 0.010835278701254579,
+          "bounds": [
+            {
+              "before": {
+                "x": 33,
+                "y": 740.96875,
+                "width": 309,
+                "height": 71.03125,
+                "top": 740.96875,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "after": {
+                "x": 33,
+                "y": 774.5625,
+                "width": 309,
+                "height": 37.4375,
+                "top": 774.5625,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<p class=\"text-body-sm text-ink-soft\">Your wallet may first ask to approve WETH, then confirm the purchase. Approval alone does not complete the trade.</p>",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\"><span aria-"
+          ]
+        },
+        {
+          "at": 6754,
+          "score": 0.0029807941681428817,
+          "bounds": [
+            {
+              "before": {
+                "x": 33,
+                "y": 774.5625,
+                "width": 309,
+                "height": 37.4375,
+                "top": 774.5625,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "after": {
+                "x": 33,
+                "y": 740.96875,
+                "width": 309,
+                "height": 71.03125,
+                "top": 740.96875,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<p class=\"text-body-sm text-ink-soft\">Your wallet may first ask to approve WETH, then confirm the purchase. Approval alone does not complete the trade.</p>"
+          ]
+        }
+      ],
+      "elapsed": 15004.199999988079
+    },
+    {
+      "route": "/exchange",
+      "run": 2,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6814.5,
+      "cls": 0.03734382431629014,
+      "fcp": 776,
+      "lcp": 776,
+      "lcpElement": "<p class=\"mt-2 text-body text-ink-soft\">Buy and sell $FUEL for ETH or WETH with a live balance-checked quote.</p>",
+      "shifts": [
+        {
+          "at": 1109.1000000238419,
+          "score": 0.03734382431629014,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 333.96875,
+                "width": 343,
+                "height": 478.03125,
+                "top": 333.96875,
+                "right": 359,
+                "bottom": 812,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 308.375,
+                "width": 343,
+                "height": 503.625,
+                "top": 308.375,
+                "right": 359,
+                "bottom": 812,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 62.40625,
+                "y": 5.5,
+                "width": 296.59375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 62.40625
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": [
+            "<div class=\"mt-4 grid gap-3 laptop:grid-cols-12\"><div class=\"laptop:col-span-12\"><!--$!--><template data-dgst=\"BAILOUT_TO_CLIENT_SIDE_RENDERING\"></template><!--/$--></div><div class=\"flex min-w-0 flex-col rounded-[var(--radius-surface)] border bg-surface-1 border-line laptop:col-span-7\" data-panel=\"true\"><div class=\"flex min-h-9 items-center justif",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div cla",
+            "unknown"
+          ]
+        },
+        {
+          "at": 5891.600000023842,
+          "score": 0.010835278701254579,
+          "bounds": [
+            {
+              "before": {
+                "x": 33,
+                "y": 740.96875,
+                "width": 309,
+                "height": 71.03125,
+                "top": 740.96875,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "after": {
+                "x": 33,
+                "y": 774.5625,
+                "width": 309,
+                "height": 37.4375,
+                "top": 774.5625,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<p class=\"text-body-sm text-ink-soft\">Your wallet may first ask to approve WETH, then confirm the purchase. Approval alone does not complete the trade.</p>",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\"><span aria-"
+          ]
+        },
+        {
+          "at": 6743.600000023842,
+          "score": 0.0029807941681428817,
+          "bounds": [
+            {
+              "before": {
+                "x": 33,
+                "y": 774.5625,
+                "width": 309,
+                "height": 37.4375,
+                "top": 774.5625,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "after": {
+                "x": 33,
+                "y": 740.96875,
+                "width": 309,
+                "height": 71.03125,
+                "top": 740.96875,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<p class=\"text-body-sm text-ink-soft\">Your wallet may first ask to approve WETH, then confirm the purchase. Approval alone does not complete the trade.</p>"
+          ]
+        }
+      ],
+      "elapsed": 15002.700000017881
+    },
+    {
+      "route": "/exchange",
+      "run": 3,
+      "rpcHttp": 19,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 7,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 1
+      },
+      "readyMilliseconds": 6836.800000011921,
+      "cls": 0.03734382431629014,
+      "fcp": 792,
+      "lcp": 792,
+      "lcpElement": "<p class=\"mt-2 text-body text-ink-soft\">Buy and sell $FUEL for ETH or WETH with a live balance-checked quote.</p>",
+      "shifts": [
+        {
+          "at": 1117.4000000059605,
+          "score": 0.03734382431629014,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 333.96875,
+                "width": 343,
+                "height": 478.03125,
+                "top": 333.96875,
+                "right": 359,
+                "bottom": 812,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 308.375,
+                "width": 343,
+                "height": 503.625,
+                "top": 308.375,
+                "right": 359,
+                "bottom": 812,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 62.40625,
+                "y": 5.5,
+                "width": 296.59375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 62.40625
+              },
+              "after": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 116.09375,
+                "width": 343,
+                "height": 16,
+                "top": 116.09375,
+                "right": 359,
+                "bottom": 132.09375,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": [
+            "<div class=\"mt-4 grid gap-3 laptop:grid-cols-12\"><div class=\"laptop:col-span-12\"><!--$!--><template data-dgst=\"BAILOUT_TO_CLIENT_SIDE_RENDERING\"></template><!--/$--></div><div class=\"flex min-w-0 flex-col rounded-[var(--radius-surface)] border bg-surface-1 border-line laptop:col-span-7\" data-panel=\"true\"><div class=\"flex min-h-9 items-center justif",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><div cla",
+            "unknown"
+          ]
+        },
+        {
+          "at": 5883.700000017881,
+          "score": 0.010835278701254579,
+          "bounds": [
+            {
+              "before": {
+                "x": 33,
+                "y": 740.96875,
+                "width": 309,
+                "height": 71.03125,
+                "top": 740.96875,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "after": {
+                "x": 33,
+                "y": 774.5625,
+                "width": 309,
+                "height": 37.4375,
+                "top": 774.5625,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 77.15625,
+                "y": 5.5,
+                "width": 281.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 77.15625
+              },
+              "after": {
+                "x": 155.15625,
+                "y": 5.5,
+                "width": 203.84375,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 155.15625
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<p class=\"text-body-sm text-ink-soft\">Your wallet may first ask to approve WETH, then confirm the purchase. Approval alone does not complete the trade.</p>",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"connected\"><span aria-"
+          ]
+        },
+        {
+          "at": 6730.800000011921,
+          "score": 0.0029807941681428817,
+          "bounds": [
+            {
+              "before": {
+                "x": 33,
+                "y": 774.5625,
+                "width": 309,
+                "height": 37.4375,
+                "top": 774.5625,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "after": {
+                "x": 33,
+                "y": 740.96875,
+                "width": 309,
+                "height": 71.03125,
+                "top": 740.96875,
+                "right": 342,
+                "bottom": 812,
+                "left": 33
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<p class=\"text-body-sm text-ink-soft\">Your wallet may first ask to approve WETH, then confirm the purchase. Approval alone does not complete the trade.</p>"
+          ]
+        }
+      ],
+      "elapsed": 15004.40000000596
+    }
+  ]
+}

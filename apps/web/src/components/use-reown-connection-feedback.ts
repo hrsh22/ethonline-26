@@ -20,7 +20,6 @@ export const connectionRejectionState = (
     case "MODAL_CLOSE": {
       if (!isRecord(event.properties)) return undefined;
       if (event.properties.connected === true) return false;
-      if (event.properties.connected === false) return true;
       return undefined;
     }
     default:
@@ -35,6 +34,9 @@ export function useReownConnectionFeedback() {
   useEffect(
     () =>
       modal?.subscribeEvents?.((event) => {
+        if (event.data.event === "MODAL_CLOSE") {
+          attemptedConnection.current = false;
+        }
         const nextRejected = connectionRejectionState(event.data);
         if (nextRejected === undefined) return;
 

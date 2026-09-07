@@ -8,6 +8,13 @@ const routeState = vi.hoisted(() => ({ pathname: "/exchange" }));
 
 // The live readout needs the protocol provider; the shell tests exercise
 // navigation and wallet states, not protocol reads.
+// Activity has its own provider and browser journeys; these checks isolate shell navigation.
+vi.mock("@/components/shell/collector-activity", () => ({
+  CollectorActivity: () => null,
+}));
+vi.mock("@/providers/protocol-client-provider", () => ({
+  useProtocolClient: () => ({ transaction: { status: "idle" } }),
+}));
 vi.mock("@/components/shell/live-pulse", () => ({ LivePulse: () => null }));
 vi.mock("next/navigation", () => ({
   usePathname: () => routeState.pathname,
@@ -38,6 +45,39 @@ describe("collector mobile navigation", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+  });
+
+  it("offers Fleet, Trade, and Rewards directly and restores focus after More", async () => {
+    await act(async () =>
+      root.render(
+        <CollectorShell>
+          <main>Collector content</main>
+        </CollectorShell>,
+      ),
+    );
+    const nav = container.querySelector(
+      'nav[aria-label="Mobile collector navigation"]',
+    );
+    expect(
+      [...(nav?.querySelectorAll("a") ?? [])].map((link) =>
+        link.getAttribute("href"),
+      ),
+    ).toEqual(["/fleet", "/exchange", "/rewards"]);
+    expect(
+      nav?.querySelector('a[aria-current="page"]')?.getAttribute("href"),
+    ).toBe("/exchange");
+    const more = nav?.querySelector<HTMLButtonElement>(
+      'button[aria-label="More navigation"]',
+    );
+    await act(async () => more?.click());
+    expect(more?.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      container.querySelector("#collector-navigation a[href='/learn']"),
+    ).not.toBeNull();
+    await act(async () =>
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })),
+    );
+    expect(document.activeElement).toBe(more);
   });
 
   it("opens explicitly and returns focus to its control when Escape closes it", async () => {
@@ -194,12 +234,15 @@ describe("collector mobile navigation", () => {
     expect(first).toBeDefined();
     expect(last).toBeDefined();
 
-    // The toggle is the cycle's last element in document order, so Tab from
+    const lastControl = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="More navigation"]',
+    );
+    // The bottom More control is the cycle's last element in document order, so Tab from
     // it wraps to the first link. The old order fabricated [toggle, ...links]
     // and wrapped Tab from the last link straight to the toggle -- skipping
     // the wallet controls that sit between them, which left a keyboard user
     // no path to connecting a wallet while the menu was open.
-    toggle?.focus();
+    lastControl?.focus();
     await act(async () =>
       document.dispatchEvent(
         new KeyboardEvent("keydown", { bubbles: true, key: "Tab" }),
@@ -217,7 +260,7 @@ describe("collector mobile navigation", () => {
         }),
       ),
     );
-    expect(document.activeElement).toBe(toggle);
+    expect(document.activeElement).toBe(lastControl);
 
     // Mid-cycle Tab is not intercepted: from the last link it proceeds
     // naturally toward the header actions instead of being wrapped past them.

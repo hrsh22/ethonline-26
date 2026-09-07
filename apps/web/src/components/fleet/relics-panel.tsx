@@ -6,7 +6,7 @@ import { blockedAccessMessage } from "@/components/access-notice";
 import { StateFeedback } from "@/components/state-feedback";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
-import { CraftArt } from "@/components/ui/craft-art";
+import { RelicPreview } from "@/components/ui/craft-preview";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Panel } from "@/components/ui/panel";
 import { Unavailable } from "@/components/ui/value";
@@ -65,10 +65,15 @@ const ownershipFor = (
   identityId: number,
 ): OwnershipState => {
   if (walletRead.status !== "loaded") return "unknown";
-  const held = walletRead.snapshot.collectibles.permanent.some(
-    (craft) => craft.identityId === identityId,
-  );
-  return held ? "held" : "not-held";
+  const held = [
+    ...walletRead.snapshot.collectibles.transient,
+    ...walletRead.snapshot.collectibles.permanent,
+  ].some((craft) => craft.identityId === identityId);
+  return held
+    ? "held"
+    : walletRead.snapshot.collectibles.permanentHoldingsStatus === "complete"
+      ? "not-held"
+      : "unknown";
 };
 
 const ownership: Record<
@@ -101,6 +106,8 @@ const ownership: Record<
  */
 const unknownOwnershipReason = (walletRead: WalletRead): string => {
   switch (walletRead.status) {
+    case "loaded":
+      return "Ownership is updating. Confirmed holdings remain visible.";
     case "loading":
       return applicationCopy.access.walletLoadingTitle;
     case "failed":
@@ -142,13 +149,8 @@ function RelicCard({
       data-relic-card
       data-relic-role={relic.role}
     >
-      <div className="flex items-center justify-center border-b border-line bg-canvas p-4">
-        <CraftArt
-          className="size-32"
-          decorative
-          identityId={relic.identityId}
-          kind="relic"
-        />
+      <div className="border-b border-line bg-canvas">
+        <RelicPreview identityId={relic.identityId} />
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -172,25 +174,25 @@ function RelicCard({
           />
         </DataList>
         <p className="mt-auto text-caption text-ink-soft">{caption}</p>
-        {state === "held" ? (
-          <Link
-            className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
-            href={`/fleet/${relic.identityId}`}
-          >
-            {applicationCopy.relics.inspectIdentity(relic.identityId)}
-          </Link>
-        ) : null}
+        <Link
+          className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
+          href={`/fleet/${relic.identityId}`}
+        >
+          {applicationCopy.relics.inspectIdentity(relic.identityId)}
+        </Link>
       </div>
     </article>
   );
 }
 
 function RelicNextAction({ walletRead }: { readonly walletRead: WalletRead }) {
-  if (walletRead.status !== "loaded") return null;
-  const holdsRelic = relicIdentities.some(({ identityId }) =>
-    walletRead.snapshot.collectibles.permanent.some(
-      (craft) => craft.identityId === identityId,
-    ),
+  if (
+    walletRead.status !== "loaded" ||
+    walletRead.snapshot.collectibles.permanentHoldingsStatus !== "complete"
+  )
+    return null;
+  const holdsRelic = relicIdentities.some(
+    ({ identityId }) => ownershipFor(walletRead, identityId) === "held",
   );
   if (holdsRelic) return null;
   return (

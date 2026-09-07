@@ -1,3 +1,7 @@
+import {
+  decodeDeliveryStatus,
+  type DeliveryStatus,
+} from "@orbit/config/public-api";
 import type { Address, Hex } from "viem";
 import { recoverMessageAddress } from "viem";
 
@@ -275,4 +279,48 @@ export const readOperatorControlState = (
     }),
     writerLease: dependencies.store.readWriterLease(),
   };
+};
+
+/** Public evidence never includes command audit, actor, lease, or diagnostics. */
+export const readPublicDeliveryStatus = (
+  dependencies: OperatorControlDependencies,
+): DeliveryStatus => {
+  const state = readOperatorControlState(dependencies);
+  const observedAt = dependencies.now();
+  return decodeDeliveryStatus({
+    apiVersion: 1,
+    chainId: dependencies.configuration.chainId,
+    deploymentFingerprint: dependencies.configuration.deploymentFingerprint,
+    observedAt,
+    expiresAt: observedAt + 30_000,
+    policy: { mode: state.desired.mode, oneShot: state.desired.oneShot },
+    liveness: {
+      state: state.service,
+      ...(state.heartbeat === undefined
+        ? {}
+        : {
+            heartbeatAt: state.heartbeat.at,
+            expiresAt:
+              state.heartbeat.at +
+              dependencies.configuration.heartbeatStaleAfterMilliseconds,
+          }),
+    },
+    dependencyReadiness: "unknown",
+    workEligibility: "unknown",
+    ...(state.latestRun === undefined
+      ? {}
+      : {
+          latestRun: {
+            outcome: ["running", "completed", "failed", "skipped"].includes(
+              state.latestRun.outcome,
+            )
+              ? state.latestRun.outcome
+              : "unknown",
+            startedAt: state.latestRun.startedAt,
+            ...(state.latestRun.finishedAt === undefined
+              ? {}
+              : { finishedAt: state.latestRun.finishedAt }),
+          },
+        }),
+  });
 };

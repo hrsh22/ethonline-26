@@ -190,6 +190,32 @@ export const runHarnessSelfTest = async (
     }),
   );
 
+  outcomes.push(
+    await withPage(origin, "/", async (page) => {
+      await page.setContent(
+        `<header style="position:relative;height:120px"><a style="position:absolute;left:150px;top:0;width:40px;height:20px" href="/">Brand</a><nav aria-label="Collector navigation" style="position:absolute;left:0;top:0;width:100px;height:40px;overflow:auto"><a href="/first" style="display:block;height:30px">First</a><a href="/last" style="display:block;height:30px">Last</a></nav><div id="actions" style="position:absolute;left:0;top:40px;width:100px;height:30px"><button aria-controls="collector-navigation">Menu</button></div></header>`,
+      );
+      const clipped = await collectorHeaderCollisionFailure(
+        page,
+        "clipped navigation",
+      );
+      await page.locator("#actions").evaluate((node) => {
+        node.style.top = "35px";
+      });
+      const overlapping = await collectorHeaderCollisionFailure(
+        page,
+        "visible navigation overlap",
+      );
+      return {
+        detected:
+          clipped === undefined && overlapping?.kind === "layout-collision",
+        expected: "layout-collision" as const,
+        name: "navigation clipping retains visible collision detection",
+        observed: overlapping === undefined ? [] : [overlapping],
+      };
+    }),
+  );
+
   // 3. A header collision that does not create document overflow.
   outcomes.push(
     await withPage(origin, "/", async (page) => {
@@ -338,7 +364,7 @@ export const runHarnessSelfTest = async (
       await settle(page);
       await page.evaluate(() => {
         for (const element of document.querySelectorAll<HTMLElement>(
-          "a,button,input,select,textarea,[tabindex]",
+          "a,button,input,select,textarea,summary,[tabindex]",
         )) {
           element.setAttribute("tabindex", "-1");
         }
@@ -348,6 +374,30 @@ export const runHarnessSelfTest = async (
         detected: failure !== undefined,
         expected: "focus-broken" as const,
         name: "broken keyboard path",
+        observed: failure === undefined ? [] : [failure],
+      };
+    }),
+  );
+
+  // A dismissed chooser restores its trigger, including at the end of the
+  // document's tab order. Native browser-chrome traversal is not a lost control.
+  outcomes.push(
+    await withPage(origin, "/admin/sign-in", async (page) => {
+      await page.goto(`${origin}/admin/sign-in`, { waitUntil: "commit" });
+      await settle(page);
+      const restored = await page
+        .getByRole("button", { name: "Connect wallet", exact: true })
+        .evaluate((button) => button === document.activeElement);
+      const failure = restored
+        ? await focusFailure(page, "self-test restored final control")
+        : {
+            kind: "focus-broken" as const,
+            detail: "Wallet chooser did not restore its Connect trigger",
+          };
+      return {
+        detected: failure === undefined,
+        expected: "none" as const,
+        name: "wallet dialog focus restoration",
         observed: failure === undefined ? [] : [failure],
       };
     }),

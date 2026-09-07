@@ -27,6 +27,7 @@ import {
   type OperatorCommandRequest,
 } from "@orbit/config/operator-control";
 import {
+  decodeDeliveryStatus,
   decodePublicFundingRequest,
   PUBLIC_API_PATHS,
 } from "@orbit/config/public-api";
@@ -78,7 +79,7 @@ export interface PublicApiServerOptions {
   readonly rateLimiters?: PublicApiRateLimiters;
 }
 
-type Upstream = "funding" | "history";
+type Upstream = "funding" | "history" | "delivery";
 type QueryPolicy = "funding-status" | "history-page" | "none";
 
 interface PublicRoute {
@@ -89,6 +90,15 @@ interface PublicRoute {
 }
 
 const publicRoutes: ReadonlyMap<string, PublicRoute> = new Map([
+  [
+    PUBLIC_API_PATHS.delivery.status,
+    {
+      method: "GET",
+      queryPolicy: "none",
+      upstream: "delivery",
+      upstreamPath: "/v1/delivery-status",
+    },
+  ],
   [
     PUBLIC_API_PATHS.history.status,
     {
@@ -132,6 +142,15 @@ const publicRoutes: ReadonlyMap<string, PublicRoute> = new Map([
       queryPolicy: "history-page",
       upstream: "history",
       upstreamPath: "/v1/protocol/liquidity-cycles",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.discoveries,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/protocol/discoveries",
     },
   ],
   [
@@ -205,6 +224,7 @@ const adminDiagnosticRoutes: ReadonlyMap<string, PublicRoute> = new Map([
 ]);
 
 const HISTORY_QUERY_PARAMETERS = new Set([
+  "account",
   "cursor",
   "fromBlock",
   "limit",
@@ -471,8 +491,22 @@ const validateUnsigned = (value: string, name: string): void => {
   }
 };
 
+const validateDiscoveryAccount = (url: URL) => {
+  const account = url.searchParams.get("account");
+  if (
+    account !== null &&
+    (url.pathname !== PUBLIC_API_PATHS.history.discoveries ||
+      !/^0x[0-9a-fA-F]{40}$/.test(account))
+  )
+    throw new PublicRequestError(
+      400,
+      "invalid-query",
+      "Invalid discovery account",
+    );
+};
 const historySearch = (url: URL): string => {
   ensureOnlyParameters(url, HISTORY_QUERY_PARAMETERS);
+  validateDiscoveryAccount(url);
   for (const name of ["fromBlock", "toBlock", "limit"] as const) {
     const value = url.searchParams.get(name);
     if (value !== null) validateUnsigned(value, name);
@@ -676,8 +710,13 @@ const prepareUpstreamRequest = async (
 const upstreamConfiguration = (
   configuration: PublicApiConfiguration,
   upstream: Upstream,
-): { readonly token: string; readonly url: URL } =>
-  upstream === "history"
+): { readonly token: string; readonly url: URL } => {
+  if (upstream === "delivery") {
+    if (configuration.operatorControl === undefined)
+      throw new Error("Delivery evidence is unavailable");
+    return configuration.operatorControl;
+  }
+  return upstream === "history"
     ? {
         token: configuration.historyReadApiToken,
         url: configuration.historyServiceUrl,
@@ -686,6 +725,7 @@ const upstreamConfiguration = (
         token: configuration.fundingApiToken,
         url: configuration.fundingServiceUrl,
       };
+};
 
 const upstreamUrl = (
   configuration: PublicApiConfiguration,
@@ -802,7 +842,7 @@ const projectFundingService = (service: TestnetFundingResponse["service"]) =>
         ...(service.cooldownSeconds === undefined
           ? {}
           : { cooldownSeconds: service.cooldownSeconds }),
-        state: service.state,
+        state: service.halted ? "disabled" : service.state,
         ...(service.targets === undefined
           ? {}
           : {
@@ -884,6 +924,36 @@ const projectFundingError = (error: TestnetFundingResponse["error"]) => {
   };
 };
 
+const projectFundingProgress = (decoded: TestnetFundingResponse) => ({
+  ...(decoded.observedAt === undefined
+    ? {}
+    : { observedAt: decoded.observedAt }),
+  ...(decoded.request === undefined || decoded.recipient === undefined
+    ? {}
+    : {
+        request: {
+          id: decoded.request.id,
+          state: decoded.request.state,
+          ...(decoded.request.delayed === undefined
+            ? {}
+            : { delayed: decoded.request.delayed }),
+          ...(decoded.request.transactions === undefined
+            ? {}
+            : {
+                transactions: decoded.request.transactions.map(
+                  ({ kind, hash, state }) => ({
+                    kind,
+                    state,
+                    ...(state === "prepared" || hash === undefined
+                      ? {}
+                      : { hash }),
+                  }),
+                ),
+              }),
+        },
+      }),
+});
+
 const projectFundingStatus = (
   prepared: PreparedUpstreamRequest,
   body: unknown,
@@ -910,6 +980,7 @@ const projectFundingStatus = (
   }
   return {
     apiVersion: API_VERSION,
+    ...projectFundingProgress(decoded),
     ...(service === undefined ? {} : { service }),
     ...(recipient === undefined ? {} : { recipient }),
     ...(fundingError === undefined ? {} : { error: fundingError }),
@@ -938,13 +1009,14 @@ const projectFundingResult = (
   }
   return {
     apiVersion: API_VERSION,
+    ...projectFundingProgress(decoded),
     ...(recipient === undefined ? {} : { recipient }),
     ...(fundingError === undefined ? {} : { error: fundingError }),
   };
 };
 
 const publicResponseBodyLimit = (route: PublicRoute): number =>
-  route.upstream === "funding"
+  route.upstream !== "history"
     ? PUBLIC_FUNDING_RESPONSE_BODY_LIMIT_BYTES
     : PUBLIC_HISTORY_RESPONSE_BODY_LIMIT_BYTES;
 
@@ -976,6 +1048,7 @@ const projectPublicResponse = (
   prepared: PreparedUpstreamRequest,
   body: unknown,
 ): unknown => {
+  if (prepared.route.upstream === "delivery") return decodeDeliveryStatus(body);
   if (prepared.route.upstream !== "funding") return body;
   if (prepared.route.upstreamPath === "/v1/challenge") {
     return projectFundingChallenge(prepared, body);
@@ -1002,7 +1075,7 @@ const proxy = async (
     // mismatch and an upstream 401 means the read credential rotated out of
     // step. Forwarding those bodies verbatim advertised credential failures
     // and index internals to the public.
-    if (prepared.route.upstream === "history" && upstream.status !== 200) {
+    if (prepared.route.upstream !== "funding" && upstream.status !== 200) {
       throw new Error("History upstream returned a non-success status");
     }
     const body = projectPublicResponse(prepared, upstream.body);

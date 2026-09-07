@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 
+import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
+import { protocolDeploymentManifest } from "@/lib/deployment";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -10,6 +12,10 @@ import {
   readPublicEvidenceCache,
   writePublicEvidenceCache,
 } from "@/lib/public-evidence-cache";
+
+const manifestScope = deploymentManifestFingerprint(
+  protocolDeploymentManifest!,
+);
 
 const testState = vi.hoisted(() => {
   const manifestHash = `0x${"12".repeat(32)}`;
@@ -236,7 +242,69 @@ describe("public status query boundary", () => {
     queryClient.clear();
     container.remove();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
+
+  it.each(["pending", "partial", "failed"])(
+    "recovers a %s wallet automatically and stops polling once complete",
+    async (condition) => {
+      vi.useFakeTimers();
+      testState.pathname = "/fleet";
+      const wallet = {
+        observedBlock: 200n,
+        collectibles: {
+          permanent: [],
+          transient: [],
+          pendingDiscovery: {
+            count: condition === "pending" ? 1 : 0,
+            phase: "ready-for-finalization",
+          },
+          permanentHoldingsStatus: "complete",
+          permanentObservedBlock: 200n,
+        },
+        partialFailures:
+          condition === "partial" ? ["Temporary history outage"] : [],
+      };
+      testState.readWallet.mockResolvedValue(wallet);
+      if (condition === "failed")
+        testState.readWallet.mockRejectedValueOnce(
+          new Error("Temporary RPC outage"),
+        );
+      await act(async () => {
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <ProtocolClientProvider>
+              <ProtocolCapture />
+            </ProtocolClientProvider>
+          </QueryClientProvider>,
+        );
+      });
+      await act(async () => vi.advanceTimersByTimeAsync(1));
+      expect(testState.readWallet).toHaveBeenCalledOnce();
+      testState.readWallet.mockResolvedValue({
+        ...wallet,
+        partialFailures: [],
+        collectibles: {
+          ...wallet.collectibles,
+          transient: [{ identityId: 42 }],
+          pendingDiscovery: { count: 0, phase: "complete" },
+        },
+      });
+      await act(async () => vi.advanceTimersByTimeAsync(30_001));
+      expect(testState.readWallet).toHaveBeenCalledTimes(2);
+      expect(currentProtocol.walletRead).toMatchObject({
+        status: "loaded",
+        snapshot: {
+          collectibles: {
+            transient: [{ identityId: 42 }],
+            pendingDiscovery: { count: 0 },
+          },
+        },
+      });
+      await act(async () => vi.advanceTimersByTimeAsync(90_000));
+      expect(testState.readWallet).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("caches and exposes only the exact sanitized public status model", async () => {
     queryClient.setQueryData(["protocol-health", "previous-route"], {
@@ -296,10 +364,7 @@ describe("public status query boundary", () => {
     );
 
     expect(
-      queryClient.getQueryData([
-        "public-protocol-status",
-        testState.manifestHash,
-      ]),
+      queryClient.getQueryData(["public-protocol-status", manifestScope]),
     ).toEqual(expected);
     expect(currentProtocol.health).toBeUndefined();
     expect(testState.readPublicStatus).toHaveBeenCalledOnce();
@@ -316,6 +381,7 @@ describe("public status query boundary", () => {
         "protocol-health",
         testState.manifestHash,
         undefined,
+        false,
         false,
         true,
       ]),
@@ -344,6 +410,57 @@ describe("public status query boundary", () => {
       expect(testState.readWallet).not.toHaveBeenCalled();
     },
   );
+
+  it("rechecks previously observed IDs after Launch and keeps hints scoped to the wallet", async () => {
+    testState.pathname = "/fleet";
+    const wallet = {
+      observedBlock: 200n,
+      collectibles: {
+        transient: [{ identityId: 1639 }],
+        permanent: [],
+        pendingDiscovery: { count: 0 },
+        permanentHoldingsStatus: "complete",
+        permanentObservedBlock: 200n,
+      },
+      partialFailures: [],
+    };
+    testState.readWallet.mockResolvedValue(wallet);
+    const render = () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>
+        </QueryClientProvider>,
+      );
+    await act(async () => {
+      render();
+    });
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(currentProtocol.walletRead.status).toBe("loaded"),
+      );
+    });
+    await act(async () => {
+      await currentProtocol.refreshWallet();
+    });
+    expect(testState.readWallet).toHaveBeenLastCalledWith(
+      testState.connection.address,
+      [1639],
+    );
+    testState.connection.address = "0x0000000000000000000000000000000000000002";
+    await act(async () => {
+      render();
+    });
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(testState.readWallet).toHaveBeenLastCalledWith(
+          testState.connection.address,
+          [],
+        ),
+      );
+    });
+  });
 
   it("reports native ETH at its actual block and waits for it to catch up with confirmed wallet changes", async () => {
     testState.pathname = "/faucet";
@@ -446,7 +563,7 @@ describe("public status query boundary", () => {
     const cached = derivePublicStatusModel(testState.health);
     writePublicEvidenceCache(
       window.localStorage,
-      testState.manifestHash,
+      manifestScope,
       cached,
       1_700_000_000_000,
     );
@@ -466,8 +583,7 @@ describe("public status query boundary", () => {
     );
     expect(currentProtocol.publicStatusRefreshing).toBe(true);
     expect(
-      readPublicEvidenceCache(window.localStorage, testState.manifestHash)
-        ?.savedAt,
+      readPublicEvidenceCache(window.localStorage, manifestScope)?.savedAt,
     ).toBe(1_700_000_000_000);
 
     await act(async () => resolveRead?.(testState.health));
@@ -495,7 +611,7 @@ describe("public status query boundary", () => {
       },
     };
     window.localStorage.setItem(
-      `orbit:public-evidence:v1:${testState.manifestHash}`,
+      `orbit:public-evidence:v1:${manifestScope}`,
       JSON.stringify(
         {
           model: {
@@ -526,10 +642,7 @@ describe("public status query boundary", () => {
     });
 
     expect(
-      queryClient.getQueryData([
-        "public-protocol-status",
-        testState.manifestHash,
-      ]),
+      queryClient.getQueryData(["public-protocol-status", manifestScope]),
     ).toBeUndefined();
   });
 
@@ -574,14 +687,12 @@ describe("public status query boundary", () => {
         testState.manifestHash,
         undefined,
         false,
+        false,
         true,
       ]),
     ).toMatchObject({ data: undefined, fetchStatus: "idle" });
     expect(
-      queryClient.getQueryData([
-        "public-protocol-status",
-        testState.manifestHash,
-      ]),
+      queryClient.getQueryData(["public-protocol-status", manifestScope]),
     ).toMatchObject({ health: "healthy", observedBlock: 200n });
   });
 });

@@ -175,9 +175,10 @@ describe("operator supervisor", () => {
   });
 
   it.each(["none", "live"] as const)(
-    "starts stopped after a restart with queued pass %s",
+    "resumes an authorized live policy after a restart with queued pass %s",
     (oneShot) => {
       const first = supervisor("supervisor-1");
+      expect(first.supervisor.initialize("deployment-a")).toBe(true);
       enableLive(first.store);
       if (oneShot === "live")
         first.store.applyCommand({
@@ -195,36 +196,65 @@ describe("operator supervisor", () => {
         });
       first.store.close();
       const restarted = supervisor("supervisor-2");
-      expect(restarted.supervisor.initialize()).toBe(true);
-      expect(restarted.supervisor.beginCycle()?.authority).toBe("skip");
-      expect(restarted.store.recentCommands(1)[0]?.result).toBe(
-        "supervisor-restarted",
-      );
-      restarted.supervisor.release();
-      restarted.store.applyCommand({
-        actor: "0x1",
-        appliedAt: now,
-        command: "enable-live",
-        commandId: "new-authorization",
-        nextMode: "live",
-        nextOneShot: "none",
-        previousMode: "stopped",
-        previousOneShot: "none",
-        result: "applied",
-        role: "keeper",
-        transactionHash: undefined,
-      });
+      expect(restarted.supervisor.initialize("deployment-a")).toBe(true);
+      expect(restarted.store.readPolicy()).toEqual({ mode: "live", oneShot });
       expect(restarted.supervisor.beginCycle()?.maySignNow()).toBe(true);
+      expect(restarted.store.readPolicy().oneShot).toBe("none");
+      restarted.supervisor.release();
       restarted.store.close();
     },
   );
+
+  it("keeps an explicit Stop across restarts and requires new authorization for a changed deployment", () => {
+    const first = supervisor("supervisor-1");
+    first.supervisor.initialize("deployment-a");
+    enableLive(first.store);
+    first.store.applyCommand({
+      actor: "0x1",
+      appliedAt: now,
+      command: "stop",
+      commandId: "stop",
+      nextMode: "stopped",
+      nextOneShot: "none",
+      previousMode: "live",
+      previousOneShot: "none",
+      result: "applied",
+      role: "keeper",
+      transactionHash: undefined,
+    });
+    first.supervisor.initialize("deployment-a");
+    expect(first.store.readPolicy().mode).toBe("stopped");
+    first.store.applyCommand({
+      actor: "0x1",
+      appliedAt: now,
+      command: "enable-live",
+      commandId: "resume",
+      nextMode: "live",
+      nextOneShot: "none",
+      previousMode: "stopped",
+      previousOneShot: "none",
+      result: "applied",
+      role: "keeper",
+      transactionHash: undefined,
+    });
+    first.store.close();
+    const restarted = supervisor("supervisor-2");
+    restarted.supervisor.initialize("deployment-b");
+    expect(restarted.supervisor.beginCycle()?.maySignNow()).toBe(false);
+    expect(restarted.store.readPolicy()).toEqual({
+      mode: "stopped",
+      oneShot: "none",
+    });
+    restarted.supervisor.release();
+    restarted.store.close();
+  });
 
   it("does not reset the policy when another supervisor still owns the lease", () => {
     const first = supervisor("supervisor-1");
     enableLive(first.store);
     const grant = first.supervisor.beginCycle()!;
     const second = supervisor("supervisor-2");
-    expect(second.supervisor.initialize()).toBe(false);
+    expect(second.supervisor.initialize("deployment-a")).toBe(false);
     expect(grant.maySignNow()).toBe(true);
     second.store.close();
     first.store.close();

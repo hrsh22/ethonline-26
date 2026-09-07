@@ -4,6 +4,15 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/hooks/use-delivery-status", () => ({
+  useDeliveryStatus: () => ({ state: "unknown", data: undefined }),
+}));
+vi.mock("@/components/collector-help", () => ({ CollectorHelp: () => null }));
+
+vi.mock("@/hooks/use-discovery-history", () => ({
+  useDiscoveryHistory: () => ({ data: undefined }),
+}));
+
 const testState = vi.hoisted(() => ({ protocol: undefined as unknown }));
 const collectibleState = vi.hoisted(() => ({
   read: {
@@ -115,6 +124,7 @@ describe("collection surfaces", () => {
     (
       globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
     ).IS_REACT_ACT_ENVIRONMENT = true;
+    window.history.replaceState(null, "", "/fleet");
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -222,6 +232,131 @@ describe("collection surfaces", () => {
       },
     );
 
+    it("filters a 50-item Fleet locally and reveals more cards in manageable groups", async () => {
+      const snapshot = walletSnapshot(
+        [],
+        Array.from({ length: 50 }, (_, index) => index + 1),
+      );
+      const current = protocol({ status: "loaded", snapshot });
+      testState.protocol = current;
+      await render(<FleetPanel />);
+      expect(container.querySelectorAll("article")).toHaveLength(24);
+      const more = [...container.querySelectorAll("button")].find(
+        (button) => button.textContent === "Show more collectibles",
+      );
+      await act(async () => more?.click());
+      expect(container.querySelectorAll("article")).toHaveLength(48);
+      const input = container.querySelector<HTMLInputElement>(
+        'input[aria-label="Find a held identity"]',
+      );
+      expect(input).not.toBeNull();
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        )?.set?.call(input, "42");
+        input?.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      expect(container.querySelectorAll("article")).toHaveLength(1);
+      expect(container.querySelector("article")?.textContent).toContain(
+        "#0042",
+      );
+      expect(window.location.search).toContain("id=42");
+      expect(current.refreshWallet).not.toHaveBeenCalled();
+    });
+
+    it("combines state and track filters, labels unknown rewards, and resets on wallet change", async () => {
+      const snapshot = walletSnapshot([1], [2, 3]);
+      snapshot.collectibles.transient[0]!.rewardTrack = "AAPLc";
+      snapshot.collectibles.permanent[0]!.rewardTrack = "AAPLc";
+      const permanent = snapshot.collectibles.permanent.map((entry) => ({
+        ...entry,
+        claimEligible: true,
+        pendingRewardsStatus:
+          entry.identityId === 3 ? "unavailable" : "observed",
+        pendingRewards: [{ track: "AAPLc", rawTokenUnits: 10n ** 18n }],
+      }));
+      const current = protocol({
+        status: "loaded",
+        snapshot: {
+          ...snapshot,
+          collectibles: { ...snapshot.collectibles, permanent },
+        },
+      });
+      testState.protocol = current;
+      await render(<FleetPanel />);
+      await act(async () => filterButtons(container)[2]?.click());
+      const select = async (label: string, value: string) => {
+        const control = container.querySelector<HTMLSelectElement>(
+          `select[aria-label="${label}"]`,
+        );
+        await act(async () => {
+          if (control) control.value = value;
+          control?.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      };
+      await select("Filter Reward Track", "AAPLc");
+      expect(container.querySelectorAll("article")).toHaveLength(1);
+      await select("Filter Reward Track", "all");
+      await select("Filter rewards", "claimable");
+      expect(container.querySelectorAll("article")).toHaveLength(1);
+      expect(container.textContent).toContain(
+        "Some rewards are still updating and are excluded",
+      );
+      await select("Filter rewards", "updating");
+      expect(container.querySelector("article")?.textContent).toContain(
+        "#0003",
+      );
+      testState.protocol = {
+        ...protocol({ status: "loaded", snapshot: walletSnapshot([4], []) }),
+        address: "0x0000000000000000000000000000000000001234",
+      };
+      await render(<FleetPanel />);
+      expect(container.querySelector("article")?.textContent).toContain(
+        "#0004",
+      );
+      expect(
+        container.querySelector<HTMLSelectElement>(
+          'select[aria-label="Filter rewards"]',
+        )?.value,
+      ).toBe("all");
+      expect(current.refreshWallet).not.toHaveBeenCalled();
+    });
+
+    it("restores URL filters when browser Back returns to Fleet", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: walletSnapshot([1], [2]),
+      });
+      await render(<FleetPanel />);
+      await act(async () => {
+        window.history.replaceState(null, "", "/fleet?state=permanent&id=2");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      expect(container.querySelectorAll("article")).toHaveLength(1);
+      expect(container.querySelector("article")?.textContent).toContain(
+        "#0002",
+      );
+      expect(
+        container.querySelector<HTMLInputElement>(
+          'input[aria-label="Find a held identity"]',
+        )?.value,
+      ).toBe("2");
+    });
+
+    it("keeps last verified holdings visible when the connection is interrupted", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        stale: true,
+        snapshot: walletSnapshot([], [42]),
+      });
+      await render(<FleetPanel />);
+      expect(container.textContent).toContain("Connection interrupted");
+      expect(container.querySelector("article")?.textContent).toContain(
+        "#0042",
+      );
+    });
+
     it("offers a wrong-network wallet the network, not a connect button", async () => {
       testState.protocol = protocol({
         accessState: "wrong-network",
@@ -243,15 +378,40 @@ describe("collection surfaces", () => {
       });
       await render(<FleetPanel />);
 
-      const action = container.querySelector("a[href='/exchange']");
-      expect(action).not.toBeNull();
-      expect(action?.textContent).toContain("Buy $FUEL");
-      // A wallet with nothing to trade with starts at the faucet; linking only
-      // to the market sent an unfunded wallet to a trade it could not make.
+      expect(container.querySelector("a[href='/exchange']")).toBeNull();
       expect(
-        container.querySelector("a[href='/faucet']")?.textContent,
+        container.querySelector("a[href='/faucet?returnTo=/fleet']")
+          ?.textContent,
       ).toContain("Faucet");
     });
+
+    it.each([
+      "waiting-for-randomness",
+      "ready-for-finalization",
+      "finalizing",
+      "delayed",
+    ])(
+      "tracks a %s discovery without asking the collector to retry or buy again",
+      async (phase) => {
+        const snapshot = walletSnapshot([], []);
+        testState.protocol = protocol({
+          status: "loaded",
+          snapshot: {
+            ...snapshot,
+            collectibles: {
+              ...snapshot.collectibles,
+              pendingDiscovery: { count: 1, phase },
+            },
+          },
+        });
+        await render(<FleetPanel />);
+
+        expect(container.textContent).not.toContain("Refresh wallet");
+        expect(container.textContent).not.toContain("No collectibles yet");
+        expect(container.querySelector("a[href='/exchange']")).toBeNull();
+        expect(container.querySelector("[data-state='success']")).toBeNull();
+      },
+    );
 
     it("explains a filter with nothing behind it instead of a bare region", async () => {
       testState.protocol = protocol({
@@ -266,7 +426,7 @@ describe("collection surfaces", () => {
       expect(container.textContent).toContain("Nothing matches this filter");
     });
 
-    it("offers retry rather than an acquisition action for a partial read", async () => {
+    it("automatically refreshes incomplete holdings without asking for another purchase", async () => {
       const snapshot = walletSnapshot([], []);
       testState.protocol = protocol({
         status: "loaded",
@@ -282,6 +442,43 @@ describe("collection surfaces", () => {
 
       expect(container.querySelector("a[href='/exchange']")).toBeNull();
       expect(container.textContent).toContain("incomplete");
+      expect(container.textContent).toContain("check again automatically");
+      expect(container.querySelector("button")).toBeNull();
+    });
+
+    it("calls out stalled delivery after randomness has already arrived", async () => {
+      const snapshot = walletSnapshot([], []);
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: {
+          ...snapshot,
+          observedAt: 2_000,
+          collectibles: {
+            ...snapshot.collectibles,
+            pendingDiscovery: {
+              count: 1,
+              phase: "ready-for-finalization",
+              batch: {
+                state: "ready",
+                fulfilledAt: 1_000n,
+                requestedAt: 500n,
+                vrfRequestId: 44n,
+                count: 1,
+                finalizedCount: 0,
+              },
+            },
+          },
+        },
+      });
+      await render(<FleetPanel />);
+      expect(
+        container.querySelector("[data-state='stale']")?.textContent,
+      ).toContain("Collectible delivery is delayed");
+      expect(container.textContent).toContain("Your random draw is verified");
+      expect(container.textContent).not.toContain(
+        "randomness service hasn't responded",
+      );
+      expect(container.querySelector("button")).toBeNull();
     });
 
     it("explains a delayed external randomness request without claiming assets were lost", async () => {
@@ -315,13 +512,13 @@ describe("collection surfaces", () => {
       await render(<FleetPanel />);
 
       expect(container.textContent).toContain(
-        "Chainlink randomness is delayed",
+        "Randomness is taking longer than expected",
       );
+      expect(container.textContent).toContain("15-minute delay threshold");
       expect(container.textContent).toContain(
-        "8 Pending Discoveries remain backed",
+        "FUEL backing recorded · 8 pending Discoveries",
       );
-      expect(container.textContent).toContain("No Grounded Craft was lost");
-      // The notice carries its own retry, so it leads the route. Below the
+      // The progress notice leads the route. Below the
       // grid, a wallet holding sixteen craft pushed it about ten thousand
       // pixels down a phone viewport.
       const notice = container.querySelector("[data-state='stale']");
@@ -374,7 +571,9 @@ describe("collection surfaces", () => {
       await render(<FleetPanel />);
 
       const marks = [
-        ...container.querySelectorAll<SVGElement>("article svg[aria-hidden]"),
+        ...container.querySelectorAll<SVGElement>(
+          "article > div:first-child svg[aria-hidden]",
+        ),
       ];
       expect(marks).toHaveLength(2);
       // The mark repeats the identity printed beside it, so it is decoration.
@@ -422,6 +621,7 @@ describe("collection surfaces", () => {
       });
       await render(<RelicsPanel />);
 
+      expect(container.querySelectorAll("[data-relic-card] a")).toHaveLength(4);
       expect(container.textContent).not.toContain("Eligible now");
       expect(container.textContent).toContain("Connect a wallet");
       expect(
@@ -459,14 +659,59 @@ describe("collection surfaces", () => {
       expect(link?.textContent).toBe("Inspect #4442");
     });
 
-    it("does not link identities the wallet does not hold", async () => {
+    it("keeps missing Relics unknown until ownership enumeration recovers", async () => {
+      const snapshot = walletSnapshot([], [4442]);
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: {
+          ...snapshot,
+          collectibles: {
+            ...snapshot.collectibles,
+            permanentHoldingsStatus: "unavailable",
+          },
+        },
+      });
+      await render(<RelicsPanel />);
+      expect(
+        container.querySelector("a[href='/fleet/4442']")?.textContent,
+      ).toBe("Inspect #4442");
+      expect(container.textContent).toContain("Ownership is updating");
+      expect(
+        container.querySelectorAll("article[data-ownership='not-held']"),
+      ).toHaveLength(0);
+      expect(container.querySelector("a[href='/exchange']")).toBeNull();
+      testState.protocol = protocol({ status: "loaded", snapshot });
+      await render(<RelicsPanel />);
+      expect(
+        container.querySelectorAll("article[data-ownership='not-held']"),
+      ).toHaveLength(3);
+    });
+
+    it("recognizes a Grounded Relic as held before Launch", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: walletSnapshot([4441], []),
+      });
+      await render(<RelicsPanel />);
+      expect(
+        container.querySelector("a[href='/fleet/4441']")?.textContent,
+      ).toBe("Inspect #4441");
+      expect(container.querySelector("a[href='/exchange']")).toBeNull();
+    });
+
+    it("lets visitors inspect every public Relic without owning it", async () => {
       testState.protocol = protocol({
         status: "loaded",
         snapshot: walletSnapshot([], []),
       });
       await render(<RelicsPanel />);
 
-      expect(container.querySelector("[data-relic-card] a")).toBeNull();
+      for (const identityId of [4441, 4442, 4443, 4444]) {
+        expect(
+          container.querySelector(`a[href='/fleet/${identityId}']`)
+            ?.textContent,
+        ).toBe(`Inspect #${identityId}`);
+      }
     });
   });
   describe("craft detail rewards", () => {
@@ -550,7 +795,7 @@ describe("collection surfaces", () => {
       const attachment = container.querySelector(
         '[aria-labelledby="attached-rewards-heading"]',
       );
-      expect(attachment?.textContent).toContain("could not be read");
+      expect(attachment?.textContent).toContain("temporarily unavailable");
       expect(attachment?.textContent).not.toContain("No rewards accrued");
     });
 
@@ -582,6 +827,7 @@ describe("heading structure", () => {
   let root: Root;
 
   beforeEach(() => {
+    window.history.replaceState(null, "", "/fleet");
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);

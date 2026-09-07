@@ -125,8 +125,16 @@ therefore remains an unresolved signing gate after acknowledgement. If journal d
 broadcast is not attempted and the bounded run aborts without recording completion. Before a later process can observe
 eligibility or sign, it replays undelivered rows and reconciles every unresolved hash against an
 exact receipt, its canonical block header, and the two-confirmation floor. Pending, missing,
-malformed, reorged, or otherwise uncertain outcomes keep the whole run gated; only canonical
-success or revert releases the exact row, after which eligibility is observed afresh. The outbox is
+malformed, reorged, or otherwise uncertain outcomes keep the whole run gated; canonical
+success or revert releases the exact row. A missing receipt can also resolve as replaced when
+the exact stored signed bytes identify a different transaction consuming the same sender nonce
+in a canonical block beyond two confirmations. Recovery searches recent account history first,
+using at most 64 nonce reads across the entire search, and validates the replacement receipt and
+canonical headers again before resolving. Unavailable historical state remains gated. Before clearing a replaced row, recovery durably retains its public proof in the existing
+outbox metadata (latest 20); failed proof persistence keeps the gate. The bounded `replacements`
+array in structured operator evidence exposes those original/replacement hashes and canonical blocks across restarts; it does not report the original action as successful. Existing public attempt
+history can still show the original hash as unknown. Subsequent Discovery and Keeper eligibility
+reads must reach the reconciled block before planning new work. The outbox is
 bound to the deployment fingerprint. Version 4 also retains signed transaction bytes, including
 their nonce, in the owner-only `0600` database. Keep this file private: a signed transaction can be
 broadcast by anyone holding it. No private key, RPC credential, provider object, or raw revert
@@ -180,7 +188,9 @@ each signer must match its corresponding current onchain role; with a shared ide
 account must currently hold both roles.
 When `OPERATOR_CONTROL_DATABASE_PATH` is configured, start the watch and use an authorized control
 command instead. A direct execute-mode child without a supervisor-issued grant is refused, and
-every watch restart begins stopped. See [Operator control plane](operator-control-plane.md).
+watch restarts resume its last authorized policy for the same deployment. Fresh
+or legacy unbound ledgers require a signed live command once. See
+[Operator control plane](operator-control-plane.md).
 
 For the explicitly self-funded staging profile, `pnpm backend` reuses `DEPLOYER_PRIVATE_KEY` only
 when execute mode is live and no operator-specific key is configured. That fallback is projected
@@ -256,3 +266,26 @@ exact values remain available as a table.
 DEX Screener does not currently index this custom Uniswap v4 pool on Base Sepolia. The dashboard
 therefore links to the official Base Sepolia PoolManager on BaseScan and displays the Pool ID needed
 to identify the exact pool rather than offering a misleading mainnet chart link.
+
+### Refreshing a local backend after code changes
+
+The backend supervisor and its workers do not hot-reload. The API runs
+`apps/api/dist/main.js`, so updating source or rebuilding the web app does not
+update a running API. Check the running command/start time and build the API
+before restarting; a new public route returning `route-not-found` can indicate an
+old process or stale API build even when `/readyz` succeeds.
+
+Use one coordinated supervisor refresh: verify the supervisor PID, stop it with
+SIGTERM, wait for all of its workers/listeners to exit, then launch exactly one
+`node scripts/backend.ts` with file-backed stdout/stderr and detached stdin, as
+specified in the browser runbook. Do not replace an API child in isolation: the
+supervisor treats a persistent child's exit as failure and tears down its group.
+Keep the existing environment and durable databases. Do not issue a new Live,
+Stop, or one-shot command merely to refresh code.
+
+A matching deployment resumes the saved authorized operator policy. Newly tracked
+history events can require the existing one-time bounded replay; during replay,
+`/readyz` remains unavailable and the supervisor waits before starting the operator.
+Afterward require successful `/readyz`, `/v1/delivery/status`, fresh history
+coverage, and an online operator heartbeat. A listening socket alone does not
+prove the refreshed runtime is ready.

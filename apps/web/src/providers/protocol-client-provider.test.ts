@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { IndexedHistoryError } from "@orbit/protocol/history";
+import { HttpRequestError } from "viem";
 
 import {
   deriveCurrentHealth,
@@ -18,6 +20,69 @@ describe("protocol client wallet synchronization", () => {
 });
 
 describe("protocol client wallet read", () => {
+  it("keeps verified holdings visible during a transient RPC failure without making them current authorization", () => {
+    const snapshot = {} as NonNullable<
+      Parameters<typeof deriveWalletRead>[0]["snapshot"]
+    >;
+    const error = new HttpRequestError({
+      url: "https://rpc.example",
+      status: 503,
+    });
+    expect(
+      deriveWalletRead({
+        accessState: "ready",
+        error,
+        fetching: false,
+        pending: false,
+        snapshot,
+      }),
+    ).toEqual({ status: "loaded", snapshot, stale: true, error });
+  });
+
+  it("does not retain ownership after canonicality failure even inside a transient transport error", () => {
+    const snapshot = {} as NonNullable<
+      Parameters<typeof deriveWalletRead>[0]["snapshot"]
+    >;
+    const error = new Error("Service unavailable", {
+      cause: new IndexedHistoryError(
+        "history-canonicality-mismatch",
+        "Invalid canonical history",
+        409,
+      ),
+    });
+    error.name = "HttpRequestError";
+    expect(
+      deriveWalletRead({
+        accessState: "ready",
+        error,
+        fetching: false,
+        pending: false,
+        snapshot,
+      }),
+    ).toEqual({ status: "failed", error });
+    expect(
+      deriveWalletRead({
+        accessState: "ready",
+        error: new HttpRequestError({
+          url: "https://rpc.example",
+          status: 503,
+        }),
+        fetching: false,
+        pending: false,
+        snapshot: undefined,
+      }).status,
+    ).toBe("failed");
+    expect(
+      deriveWalletRead({
+        accessState: "wrong-network",
+        error: null,
+        fetching: false,
+        pending: false,
+        snapshot,
+      }).status,
+    ).toBe("blocked");
+  });
+
   it("surfaces a current query error instead of a retained wallet snapshot", () => {
     const error = new Error("current wallet read failed");
     const snapshot = {} as NonNullable<

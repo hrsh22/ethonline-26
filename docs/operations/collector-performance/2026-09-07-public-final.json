@@ -1,0 +1,173 @@
+{
+  "origin": "http://127.0.0.1:3132",
+  "browserVersion": "151.0.7922.34",
+  "recordedAt": "2026-09-07T07:07:52.046Z",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh disconnected browser context; HTTP cache disabled",
+  "results": [
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 1,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 671.5,
+      "cls": 0.0008045977011494253,
+      "fcp": 748,
+      "lcp": 748,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1112,
+          "score": 0.0008045977011494253,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 186.59375,
+                "width": 343,
+                "height": 141.59375,
+                "top": 186.59375,
+                "right": 359,
+                "bottom": 328.1875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 182.59375,
+                "width": 343,
+                "height": 141.59375,
+                "top": 182.59375,
+                "right": 359,
+                "bottom": 324.1875,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": ["unknown"]
+        }
+      ],
+      "elapsed": 15002.90000000596
+    },
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 2,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 663.6999999880791,
+      "cls": 0.0008045977011494253,
+      "fcp": 740,
+      "lcp": 740,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1113.699999988079,
+          "score": 0.0008045977011494253,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 186.59375,
+                "width": 343,
+                "height": 141.59375,
+                "top": 186.59375,
+                "right": 359,
+                "bottom": 328.1875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 182.59375,
+                "width": 343,
+                "height": 141.59375,
+                "top": 182.59375,
+                "right": 359,
+                "bottom": 324.1875,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": ["unknown"]
+        }
+      ],
+      "elapsed": 15004.699999988079
+    },
+    {
+      "route": "/",
+      "scenario": "public-home-disconnected",
+      "run": 3,
+      "heldIdentities": 0,
+      "renderedInspectLinks": 1,
+      "rpcHttp": 6,
+      "methods": {
+        "eth_call": 3,
+        "eth_chainId": 1,
+        "eth_getBlockByNumber": 2
+      },
+      "readyMilliseconds": 671.2999999821186,
+      "cls": 0.0008045977011494253,
+      "fcp": 748,
+      "lcp": 748,
+      "lcpElement": "<p class=\"mt-4 max-w-[56ch] text-body text-ink-soft\">Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.</p>",
+      "shifts": [
+        {
+          "at": 1106.0999999940395,
+          "score": 0.0008045977011494253,
+          "bounds": [
+            {
+              "before": {
+                "x": 16,
+                "y": 186.59375,
+                "width": 343,
+                "height": 141.59375,
+                "top": 186.59375,
+                "right": 359,
+                "bottom": 328.1875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 182.59375,
+                "width": 343,
+                "height": 141.59375,
+                "top": 182.59375,
+                "right": 359,
+                "bottom": 324.1875,
+                "left": 16
+              },
+              "styles": null
+            }
+          ],
+          "sources": ["unknown"]
+        }
+      ],
+      "elapsed": 15002.09999999404
+    }
+  ],
+  "productSource": "60c43eab6e24f8c86f5b3151d68beb5b831cfae1",
+  "productionBuildId": "VUTjVKCEc76BibtbJ3qU-"
+}

@@ -2,6 +2,7 @@
 
 import { formatUnits } from "viem";
 
+import { Button } from "@/components/ui/button";
 import { AmountField, MaxAction } from "@/components/ui/amount-field";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { BasisPoints, Rate, Unavailable } from "@/components/ui/value";
@@ -58,12 +59,30 @@ export function ExchangeInstrument({
       <AmountField
         action={
           maximumAmountWei === undefined ? undefined : (
-            <MaxAction
-              label={applicationCopy.exchange.maxAmountLabel(payAsset)}
-              onClick={() => onAmount(formatUnits(maximumAmountWei, 18))}
-            >
-              {applicationCopy.exchange.maxAmount}
-            </MaxAction>
+            <div className="flex flex-wrap gap-1">
+              {[25n, 50n].map((percent) => (
+                <Button
+                  key={String(percent)}
+                  aria-label={`Use ${percent}% of spendable ${payAsset}`}
+                  disabled={(maximumAmountWei * percent) / 100n === 0n}
+                  onClick={() =>
+                    onAmount(
+                      formatUnits((maximumAmountWei * percent) / 100n, 18),
+                    )
+                  }
+                  size="sm"
+                  variant="ghost"
+                >
+                  {String(percent)}%
+                </Button>
+              ))}
+              <MaxAction
+                label={applicationCopy.exchange.maxAmountLabel(payAsset)}
+                onClick={() => onAmount(formatUnits(maximumAmountWei, 18))}
+              >
+                {applicationCopy.exchange.maxAmount}
+              </MaxAction>
+            </div>
           )
         }
         describedBy={describedBy(intent)}

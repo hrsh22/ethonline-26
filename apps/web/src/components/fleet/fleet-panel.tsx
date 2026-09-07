@@ -5,7 +5,13 @@ import {
   ORDINARY_IDENTITY_COUNT,
   tierWeights,
 } from "@orbit/config/collection-manifest";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+import { DiscoveryOutcomes } from "@/components/fleet/discovery-outcomes";
+import { DiscoveryProgress } from "@/components/fleet/discovery-progress";
+import { CollectorNextAction } from "@/components/start/collector-next-action";
+import { createCollectorJourneyView } from "@/lib/collector-journey";
 
 import { blockedAccessMessage } from "@/components/access-notice";
 import { ConnectWalletAction } from "@/components/connect-wallet-action";
@@ -14,10 +20,7 @@ import {
   FleetCraftCard,
   type FleetCraft,
 } from "@/components/fleet/fleet-craft-card";
-import {
-  StateFeedback,
-  type StateFeedbackTone,
-} from "@/components/state-feedback";
+import { StateFeedback } from "@/components/state-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { CraftArt, type CraftKind } from "@/components/ui/craft-art";
@@ -32,6 +35,40 @@ type ProtocolClient = ReturnType<typeof useProtocolClient>;
 type WalletRead = ProtocolClient["walletRead"];
 type LoadedWalletRead = Extract<WalletRead, { readonly status: "loaded" }>;
 type CollectionFilter = "all" | "transient" | "permanent";
+
+interface FleetFilters {
+  readonly state: CollectionFilter;
+  readonly id: string;
+  readonly track: string;
+  readonly rewards: "all" | "claimable" | "updating";
+  readonly page: number;
+}
+const DEFAULT_FILTERS: FleetFilters = {
+  state: "all",
+  id: "",
+  track: "all",
+  rewards: "all",
+  page: 1,
+};
+const filterId = (id: string): string =>
+  /^\d{1,4}$/.test(id) && Number(id) >= 1 && Number(id) <= 4444 ? id : "";
+const filterPage = (page: number): number =>
+  Number.isInteger(page) && page >= 1 && page <= 186 ? page : 1;
+const readFilters = (params: Pick<URLSearchParams, "get">): FleetFilters => {
+  const state = params.get("state");
+  const rewards = params.get("rewards");
+  const track = params.get("track") ?? "all";
+  const id = params.get("id") ?? "";
+  const page = Number(params.get("page") ?? "1");
+  return {
+    state: state === "transient" || state === "permanent" ? state : "all",
+    rewards:
+      rewards === "claimable" || rewards === "updating" ? rewards : "all",
+    track: identity.rewardTrackLabels.includes(track) ? track : "all",
+    id: filterId(id),
+    page: filterPage(page),
+  };
+};
 
 const filterLabels: Record<CollectionFilter, string> = {
   all: applicationCopy.fleet.filterAll,
@@ -64,7 +101,7 @@ const countValue = (
  *
  * Only rendered for a loaded read, so the one value that can still be
  * unreadable is the permanent count when enumeration fell over. Every amount
- * is typeset from base units so the balance and the threshold round alike.
+ * is typeset from base units; the remaining requirement rounds upward.
  */
 function CollectionSummary({
   walletRead,
@@ -89,10 +126,13 @@ function CollectionSummary({
       />
       <Metric
         label={applicationCopy.fleet.remaining}
-        value={amountValue(
-          liquidToken.nextDiscoveryDraw.remainingWei,
-          notObserved,
-        )}
+        value={
+          <Amount
+            minimumFractionDigits={4}
+            rounding="ceil"
+            value={liquidToken.nextDiscoveryDraw.remainingWei}
+          />
+        }
       />
       <Metric
         label={applicationCopy.fleet.grounded}
@@ -117,14 +157,23 @@ function CollectionSummary({
 }
 
 function RetryAction({ onRetry }: { readonly onRetry: () => Promise<void> }) {
+  const [refreshing, setRefreshing] = useState(false);
   return (
     <Button
-      onClick={() => void onRetry()}
+      disabled={refreshing}
+      onClick={async () => {
+        setRefreshing(true);
+        try {
+          await onRetry();
+        } finally {
+          setRefreshing(false);
+        }
+      }}
       size="sm"
       type="button"
       variant="outline"
     >
-      {applicationCopy.access.retryWalletRead}
+      {refreshing ? "Refreshing…" : applicationCopy.access.retryWalletRead}
     </Button>
   );
 }
@@ -151,7 +200,7 @@ function UnloadedCollection({
       <StateFeedback
         action={<RetryAction onRetry={onRetry} />}
         description={applicationCopy.fleet.readFailed}
-        title="Collection read failed"
+        title="Your collection is temporarily unavailable"
         tone="error"
       />
     );
@@ -175,7 +224,7 @@ function UnloadedCollection({
         blocked.connectable ? applicationCopy.fleet.connect : blocked.body
       }
       title={blocked.title}
-      tone="blocked"
+      tone={blocked.tone}
     />
   );
 }
@@ -268,35 +317,20 @@ function CollectionModel() {
 
 function EmptyCollection({
   holdingsIncomplete,
-  onRetry,
 }: {
   readonly holdingsIncomplete: boolean;
-  readonly onRetry: () => Promise<void>;
 }) {
   if (holdingsIncomplete) {
     return (
       <StateFeedback
-        action={<RetryAction onRetry={onRetry} />}
         description={applicationCopy.fleet.partial}
-        title="Collection is incomplete"
+        title="Updating your collection"
         tone="partial"
       />
     );
   }
   return (
     <StateFeedback
-      // An empty collection is a task, not a dead end — and a wallet with
-      // nothing to trade with starts at the faucet, not the market.
-      action={
-        <>
-          <ButtonLink href="/exchange" size="sm">
-            {applicationCopy.fleet.emptyAction}
-          </ButtonLink>
-          <ButtonLink href="/faucet" size="sm" variant="outline">
-            {applicationCopy.fleet.emptyFaucetAction}
-          </ButtonLink>
-        </>
-      }
       description={applicationCopy.fleet.empty}
       title="No collectibles yet"
       tone="empty"
@@ -322,9 +356,9 @@ function CollectionGrid({
     );
   }
   return (
-    <ul className="grid gap-3 compact:grid-cols-2 laptop:grid-cols-3 nav:grid-cols-4">
+    <ul className="grid min-w-0 grid-cols-1 gap-3 compact:grid-cols-2 laptop:grid-cols-3 nav:grid-cols-4">
       {craft.map((entry) => (
-        <li className="flex" key={entry.identityId}>
+        <li className="flex min-w-0" key={entry.identityId}>
           <FleetCraftCard craft={entry} />
         </li>
       ))}
@@ -332,131 +366,145 @@ function CollectionGrid({
   );
 }
 
-type PendingDiscovery =
-  LoadedWalletRead["snapshot"]["collectibles"]["pendingDiscovery"];
-
-interface PendingDiscoveryNoticeContent {
-  readonly description: string;
-  readonly title: string;
-  readonly tone: StateFeedbackTone;
-}
-
-const readyDiscoveryDescription = (pending: PendingDiscovery): string => {
-  const batch = pending.batch;
-  return applicationCopy.fleet.discoveryReady(
-    batch?.finalizedCount ?? 0,
-    batch?.count ?? pending.count,
-  );
-};
-
-const pendingDiscoveryNoticeContent = (
-  pending: PendingDiscovery,
-): PendingDiscoveryNoticeContent => {
-  const notices = {
-    complete: {
-      description: applicationCopy.fleet.discoveryUnknown,
-      title: applicationCopy.fleet.discoveryUnknownTitle,
-      tone: "notice",
-    },
-    delayed: {
-      description: applicationCopy.fleet.discoveryDelayed(pending.count),
-      title: applicationCopy.fleet.discoveryDelayedTitle,
-      tone: "stale",
-    },
-    finalizing: {
-      description: readyDiscoveryDescription(pending),
-      title: applicationCopy.fleet.discoveryReadyTitle,
-      tone: "success",
-    },
-    "ready-for-finalization": {
-      description: readyDiscoveryDescription(pending),
-      title: applicationCopy.fleet.discoveryReadyTitle,
-      tone: "success",
-    },
-    unknown: {
-      description: applicationCopy.fleet.discoveryUnknown,
-      title: applicationCopy.fleet.discoveryUnknownTitle,
-      tone: "partial",
-    },
-    "waiting-for-randomness": {
-      description: applicationCopy.fleet.discoveryWaiting(pending.count),
-      title: applicationCopy.fleet.discoveryWaitingTitle,
-      tone: "notice",
-    },
-  } as const satisfies Record<string, PendingDiscoveryNoticeContent>;
-  return notices[pending.phase ?? "unknown"];
-};
-
-function PendingDiscoveryNotice({
-  onRetry,
-  pending,
-}: {
-  readonly onRetry: () => Promise<void>;
-  readonly pending: PendingDiscovery;
-}) {
-  if (pending.count === 0) return null;
-  const notice = pendingDiscoveryNoticeContent(pending);
-  return (
-    <StateFeedback
-      action={<RetryAction onRetry={onRetry} />}
-      description={notice.description}
-      title={notice.title}
-      tone={notice.tone}
-    />
-  );
-}
-
 const matchesFilter = (craft: FleetCraft, filter: CollectionFilter) =>
   filter === "all" || craft.permanent === (filter === "permanent");
 
+const rewardsUpdating = (craft: FleetCraft) =>
+  craft.pendingRewardsStatus === "unavailable" ||
+  craft.claimEligibilityStatus === "unavailable";
+const matchesRewards = (craft: FleetCraft, filter: FleetFilters["rewards"]) =>
+  filter === "all" ||
+  (filter === "updating"
+    ? rewardsUpdating(craft)
+    : craft.permanent &&
+      !rewardsUpdating(craft) &&
+      craft.claimEligible &&
+      craft.hasAttachedRewards);
+const matchesTrack = (craft: FleetCraft, track: string) =>
+  track === "all" ||
+  craft.rewardTrack === track ||
+  craft.specialKindCode === "basket" ||
+  craft.specialKindCode === "indicator";
+
 function LoadedCollection({
   allCraft,
-  filter,
+  filters,
   holdingsIncomplete,
-  onFilter,
-  onRetry,
+  onFilters,
 }: {
   readonly allCraft: readonly FleetCraft[];
-  readonly filter: CollectionFilter;
+  readonly filters: FleetFilters;
   readonly holdingsIncomplete: boolean;
-  readonly onFilter: (filter: CollectionFilter) => void;
-  readonly onRetry: () => Promise<void>;
+  readonly onFilters: (filters: FleetFilters) => void;
 }) {
-  if (allCraft.length === 0) {
-    return (
-      <EmptyCollection
-        holdingsIncomplete={holdingsIncomplete}
-        onRetry={onRetry}
-      />
-    );
-  }
+  if (allCraft.length === 0)
+    return <EmptyCollection holdingsIncomplete={holdingsIncomplete} />;
   const countFor = (option: CollectionFilter) =>
     allCraft.filter((craft) => matchesFilter(craft, option)).length;
-
+  const matching = allCraft.filter(
+    (craft) =>
+      matchesFilter(craft, filters.state) &&
+      matchesTrack(craft, filters.track) &&
+      matchesRewards(craft, filters.rewards) &&
+      (filters.id === "" ||
+        String(craft.identityId) === String(Number(filters.id))),
+  );
+  const limit = filters.page * 24;
+  const change = (update: Partial<FleetFilters>) =>
+    onFilters({ ...filters, ...update, page: 1 });
+  const controlClass =
+    "min-h-11 min-w-0 w-full rounded-[var(--radius-control)] border border-line bg-canvas px-3 text-[16px] text-ink";
   return (
     <>
       {holdingsIncomplete ? (
         <StateFeedback
-          action={<RetryAction onRetry={onRetry} />}
           description={applicationCopy.fleet.partial}
-          title="Collection is incomplete"
+          title="Updating your collection"
           tone="partial"
         />
       ) : null}
       <SegmentedControl
         className="max-w-[40rem]"
         label={applicationCopy.fleet.filterLabel}
-        onValueChange={onFilter}
+        onValueChange={(state: CollectionFilter) => change({ state })}
         options={(["all", "transient", "permanent"] as const).map((option) => ({
           label: `${filterLabels[option]} (${countFor(option)})`,
           value: option,
         }))}
-        value={filter}
+        value={filters.state}
       />
-      <CollectionGrid
-        craft={allCraft.filter((craft) => matchesFilter(craft, filter))}
-        filter={filter}
-      />
+      <div className="grid min-w-0 grid-cols-1 gap-3 tablet:grid-cols-3">
+        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+          Identity number
+          <input
+            aria-label="Find a held identity"
+            className={controlClass}
+            inputMode="numeric"
+            maxLength={4}
+            placeholder="e.g. 1639"
+            value={filters.id}
+            onChange={(event) => change({ id: event.target.value })}
+          />
+        </label>
+        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+          Reward Track
+          <select
+            aria-label="Filter Reward Track"
+            className={controlClass}
+            value={filters.track}
+            onChange={(event) => change({ track: event.target.value })}
+          >
+            <option value="all">All tracks</option>
+            {identity.rewardTrackLabels.slice(1).map((track) => (
+              <option key={track} value={track}>
+                {track}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+          Rewards
+          <select
+            aria-label="Filter rewards"
+            className={controlClass}
+            value={filters.rewards}
+            onChange={(event) =>
+              change({ rewards: event.target.value as FleetFilters["rewards"] })
+            }
+          >
+            <option value="all">All rewards</option>
+            <option value="claimable">Claimable</option>
+            <option value="updating">Still updating</option>
+          </select>
+        </label>
+      </div>
+      {filters.rewards === "claimable" && allCraft.some(rewardsUpdating) ? (
+        <p className="text-body-sm text-ink-soft">
+          Some rewards are still updating and are excluded from this filter.
+          Choose Still updating to see those identities.
+        </p>
+      ) : null}
+      <p className="text-caption text-ink-soft" role="status">
+        Showing {Math.min(limit, matching.length)} of {matching.length} matching
+        confirmed collectibles.
+      </p>
+      <CollectionGrid craft={matching.slice(0, limit)} filter={filters.state} />
+      {limit < matching.length ? (
+        <Button
+          variant="outline"
+          onClick={() => onFilters({ ...filters, page: filters.page + 1 })}
+        >
+          Show more collectibles
+        </Button>
+      ) : null}
+      {filters.state !== "all" ||
+      filters.id !== "" ||
+      filters.track !== "all" ||
+      filters.rewards !== "all" ? (
+        <Button variant="ghost" onClick={() => onFilters(DEFAULT_FILTERS)}>
+          Clear filters
+        </Button>
+      ) : null}
     </>
   );
 }
@@ -475,13 +523,13 @@ const enrichCraft =
   });
 
 function FleetReadContent({
-  filter,
-  onFilter,
+  filters,
+  onFilters,
   onRetry,
   walletRead,
 }: {
-  readonly filter: CollectionFilter;
-  readonly onFilter: (filter: CollectionFilter) => void;
+  readonly filters: FleetFilters;
+  readonly onFilters: (filters: FleetFilters) => void;
   readonly onRetry: () => Promise<void>;
   readonly walletRead: WalletRead;
 }) {
@@ -500,15 +548,20 @@ function FleetReadContent({
       enrichCraft(true, collectibles.permanentObservedAt ?? observedAt),
     ),
   ];
+  if (
+    allCraft.length === 0 &&
+    collectibles.pendingDiscovery.count > 0 &&
+    collectibles.permanentHoldingsStatus !== "unavailable"
+  )
+    return null;
   return (
     <LoadedCollection
       allCraft={allCraft}
-      filter={filter}
+      filters={filters}
       holdingsIncomplete={
         collectibles.permanentHoldingsStatus === "unavailable"
       }
-      onFilter={onFilter}
-      onRetry={onRetry}
+      onFilters={onFilters}
     />
   );
 }
@@ -519,35 +572,99 @@ function FleetReadContent({
  * Holdings are the point of the route, so the cards come first and the
  * six-value summary follows them as a compact board.
  *
- * A pending Discovery leads, though. It is a live state with its own retry,
- * and it sat below every card: a wallet holding sixteen craft pushed it about
- * ten thousand pixels down a 375px viewport, out of reach of the reader it
- * was addressed to. Its sibling notice — an incomplete holdings read — already
- * leads the list for the same reason.
+ * A pending Discovery leads so its progress stays visible above the cards.
  */
-export function FleetPanel() {
+function FleetContent() {
   const protocol = useProtocolClient();
-  const [filter, setFilter] = useState<CollectionFilter>("all");
+  const params = useSearchParams();
+  const [selection, setSelection] = useState(() => ({
+    scope: protocol.address,
+    filters: readFilters(params ?? new URLSearchParams()),
+  }));
+  const filters =
+    selection.scope === protocol.address ? selection.filters : DEFAULT_FILTERS;
+  const onFilters = (next: FleetFilters) => {
+    setSelection({ scope: protocol.address, filters: next });
+    const url = new URL(window.location.href);
+    for (const [key, value] of Object.entries(next)) {
+      if (value === DEFAULT_FILTERS[key as keyof FleetFilters])
+        url.searchParams.delete(key);
+      else url.searchParams.set(key, String(value));
+    }
+    window.history.replaceState(window.history.state, "", url);
+  };
+  useEffect(() => {
+    const restore = () =>
+      setSelection({
+        scope: protocol.address,
+        filters: readFilters(new URLSearchParams(window.location.search)),
+      });
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [protocol.address]);
   const walletRead = protocol.walletRead;
 
   return (
-    <div className="mt-4 grid gap-3">
+    <div className="grid min-w-0 grid-cols-1 gap-3">
+      <div id="discovery-outcomes">
+        <DiscoveryOutcomes />
+      </div>
+      {walletRead.status === "loaded" && walletRead.stale === true ? (
+        <StateFeedback
+          title="Connection interrupted"
+          description="Showing your last verified collection while we reconnect. Ownership and rewards must refresh before any wallet action."
+          tone="stale"
+        />
+      ) : null}
       {walletRead.status === "loaded" ? (
-        <PendingDiscoveryNotice
-          onRetry={protocol.refreshWallet}
+        <DiscoveryProgress
+          observedAt={walletRead.snapshot.observedAt}
           pending={walletRead.snapshot.collectibles.pendingDiscovery}
         />
       ) : null}
-      <FleetReadContent
-        filter={filter}
-        onFilter={setFilter}
-        onRetry={protocol.refreshWallet}
-        walletRead={walletRead}
-      />
-      {walletRead.status === "loaded" ? (
-        <CollectionSummary walletRead={walletRead} />
-      ) : null}
+      <div className="grid min-h-[32rem] min-w-0 grid-cols-1 content-start gap-3">
+        {walletRead.status === "loaded" ? (
+          <CollectorNextAction
+            journey={createCollectorJourneyView({
+              accessState: protocol.accessState,
+              walletRead,
+              nativeBalanceWei:
+                protocol.nativeBalanceRead?.status === "loaded"
+                  ? protocol.nativeBalanceRead.balance.rawWei
+                  : undefined,
+            })}
+            returnTo="/fleet"
+          />
+        ) : null}
+        <FleetReadContent
+          filters={filters}
+          onFilters={onFilters}
+          onRetry={protocol.refreshWallet}
+          walletRead={walletRead}
+        />
+        {walletRead.status === "loaded" ? (
+          <CollectionSummary walletRead={walletRead} />
+        ) : null}
+      </div>
       <CollectibleExplorerLinks />
+    </div>
+  );
+}
+
+export function FleetPanel() {
+  return (
+    <div className="mt-4 min-h-[32rem]">
+      <Suspense
+        fallback={
+          <StateFeedback
+            title="Loading collection"
+            description="Restoring your Fleet view."
+            tone="loading"
+          />
+        }
+      >
+        <FleetContent />
+      </Suspense>
     </div>
   );
 }

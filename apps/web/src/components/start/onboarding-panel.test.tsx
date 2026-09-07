@@ -7,6 +7,15 @@ import { createRoot, type Root } from "react-dom/client";
 import type { Address } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/hooks/use-delivery-status", () => ({
+  useDeliveryStatus: () => ({ state: "unknown", data: undefined }),
+}));
+vi.mock("@/components/collector-help", () => ({ CollectorHelp: () => null }));
+
+vi.mock("@/hooks/use-discovery-history", () => ({
+  useDiscoveryHistory: () => ({ data: undefined }),
+}));
+
 const testState = vi.hoisted(() => ({ protocol: undefined as unknown }));
 
 vi.mock("@/providers/protocol-client-provider", () => ({
@@ -148,13 +157,37 @@ describe("three-phase collector journey", () => {
 
     expect(container.textContent).toContain("$FUEL balance0.4");
     expect(container.textContent).toContain("$FUEL still needed0.6");
-    expect(container.querySelector("a[href='/faucet']")?.textContent).toBe(
-      "Open Faucet",
-    );
+    expect(
+      container.querySelector("a[href='/faucet?returnTo=/start']")?.textContent,
+    ).toBe("Open Faucet");
     expect(container.textContent).toContain("random");
     expect(container.textContent).toContain("Burns exactly one $FUEL forever");
     expect(fetcher).toHaveBeenCalledTimes(1);
     expect(fetcher.mock.calls[0]?.[0]).toContain("/status?recipient=");
+  });
+
+  it("keeps accepted funding reachable without requesting another grant", async () => {
+    testState.protocol = protocol("ready");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            apiVersion: 1,
+            recipient: { address, state: "pending" },
+            request: { id: "accepted-1", state: "pending" },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    await renderPanel();
+    await flushPanel();
+    expect(container.textContent).toContain("Funding is on its way");
+    expect(
+      container.querySelector("a[href='/faucet?returnTo=/start']")?.textContent,
+    ).toBe("View funding progress");
+    expect(container.textContent).not.toContain("Fund test wallet");
   });
 
   it("routes a funded wallet to Trade to buy the missing FUEL", async () => {
@@ -169,9 +202,10 @@ describe("three-phase collector journey", () => {
     await renderPanel();
     await flushPanel();
 
-    expect(container.querySelector("a[href='/exchange']")?.textContent).toBe(
-      "Buy $FUEL on Trade",
-    );
+    expect(
+      container.querySelector("a[href='/exchange?returnTo=/start']")
+        ?.textContent,
+    ).toBe("Buy $FUEL on Trade");
     expect(container.querySelector("li[data-state]")?.textContent).toContain(
       "random Discovery",
     );
@@ -200,10 +234,13 @@ describe("three-phase collector journey", () => {
     await renderPanel();
     await flushPanel();
 
-    expect(container.querySelector("a[href='/exchange']")?.textContent).toBe(
-      "Buy $FUEL on Trade",
-    );
-    expect(container.querySelector("a[href='/faucet']")).toBeNull();
+    expect(
+      container.querySelector("a[href='/exchange?returnTo=/start']")
+        ?.textContent,
+    ).toBe("Buy $FUEL on Trade");
+    expect(
+      container.querySelector("a[href='/faucet?returnTo=/start']"),
+    ).toBeNull();
   });
 
   it("collapses Fund and tracks an in-flight random Discovery", async () => {
@@ -219,6 +256,12 @@ describe("three-phase collector journey", () => {
     const phases = [...container.querySelectorAll("li[data-state]")];
     expect(phases[0]?.getAttribute("data-state")).toBe("complete");
     expect(phases[1]?.getAttribute("data-state")).toBe("current");
+    expect(container.textContent).toContain(
+      "check My Collection for its current stage",
+    );
+    expect(container.textContent).not.toContain(
+      "is awaiting verified randomness",
+    );
     expect(phases[2]?.getAttribute("data-state")).toBe("waiting");
     expect(container.querySelector("a[href='/fleet']")?.textContent).toBe(
       "Check Discovery in My Collection",
@@ -242,8 +285,8 @@ describe("three-phase collector journey", () => {
     const launch = phases[2];
     expect(launch?.textContent).toContain("Burns exactly one $FUEL forever");
     expect(
-      launch?.querySelector("a[href='/fleet/1493']")?.textContent,
-    ).toContain("Review Launch");
+      container.querySelector("a[href='/fleet/1493']")?.textContent,
+    ).toContain("Inspect craft #1493");
   });
 
   it("shows a concise success state after an Orbiter exists", async () => {
@@ -289,8 +332,12 @@ describe("three-phase collector journey", () => {
     const withAction = phases.filter(
       (phase) => phase.querySelector("button, a") !== null,
     );
-    expect(withAction).toHaveLength(1);
-    expect(withAction[0]).toBe(phases[0]);
+    expect(withAction).toHaveLength(0);
+    expect(
+      [...container.querySelectorAll("button")].filter(
+        (button) => button.textContent === "Wallet control",
+      ),
+    ).toHaveLength(1);
   });
 
   it("opens with the live board, then the plan", async () => {
@@ -310,15 +357,43 @@ describe("three-phase collector journey", () => {
     );
   });
 
-  it("explains blocked progress instead of rendering placeholder glyphs", async () => {
+  it("does not restart funding while empty ownership is still updating", async () => {
+    const state = protocol("ready");
+    if (state.walletRead.status !== "loaded")
+      throw new Error("Expected wallet");
+    testState.protocol = {
+      ...state,
+      walletRead: {
+        ...state.walletRead,
+        snapshot: {
+          ...state.walletRead.snapshot,
+          collectibles: {
+            ...state.walletRead.snapshot.collectibles,
+            permanentHoldingsStatus: "unavailable",
+          },
+        },
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>());
+    await renderPanel();
+    expect(container.textContent).toContain("Collection is updating");
+    expect(
+      container.querySelector("a[href='/faucet?returnTo=/start']"),
+    ).toBeNull();
+    expect(
+      container.querySelector("a[href='/exchange?returnTo=/start']"),
+    ).toBeNull();
+  });
+
+  it("invites a disconnected visitor to connect without reporting a failure", async () => {
     testState.protocol = protocol("disconnected");
     vi.stubGlobal("fetch", vi.fn<typeof fetch>());
 
     await renderPanel();
 
     const progress = container.querySelector("[data-progress-state]");
-    expect(progress?.getAttribute("data-progress-state")).toBe("unavailable");
-    expect(progress?.textContent).toContain("unavailable");
+    expect(progress?.getAttribute("data-progress-state")).toBe("disconnected");
+    expect(progress?.textContent).toContain("Connect to see your progress");
     expect(progress?.textContent).not.toContain("\u2014");
     expect(progress?.querySelector("dd")).toBeNull();
   });
@@ -359,7 +434,7 @@ describe("three-phase collector journey", () => {
     expect(progress?.textContent).toContain("0.4000");
   });
 
-  it("compacts long token values without hiding their exact amount", async () => {
+  it("compacts balances and rounds remaining requirements upward without hiding exact amounts", async () => {
     const balance = "0.724218211757156969";
     const remaining = "0.275781788242843031";
     testState.protocol = protocol("ready", "empty", address, 0n, {
@@ -384,7 +459,7 @@ describe("three-phase collector journey", () => {
     ];
     expect(values[0]?.textContent).toBe("0.72422");
     expect(values[0]?.getAttribute("title")).toBe(balance);
-    expect(values[1]?.textContent).toBe("0.27578");
+    expect(values[1]?.textContent).toBe("0.27579");
     expect(values[1]?.getAttribute("title")).toBe(remaining);
   });
 });

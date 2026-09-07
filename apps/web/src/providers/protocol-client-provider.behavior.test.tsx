@@ -118,6 +118,7 @@ const testState = vi.hoisted(() => {
     queryClient: {
       cancelQueries: vi.fn(async () => undefined),
       refetchQueries: vi.fn(async () => undefined),
+      invalidateQueries: vi.fn(async () => undefined),
       removeQueries: vi.fn(),
     },
     pathname: "/admin/operations",
@@ -352,6 +353,8 @@ describe("protocol client transaction coordination", () => {
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
     testState.pathname = "/admin/operations";
+    window.localStorage.clear();
+    testState.queryClient.invalidateQueries.mockClear();
     testState.historyBasePaths.length = 0;
     testState.connection.address = testState.address;
     testState.connection.chainId = 84_532;
@@ -411,7 +414,53 @@ describe("protocol client transaction coordination", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("restores a collector submission after reload and reconciles the original hash automatically", async () => {
+    vi.useFakeTimers();
+    testState.pathname = "/fleet/1639";
+    await act(async () => {
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      );
+    });
+    testState.transactionClient.waitForTransactionReceipt.mockRejectedValueOnce(
+      new Error("receipt RPC unavailable"),
+    );
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    await act(async () => {
+      await currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch Grounded Craft #1639",
+      );
+    });
+    expect(currentProtocol.transaction).toMatchObject({
+      status: "outcome-unknown",
+      hash: testState.hash,
+    });
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    testState.pathname = "/fleet";
+    await act(async () => {
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      );
+    });
+    expect(currentProtocol.transaction).toMatchObject({
+      hash: testState.hash,
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+    expect(currentProtocol.transaction).toMatchObject({ hash: testState.hash });
   });
 
   it("allows only one wallet submission while an operation is pending", async () => {
@@ -467,7 +516,7 @@ describe("protocol client transaction coordination", () => {
       paused: true,
     } as const;
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -488,7 +537,7 @@ describe("protocol client transaction coordination", () => {
     });
     const action = { type: "open-reward-epoch" } as const;
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -604,11 +653,18 @@ describe("protocol client transaction coordination", () => {
         data: testState.nativeBalance,
       });
       const refresh = [...container.querySelectorAll("button")].find(
-        (button) => button.textContent === "Retry wallet read",
+        (button) => button.textContent === "Refresh wallet",
       );
-      expect(refresh).toBeDefined();
+      expect(refresh).toBeUndefined();
       await act(async () => {
-        refresh?.click();
+        // The real-query integration tests cover automatic polling. This
+        // mocked observer receives the next background result here.
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+            <AccessNotice />
+          </ProtocolClientProvider>,
+        );
       });
       expect(currentProtocol.walletSynchronizing).toBe(false);
       expect(currentProtocol.walletRead).toMatchObject({
@@ -650,6 +706,7 @@ describe("protocol client transaction coordination", () => {
     const publicOperational = vi.fn(async () => undefined as never);
     const protectedOperational = vi.fn(async () => undefined as never);
     const shared = {
+      discoveries: vi.fn(async () => undefined as never),
       liquidityCycles: vi.fn(async () => undefined as never),
       operations: vi.fn(async () => undefined as never),
     };
@@ -743,7 +800,7 @@ describe("protocol client transaction coordination", () => {
     } as const;
     testState.transactionClient.call.mockRejectedValue(transientRpcFailure());
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -766,7 +823,7 @@ describe("protocol client transaction coordination", () => {
       new InvalidParamsRpcError(new Error("invalid transaction parameters")),
     );
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -788,7 +845,7 @@ describe("protocol client transaction coordination", () => {
     hostile.revoke();
     testState.transactionClient.call.mockRejectedValueOnce(hostile.proxy);
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -873,6 +930,7 @@ describe("protocol client transaction coordination", () => {
       );
     });
     testState.pathname = "/admin/operations";
+    testState.queryClient.invalidateQueries.mockClear();
     await act(async () => {
       root.render(
         <ProtocolClientProvider>
@@ -925,7 +983,7 @@ describe("protocol client transaction coordination", () => {
   });
 
   it.each(["route", "account", "chain"] as const)(
-    "keeps controls disabled until a deferred wallet prompt settles after a %s change",
+    "keeps same-wallet route locks and isolates a deferred wallet prompt after a %s change",
     async (scopeChange) => {
       const action = {
         type: "set-pause",
@@ -940,7 +998,7 @@ describe("protocol client transaction coordination", () => {
           }),
       );
       const consoleError = vi
-        .spyOn(console, "error")
+        .spyOn(console, "warn")
         .mockImplementation(() => undefined);
       let execution: ReturnType<ProtocolClient["execute"]> | undefined;
 
@@ -968,13 +1026,20 @@ describe("protocol client transaction coordination", () => {
       const stateDuringPrompt = currentProtocol.transaction.status;
       const actionDuringPrompt = currentProtocol.getActionState(action);
       await act(async () => {
-        rejectWallet(new Error("wallet prompt cancelled"));
+        rejectWallet(
+          new Error("wallet connection lost before returning a hash"),
+        );
         await execution;
       });
 
-      expect(stateDuringPrompt).toBe("simulated");
-      expect(actionDuringPrompt.enabled).toBe(false);
-      expect(currentProtocol.transaction.status).toBe("idle");
+      expect(testState.queryClient.invalidateQueries).not.toHaveBeenCalled();
+      expect(stateDuringPrompt).toBe(
+        scopeChange === "route" ? "simulated" : "idle",
+      );
+      expect(actionDuringPrompt.enabled).toBe(scopeChange === "account");
+      expect(currentProtocol.transaction.status).toBe(
+        scopeChange === "route" ? "submission-unknown" : "idle",
+      );
       expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
       consoleError.mockRestore();
     },
@@ -1024,7 +1089,16 @@ describe("protocol client transaction coordination", () => {
         await execution;
       });
 
-      expect(stateDuringPrompt).toBe("simulated");
+      if (scopeChange === "route") {
+        expect(testState.queryClient.invalidateQueries).toHaveBeenCalledWith({
+          queryKey: ["protocol-wallet", testState.hash, testState.address],
+          refetchType: "active",
+        });
+      } else
+        expect(testState.queryClient.invalidateQueries).not.toHaveBeenCalled();
+      expect(stateDuringPrompt).toBe(
+        scopeChange === "route" ? "simulated" : "idle",
+      );
       expect(currentProtocol.transaction.status).toBe("idle");
       expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
       expect(
@@ -1050,7 +1124,7 @@ describe("protocol client transaction coordination", () => {
         new Error("stale simulation rpc"),
       );
       const consoleError = vi
-        .spyOn(console, "error")
+        .spyOn(console, "warn")
         .mockImplementation(() => undefined);
 
       await act(async () => {
@@ -1128,7 +1202,9 @@ describe("protocol client transaction coordination", () => {
         await retry;
       });
 
-      expect(stateDuringQuote).toBe("pending");
+      expect(stateDuringQuote).toBe(
+        scopeChange === "route" ? "pending" : "idle",
+      );
       expect(currentProtocol.transaction.status).toBe("idle");
       expect(testState.transactionClient.getBlock).toHaveBeenCalledOnce();
       expect(stalePreflightCalls).toBe(0);
@@ -1152,7 +1228,7 @@ describe("protocol client transaction coordination", () => {
         .mockRejectedValueOnce(receiptFailure)
         .mockResolvedValueOnce({ blockNumber: 100n, status: "success" });
       const consoleError = vi
-        .spyOn(console, "error")
+        .spyOn(console, "warn")
         .mockImplementation(() => undefined);
 
       await act(async () => {
@@ -1180,6 +1256,52 @@ describe("protocol client transaction coordination", () => {
     },
   );
 
+  it("retains a monotonic identity receipt floor only for the current wallet session", async () => {
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+    await act(async () => {
+      await currentProtocol.refreshWallet(100n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(100n);
+    expect(currentProtocol.walletSynchronizing).toBe(false);
+    await act(async () => {
+      await currentProtocol.refreshWallet(99n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(100n);
+    await act(async () => {
+      await currentProtocol.refreshWallet();
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(100n);
+
+    const oldWalletRefresh = currentProtocol.refreshWallet;
+    testState.connection.address = "0x0000000000000000000000000000000000000002";
+    await act(async () => {
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      );
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+    await act(async () => {
+      await oldWalletRefresh(100n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+    await act(async () => {
+      await currentProtocol.refreshWallet(99n);
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBe(99n);
+
+    testState.connection.chainId = 1;
+    await act(async () => {
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      );
+    });
+    expect(currentProtocol.minimumCollectibleBlock).toBeUndefined();
+  });
+
   it("keeps reconciliation single-flight and the execution lock owned until refresh settles", async () => {
     const action = {
       type: "set-pause",
@@ -1190,7 +1312,7 @@ describe("protocol client transaction coordination", () => {
       .mockRejectedValueOnce(new Error("receipt rpc timed out"))
       .mockResolvedValueOnce({ blockNumber: 100n, status: "success" });
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -1266,7 +1388,7 @@ describe("protocol client transaction coordination", () => {
       .mockResolvedValueOnce(hostileReceipt)
       .mockResolvedValueOnce({ blockNumber: 100n, status: "success" });
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -1304,7 +1426,7 @@ describe("protocol client transaction coordination", () => {
       new Error("simulation rpc timed out"),
     );
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -1468,7 +1590,7 @@ describe("protocol client transaction coordination", () => {
       },
     });
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -1544,6 +1666,30 @@ describe("protocol client transaction coordination", () => {
     expect(currentProtocol.transaction.status).toBe("confirmed");
   });
 
+  it("explains wallet submission failures without replaying the wallet request", async () => {
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    testState.sendTransaction.mockRejectedValueOnce(transientRpcFailure());
+    await act(async () => {
+      await currentProtocol.execute(
+        { type: "set-pause", module: "rewards", paused: true },
+        "Pause Reward Ledger",
+      );
+    });
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+    expect(
+      testState.transactionClient.waitForTransactionReceipt,
+    ).not.toHaveBeenCalled();
+    expect(currentProtocol.transaction).toMatchObject({
+      status: "submission-unknown",
+      message: expect.stringContaining(
+        "app did not receive a transaction hash",
+      ),
+    });
+    expect(warning).not.toHaveBeenCalled();
+  });
+
   it("reports a cancelled wallet approval as unsubmitted and lets the user retry", async () => {
     const action: SwapAction = {
       type: "swap-exact-input",
@@ -1564,7 +1710,7 @@ describe("protocol client transaction coordination", () => {
         { account: null },
       ),
     );
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await act(async () => {
       await currentProtocol.execute(action, "Buy $FUEL");
@@ -1599,76 +1745,105 @@ describe("protocol client transaction coordination", () => {
     ).toHaveBeenCalledTimes(2);
   });
 
-  it("reconciles an unknown approval, refreshes review, and waits for an explicit swap submit", async () => {
-    const action: SwapAction = {
-      type: "swap-exact-input",
-      quote: createSwapQuote({ amountOut: 10_000n }),
-      liquidTokenForWeth: false,
-      exactAmountIn: 10_000n,
-      minimumAmountOut: 9_750n,
-      recipient: testState.address as `0x${string}`,
-      deadline: 1_600n,
-      useNative: false,
-    };
-    testState.reader.quoteExactInput.mockResolvedValue(
-      createSwapQuote({ amountOut: 10_000n, observedBlock: 101n }),
-    );
-    testState.reader.readExchangeAllowance.mockResolvedValueOnce({
-      amount: 0n,
-    });
-    testState.transactionClient.waitForTransactionReceipt
-      .mockRejectedValueOnce(new Error("approval receipt rpc timed out"))
-      .mockResolvedValueOnce({ blockNumber: 100n, status: "success" })
-      .mockResolvedValueOnce({ blockNumber: 101n, status: "success" });
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+  it.each([false, true])(
+    "reconciles unknown approval with reload=%s and waits for explicit swap authorization",
+    async (reload) => {
+      testState.pathname = "/exchange";
+      await act(async () =>
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>,
+        ),
+      );
+      const action: SwapAction = {
+        type: "swap-exact-input",
+        quote: createSwapQuote({ amountOut: 10_000n }),
+        liquidTokenForWeth: false,
+        exactAmountIn: 10_000n,
+        minimumAmountOut: 9_750n,
+        recipient: testState.address as `0x${string}`,
+        deadline: 1_600n,
+        useNative: false,
+      };
+      testState.reader.quoteExactInput.mockResolvedValue(
+        createSwapQuote({ amountOut: 10_000n, observedBlock: 101n }),
+      );
+      testState.reader.readExchangeAllowance.mockResolvedValueOnce({
+        amount: 0n,
+      });
+      testState.transactionClient.waitForTransactionReceipt
+        .mockRejectedValueOnce(new Error("approval receipt rpc timed out"))
+        .mockResolvedValueOnce({ blockNumber: 100n, status: "success" })
+        .mockResolvedValueOnce({ blockNumber: 101n, status: "success" });
+      const consoleError = vi
+        .spyOn(console, "warn")
+        .mockImplementation(() => undefined);
 
-    await act(async () => {
-      await currentProtocol.execute(action, "Buy $FUEL");
-    });
+      await act(async () => {
+        await currentProtocol.execute(action, "Buy $FUEL");
+      });
 
-    expect(currentProtocol.transaction).toMatchObject({
-      status: "outcome-unknown",
-      label: "Approve WETH for exchange",
-      hash: testState.hash,
-    });
-    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "outcome-unknown",
+        label: "Approve WETH for exchange",
+        hash: testState.hash,
+      });
+      expect(testState.sendTransaction).toHaveBeenCalledOnce();
 
-    await act(async () => {
-      await currentProtocol.retry();
-    });
+      if (reload) {
+        vi.useFakeTimers();
+        await act(async () => root.unmount());
+        root = createRoot(container);
+        testState.pathname = "/fleet";
+        await act(async () =>
+          root.render(
+            <ProtocolClientProvider>
+              <ProtocolCapture />
+            </ProtocolClientProvider>,
+          ),
+        );
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+      } else {
+        await act(async () => {
+          await currentProtocol.retry();
+        });
+      }
 
-    expect(testState.reader.readExchangeAllowance).toHaveBeenCalledOnce();
-    expect(testState.sendTransaction).toHaveBeenCalledOnce();
-    expect(
-      testState.transactionClient.waitForTransactionReceipt,
-    ).toHaveBeenCalledTimes(2);
-    expect(currentProtocol.transaction).toMatchObject({
-      status: "confirmed",
-      label: "Approve WETH for exchange",
-      message: expect.stringContaining("no exchange was submitted"),
-    });
-    expect(currentProtocol.exchangeQuoteRevision).toBe(1);
+      expect(testState.reader.readExchangeAllowance).toHaveBeenCalledOnce();
+      expect(testState.sendTransaction).toHaveBeenCalledOnce();
+      expect(
+        testState.transactionClient.waitForTransactionReceipt,
+      ).toHaveBeenCalledTimes(2);
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "confirmed",
+        label: "Approve WETH for exchange",
+        message: expect.stringContaining("no exchange was submitted"),
+      });
+      expect(currentProtocol.exchangeQuoteRevision).toBe(1);
+      vi.useRealTimers();
 
-    testState.reader.readExchangeAllowance.mockResolvedValue({
-      amount: action.exactAmountIn,
-    });
-    await act(async () => {
-      await currentProtocol.execute(action, "Buy $FUEL");
-    });
+      testState.reader.readExchangeAllowance.mockResolvedValue({
+        amount: action.exactAmountIn,
+      });
+      await act(async () => {
+        await currentProtocol.execute(action, "Buy $FUEL");
+      });
 
-    expect(testState.reader.readExchangeAllowance).toHaveBeenCalledTimes(2);
-    expect(testState.sendTransaction).toHaveBeenCalledTimes(2);
-    expect(
-      testState.transactionClient.waitForTransactionReceipt,
-    ).toHaveBeenCalledTimes(3);
-    expect(currentProtocol.transaction).toMatchObject({
-      status: "confirmed",
-      label: "Buy $FUEL",
-    });
-    consoleError.mockRestore();
-  });
+      expect(testState.reader.readExchangeAllowance).toHaveBeenCalledTimes(2);
+      expect(testState.sendTransaction).toHaveBeenCalledTimes(2);
+      expect(
+        testState.transactionClient.waitForTransactionReceipt,
+      ).toHaveBeenCalledTimes(3);
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "confirmed",
+        label: "Buy $FUEL",
+      });
+      consoleError.mockRestore();
+    },
+  );
 
   it.each(["route", "account", "chain"] as const)(
     "settles a submitted approval on an old %s scope without leaving controls locked",
@@ -1731,6 +1906,7 @@ describe("protocol client transaction coordination", () => {
       expect(testState.sendTransaction).toHaveBeenCalledOnce();
 
       testState.pathname = "/admin/operations";
+      testState.queryClient.invalidateQueries.mockClear();
       testState.connection.address = testState.address;
       testState.connection.chainId = 84_532;
       testState.reader.readExchangeAllowance.mockResolvedValue({
@@ -1829,7 +2005,7 @@ describe("protocol client transaction coordination", () => {
         data: { ...testState.wallet, observedBlock: 102n },
       });
       const consoleError = vi
-        .spyOn(console, "error")
+        .spyOn(console, "warn")
         .mockImplementation(() => undefined);
 
       await act(async () => {
@@ -1913,7 +2089,7 @@ describe("protocol client transaction coordination", () => {
         prepareWithActualSwapSemantics,
       );
       const consoleError = vi
-        .spyOn(console, "error")
+        .spyOn(console, "warn")
         .mockImplementation(() => undefined);
 
       await act(async () => {
@@ -1960,7 +2136,7 @@ describe("protocol client transaction coordination", () => {
       prepareWithActualSwapSemantics,
     );
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -1985,7 +2161,7 @@ describe("protocol client transaction coordination", () => {
       throw new Error("preparation failed");
     });
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -2024,7 +2200,7 @@ describe("protocol client transaction coordination", () => {
       createSwapQuote({ amountOut: 10_000n, observedBlock: 101n }),
     );
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -2073,7 +2249,7 @@ describe("protocol client transaction coordination", () => {
       new Error("stale simulation rpc"),
     );
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -2152,7 +2328,7 @@ describe("protocol client transaction coordination", () => {
     expect(currentProtocol.transaction.status).toBe("idle");
   });
 
-  it("preserves an unknown submitted hash across scope changes and unlocks after reconciliation", async () => {
+  it("hides a previous wallet transaction and allows a separately authorized action in the new wallet", async () => {
     const action = {
       type: "set-pause",
       module: "rewards",
@@ -2162,7 +2338,7 @@ describe("protocol client transaction coordination", () => {
       .mockRejectedValueOnce(new Error("receipt rpc timed out"))
       .mockResolvedValueOnce({ blockNumber: 100n, status: "success" });
     const consoleError = vi
-      .spyOn(console, "error")
+      .spyOn(console, "warn")
       .mockImplementation(() => undefined);
 
     await act(async () => {
@@ -2180,11 +2356,14 @@ describe("protocol client transaction coordination", () => {
       );
     });
 
-    expect(currentProtocol.transaction.status).toBe("outcome-unknown");
+    expect(currentProtocol.transaction.status).toBe("idle");
     await act(async () => {
       await currentProtocol.retry();
     });
-    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(currentProtocol.transaction.status).toBe("idle");
+    expect(
+      testState.transactionClient.waitForTransactionReceipt,
+    ).toHaveBeenCalledTimes(1);
     expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -2283,4 +2462,240 @@ describe("protocol client transaction coordination", () => {
     expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
     expect(currentProtocol.transaction.status).toBe("confirmed");
   });
+  it("keeps uncertain wallet submission locked through navigation and reload", async () => {
+    testState.pathname = "/fleet/1639";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    testState.sendTransaction.mockRejectedValueOnce(transientRpcFailure());
+    await act(async () => {
+      await currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+    });
+    expect(currentProtocol.transaction.status).toBe("submission-unknown");
+    await act(async () => {
+      await currentProtocol.retry();
+      await currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+    });
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    testState.pathname = "/fleet";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("submission-unknown");
+    expect(
+      currentProtocol.getActionState({
+        type: "commit-collectible",
+        identityId: 1639,
+      }).enabled,
+    ).toBe(false);
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("retains submission uncertainty when navigation happens before the wallet RPC fails", async () => {
+    testState.pathname = "/fleet/1639";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    let rejectSubmission!: (cause: unknown) => void;
+    testState.sendTransaction.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectSubmission = reject;
+        }),
+    );
+    let execution!: ReturnType<ProtocolClient["execute"]>;
+    await act(async () => {
+      execution = currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+      await vi.waitFor(() =>
+        expect(testState.sendTransaction).toHaveBeenCalledOnce(),
+      );
+    });
+    testState.pathname = "/fleet";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    await act(async () => {
+      rejectSubmission(transientRpcFailure());
+      await execution;
+    });
+    expect(currentProtocol.transaction.status).toBe("submission-unknown");
+    await act(async () => {
+      await currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+    });
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("stores late submission uncertainty only for the submitting wallet", async () => {
+    testState.pathname = "/fleet/1639";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    let rejectSubmission!: (cause: unknown) => void;
+    testState.sendTransaction.mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectSubmission = reject;
+        }),
+    );
+    let execution!: ReturnType<ProtocolClient["execute"]>;
+    await act(async () => {
+      execution = currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+      await vi.waitFor(() =>
+        expect(testState.sendTransaction).toHaveBeenCalledOnce(),
+      );
+    });
+    testState.connection.address = "0x0000000000000000000000000000000000000002";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    await act(async () => {
+      rejectSubmission(transientRpcFailure());
+      await execution;
+    });
+    expect(currentProtocol.transaction.status).toBe("idle");
+    testState.connection.address = testState.address;
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("submission-unknown");
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+  });
+
+  it.each(["repriced", "cancelled", "replaced"] as const)(
+    "persists a %s replacement before its receipt and restores the correct outcome",
+    async (reason) => {
+      testState.pathname = "/fleet/1639";
+      await act(async () =>
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>,
+        ),
+      );
+      const replacementHash = `0x${"ab".repeat(32)}` as `0x${string}`;
+      type Replacement = {
+        transaction: { hash: `0x${string}` };
+        reason: "repriced" | "cancelled" | "replaced";
+      };
+      let replaced!: (event: Replacement) => void;
+      let finishOriginal!: (receipt: {
+        blockNumber: bigint;
+        status: "success";
+      }) => void;
+      testState.transactionClient.waitForTransactionReceipt.mockImplementationOnce(
+        (...args: unknown[]) => {
+          replaced = (args[0] as { onReplaced: (event: Replacement) => void })
+            .onReplaced;
+          return new Promise((resolve) => {
+            finishOriginal = resolve;
+          });
+        },
+      );
+      let execution!: ReturnType<ProtocolClient["execute"]>;
+      await act(async () => {
+        execution = currentProtocol.execute(
+          { type: "commit-collectible", identityId: 1639 },
+          "Launch #1639",
+        );
+        await vi.waitFor(() =>
+          expect(
+            testState.transactionClient.waitForTransactionReceipt,
+          ).toHaveBeenCalledOnce(),
+        );
+      });
+      await act(async () => {
+        replaced({ transaction: { hash: replacementHash }, reason });
+      });
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "submitted",
+        hash: replacementHash,
+      });
+      vi.useFakeTimers();
+      await act(async () => root.unmount());
+      root = createRoot(container);
+      testState.pathname = "/fleet";
+      await act(async () =>
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>,
+        ),
+      );
+      // A fresh provider sees the replacement before any receipt has resolved.
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "outcome-unknown",
+        hash: replacementHash,
+      });
+      expect(testState.sendTransaction).toHaveBeenCalledOnce();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(
+        testState.transactionClient.waitForTransactionReceipt,
+      ).toHaveBeenLastCalledWith(
+        expect.objectContaining({ hash: replacementHash }),
+      );
+      expect(currentProtocol.transaction).toMatchObject({
+        status: reason === "repriced" ? "confirmed" : "failed",
+        hash: replacementHash,
+      });
+      if (reason !== "repriced")
+        expect(currentProtocol.transaction).toMatchObject({
+          message: expect.stringContaining("original action did not complete"),
+        });
+      await act(async () => {
+        finishOriginal({ blockNumber: 102n, status: "success" });
+        await execution;
+      });
+      expect(currentProtocol.transaction.status).toBe(
+        reason === "repriced" ? "confirmed" : "failed",
+      );
+      expect(testState.sendTransaction).toHaveBeenCalledOnce();
+    },
+  );
 });

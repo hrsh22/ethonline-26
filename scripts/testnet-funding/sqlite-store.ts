@@ -106,6 +106,9 @@ export interface TestnetFundingStore {
     completedAt: number,
   ) => StoredFundingRequest;
   readonly failRequest: (requestId: string, completedAt: number) => void;
+  readonly readLatestRequest: (
+    recipient: Address,
+  ) => StoredFundingRequest | undefined;
   readonly readActiveRequest: () => StoredFundingRequest | undefined;
   readonly tryAcquireLease: (input: {
     readonly requestId: string;
@@ -392,6 +395,14 @@ export const openTestnetFundingStore = (
         };
         writeRequest(request, completedAt);
       }),
+    readLatestRequest: (recipient) => {
+      const row = database
+        .prepare(
+          "SELECT * FROM funding_requests WHERE recipient = ? ORDER BY created_at DESC, rowid DESC LIMIT 1",
+        )
+        .get(recipient.toLowerCase());
+      return row === undefined ? undefined : requestFromRow(row);
+    },
     readActiveRequest: () => {
       const row = database
         .prepare(

@@ -1,0 +1,126 @@
+{
+  "origin": "http://127.0.0.1:3109",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh browser context; HTTP cache disabled; wallet storage restored",
+  "results": [
+    {
+      "route": "/fleet",
+      "run": 1,
+      "rpcHttp": 46,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 8,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6825.0999999940395,
+      "cls": 0.3510377668308703,
+      "fcp": 756,
+      "lcp": 756,
+      "elapsed": 15003.40000000596
+    },
+    {
+      "route": "/fleet",
+      "run": 2,
+      "rpcHttp": 46,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 8,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6818.299999982119,
+      "cls": 0.3510377668308703,
+      "fcp": 756,
+      "lcp": 756,
+      "elapsed": 15001.5
+    },
+    {
+      "route": "/fleet",
+      "run": 3,
+      "rpcHttp": 46,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 8,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6836.199999988079,
+      "cls": 0.3510377668308703,
+      "fcp": 768,
+      "lcp": 768,
+      "elapsed": 15002.90000000596
+    },
+    {
+      "route": "/exchange",
+      "run": 1,
+      "rpcHttp": 42,
+      "methods": {
+        "eth_blockNumber": 1,
+        "eth_call": 8,
+        "eth_chainId": 3,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6824.799999982119,
+      "cls": 0.1288367566854328,
+      "fcp": 744,
+      "lcp": 744,
+      "elapsed": 15004.09999999404
+    },
+    {
+      "route": "/exchange",
+      "run": 2,
+      "rpcHttp": 42,
+      "methods": {
+        "eth_blockNumber": 1,
+        "eth_call": 8,
+        "eth_chainId": 3,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6814.699999988079,
+      "cls": 0.1288367566854328,
+      "fcp": 752,
+      "lcp": 752,
+      "elapsed": 15004.199999988079
+    },
+    {
+      "route": "/exchange",
+      "run": 3,
+      "rpcHttp": 42,
+      "methods": {
+        "eth_blockNumber": 1,
+        "eth_call": 8,
+        "eth_chainId": 3,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6835.700000017881,
+      "cls": 0.1288367566854328,
+      "fcp": 752,
+      "lcp": 752,
+      "elapsed": 15002.5
+    }
+  ],
+  "sourceCommit": "c16067c04bcfe5f08399a2de5a9b57077b9accef",
+  "buildId": "-oXMbP6E6hfUvQSrfJEEx"
+}

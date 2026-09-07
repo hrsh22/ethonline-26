@@ -24,6 +24,9 @@ import {
   http,
   keccak256,
   parseEther,
+  parseTransaction,
+  recoverTransactionAddress,
+  TransactionReceiptNotFoundError,
   parseAbi,
   toHex,
 } from "viem";
@@ -33,6 +36,7 @@ import type {
   Hex,
   SimulateContractParameters,
   WriteContractParameters,
+  TransactionSerialized,
 } from "viem";
 import {
   parseHistoryLoopbackUrl,
@@ -76,6 +80,7 @@ import {
   deliverSubmittedKeeperAttempt,
   replayKeeperAttemptOutbox,
   type KeeperAttemptOutbox,
+  type KeeperReplacementEvidence,
 } from "./keeper-attempt-outbox.ts";
 import { deriveHistoryIndexConfiguration } from "./history-indexer/configuration.ts";
 import { openOperatorControlStore } from "./operator-control/store.ts";
@@ -440,11 +445,17 @@ export interface OperatorChain {
   ) => Promise<OperatorActionEvidence>;
   readonly reconcileSubmission?: (
     transactionHash: Hex,
+    rawTransaction?: Hex,
   ) => Promise<OperatorSubmissionResolution>;
   readonly rebroadcastSubmission?: (rawTransaction: Hex) => Promise<Hex>;
 }
 
 export type OperatorSubmissionResolution =
+  | {
+      readonly status: "replaced";
+      readonly blockNumber: bigint;
+      readonly replacementHash: Hex;
+    }
   | {
       readonly status: "confirmed" | "reverted";
       readonly blockNumber: bigint;
@@ -455,11 +466,44 @@ export type OperatorSubmissionResolution =
       readonly failureClass: "receipt-unavailable" | "canonicality-uncertain";
     };
 
+interface OperatorReconciliationEvidence {
+  readonly minimumBlock: bigint | undefined;
+  readonly replacements: readonly KeeperReplacementEvidence[];
+}
+const higherObservedBlock = (
+  left: bigint | undefined,
+  right: bigint | undefined,
+) =>
+  left === undefined
+    ? right
+    : right === undefined || left >= right
+      ? left
+      : right;
+
+const combineOperatorReconciliation = (
+  current: OperatorReconciliationEvidence,
+  prior: OperatorReconciliationEvidence = {
+    minimumBlock: undefined,
+    replacements: [],
+  },
+) => ({
+  minimumBlock: higherObservedBlock(current.minimumBlock, prior.minimumBlock),
+  replacements: [
+    ...new Map(
+      [...prior.replacements, ...current.replacements].map((proof) => [
+        proof.transactionHash,
+        proof,
+      ]),
+    ).values(),
+  ].slice(-20),
+});
+
 export interface OperatorWorkflowDependencies {
   readonly chain: OperatorChain;
   readonly recorder: KeeperAttemptRecorder;
   readonly outbox: KeeperAttemptOutbox;
   readonly runId: string;
+  readonly priorReconciliation?: OperatorReconciliationEvidence;
 }
 
 const readCurrentTick = async (
@@ -1067,9 +1111,197 @@ const snapshotCanonicalOperatorReceipt = (
   };
 };
 
+const observedAccountNonce = async (
+  clients: OperatorClients,
+  address: Address,
+  blockNumber: bigint,
+) => {
+  const nonce = await clients.publicClient.getTransactionCount({
+    address,
+    blockNumber,
+  });
+  if (!Number.isSafeInteger(nonce) || nonce < 0)
+    throw new Error("Invalid canonical account nonce");
+  return nonce;
+};
+
+/** Find the first block consuming this nonce; archive failures leave the outbox gated. */
+const nonceInclusionBlock = async (
+  clients: OperatorClients,
+  address: Address,
+  nonce: number,
+  upper: bigint,
+) => {
+  let lower = upper;
+  let distance = 1n;
+  let reads = 1; // Includes the confirmed-boundary nonce read.
+  // Recent replacements should not require genesis-era archive state.
+  while (reads < 32) {
+    lower = upper > distance ? upper - distance : 0n;
+    reads += 1;
+    if ((await observedAccountNonce(clients, address, lower)) <= nonce) break;
+    if (lower === 0n) throw new Error("No canonical nonce transition found");
+    upper = lower;
+    distance *= 2n;
+  }
+  if (reads === 32)
+    throw new Error("Canonical nonce search exceeded its bound");
+  lower += 1n;
+  for (; lower < upper && reads < 64; reads += 1) {
+    const middle = (lower + upper) / 2n;
+    if ((await observedAccountNonce(clients, address, middle)) > nonce)
+      upper = middle;
+    else lower = middle + 1n;
+  }
+  if (lower !== upper)
+    throw new Error("Canonical nonce search exceeded its bound");
+  return lower;
+};
+
+const signedOperatorIdentity = async (
+  clients: OperatorClients,
+  transactionHash: Hex,
+  rawTransaction: Hex,
+) => {
+  if (keccak256(rawTransaction) !== transactionHash)
+    throw new Error("Stored signed transaction hash mismatch");
+  const signed = parseTransaction(rawTransaction);
+  if (
+    signed.chainId !== BASE_SEPOLIA_CHAIN_ID ||
+    (await clients.publicClient.getChainId()) !== signed.chainId ||
+    !Number.isSafeInteger(signed.nonce) ||
+    signed.nonce === undefined ||
+    signed.nonce < 0
+  )
+    throw new Error("Stored signed transaction scope is invalid");
+  const sender = await recoverTransactionAddress({
+    serializedTransaction: rawTransaction as TransactionSerialized,
+  });
+  return { sender, nonce: signed.nonce };
+};
+
+const canonicalNonceReplacement = async (
+  clients: OperatorClients,
+  transactionHash: Hex,
+  sender: Address,
+  nonce: number,
+  floor: bigint,
+) => {
+  const inclusion = await nonceInclusionBlock(clients, sender, nonce, floor);
+  const block = await clients.publicClient.getBlock({
+    blockNumber: inclusion,
+    includeTransactions: true,
+  });
+  const identity = decodeOperatorBlockIdentity(
+    block,
+    "Operator replacement inclusion header",
+  );
+  const replacement = block.transactions.find(
+    (transaction) =>
+      transaction.from.toLowerCase() === sender.toLowerCase() &&
+      transaction.nonce === nonce,
+  );
+  if (
+    identity.number !== inclusion ||
+    replacement === undefined ||
+    replacement.hash === transactionHash
+  )
+    throw new Error(
+      "No different canonical transaction consumes the signed nonce",
+    );
+  const receipt = await clients.publicClient.getTransactionReceipt({
+    hash: replacement.hash,
+  });
+  const snapshot = snapshotCanonicalOperatorReceipt(receipt);
+  if (
+    receipt.transactionHash !== replacement.hash ||
+    snapshot.blockNumber !== inclusion ||
+    snapshot.blockHash !== identity.hash
+  )
+    throw new Error(
+      "Replacement receipt does not match its canonical inclusion",
+    );
+  return { inclusion, identity, replacement };
+};
+
+const reconcileConsumedOperatorNonce = async (
+  clients: OperatorClients,
+  transactionHash: Hex,
+  rawTransaction: Hex,
+): Promise<OperatorSubmissionResolution> => {
+  try {
+    const { sender, nonce } = await signedOperatorIdentity(
+      clients,
+      transactionHash,
+      rawTransaction,
+    );
+    const head = await clients.publicClient.getBlockNumber();
+    if (typeof head !== "bigint" || head < 2n)
+      throw new Error("Canonical confirmation floor unavailable");
+    const floor = head - 2n;
+    const anchor = decodeOperatorBlockIdentity(
+      await clients.publicClient.getBlock({ blockNumber: floor }),
+      "Operator nonce confirmation header",
+    );
+    if (anchor.number !== floor)
+      throw new Error("Canonical nonce header mismatch");
+    if ((await observedAccountNonce(clients, sender, floor)) <= nonce)
+      return {
+        status: "submitted-unknown",
+        failureClass: "receipt-unavailable",
+        reason:
+          "The signed nonce has not been consumed at the confirmation boundary.",
+      };
+    const { inclusion, identity, replacement } =
+      await canonicalNonceReplacement(
+        clients,
+        transactionHash,
+        sender,
+        nonce,
+        floor,
+      );
+    const [currentAnchor, currentInclusion] = await Promise.all([
+      clients.publicClient.getBlock({ blockNumber: floor }),
+      clients.publicClient.getBlock({ blockNumber: inclusion }),
+    ]);
+    if (
+      !sameOperatorBlockIdentity(
+        decodeOperatorBlockIdentity(
+          currentAnchor,
+          "Operator nonce confirmation recheck",
+        ),
+        anchor,
+      ) ||
+      !sameOperatorBlockIdentity(
+        decodeOperatorBlockIdentity(
+          currentInclusion,
+          "Operator replacement inclusion recheck",
+        ),
+        identity,
+      )
+    )
+      throw new Error(
+        "Canonical replacement evidence changed during reconciliation",
+      );
+    return {
+      status: "replaced",
+      blockNumber: inclusion,
+      replacementHash: replacement.hash,
+    };
+  } catch {
+    return {
+      status: "submitted-unknown",
+      failureClass: "canonicality-uncertain",
+      reason:
+        "The signed transaction's nonce replacement is not yet canonically proven.",
+    };
+  }
+};
+
 export const reconcileOperatorSubmission = async (
   clients: OperatorClients,
   transactionHash: Hex,
+  rawTransaction?: Hex,
 ): Promise<OperatorSubmissionResolution> => {
   try {
     const receipt = snapshotCanonicalOperatorReceipt(
@@ -1106,6 +1338,15 @@ export const reconcileOperatorSubmission = async (
       blockNumber: receipt.blockNumber,
     };
   } catch (cause) {
+    if (
+      cause instanceof TransactionReceiptNotFoundError &&
+      rawTransaction !== undefined
+    )
+      return reconcileConsumedOperatorNonce(
+        clients,
+        transactionHash,
+        rawTransaction,
+      );
     return {
       status: "submitted-unknown",
       reason: errorDescription(cause),
@@ -1857,8 +2098,8 @@ export const createViemOperatorChain = (
   },
   getChainId: () => input.clients.publicClient.getChainId(),
   observe: (request) => observeCanonicalOperatorState(input, request),
-  reconcileSubmission: (transactionHash) =>
-    reconcileOperatorSubmission(input.clients, transactionHash),
+  reconcileSubmission: (transactionHash, rawTransaction) =>
+    reconcileOperatorSubmission(input.clients, transactionHash, rawTransaction),
   rebroadcastSubmission: async (rawTransaction) => {
     input.clients.assertMaySign?.();
     const hash = await input.clients.publicClient.sendRawTransaction({
@@ -2067,7 +2308,14 @@ const reconcileUnresolvedSubmissions = async (
   outbox: KeeperAttemptOutbox,
   recorder: KeeperAttemptRecorder,
   execute: boolean,
-): Promise<void> => {
+): Promise<OperatorReconciliationEvidence> => {
+  let minimumBlock = outbox
+    .replacements()
+    .reduce<bigint | undefined>(
+      (floor, proof) => higherObservedBlock(floor, proof.blockNumber),
+      undefined,
+    );
+
   await replayKeeperAttemptOutbox(outbox, recorder);
   const stillUnresolved: Array<{
     readonly transactionHash: Hex;
@@ -2095,7 +2343,10 @@ const reconcileUnresolvedSubmissions = async (
             status: "submitted-unknown" as const,
             reason: "No canonical receipt reconciliation source is configured.",
           }
-        : await chain.reconcileSubmission(delivery.transactionHash);
+        : await chain.reconcileSubmission(
+            delivery.transactionHash,
+            delivery.rawTransaction,
+          );
     if (resolution.status === "submitted-unknown") {
       if (
         "failureClass" in resolution &&
@@ -2112,11 +2363,20 @@ const reconcileUnresolvedSubmissions = async (
         reason: resolution.reason,
       });
     } else {
+      if (resolution.status === "replaced") {
+        outbox.recordReplacement({
+          transactionHash: delivery.transactionHash,
+          replacementHash: resolution.replacementHash,
+          blockNumber: resolution.blockNumber,
+        });
+      }
+      minimumBlock = higherObservedBlock(minimumBlock, resolution.blockNumber);
       delivery.resolve();
     }
   }
   const first = stillUnresolved[0];
-  if (first === undefined) return;
+  if (first === undefined)
+    return { minimumBlock, replacements: outbox.replacements() };
   throw new Error(
     `Operator signing is gated by ${stillUnresolved.length} unresolved submitted transaction(s); ${first.transactionHash}: ${first.reason}`,
   );
@@ -2202,13 +2462,23 @@ export const runOperatorWorkflow = async (
   if (chainId !== BASE_SEPOLIA_CHAIN_ID) {
     throw new Error(`Operator RPC returned chain ${chainId}, expected 84532`);
   }
-  await reconcileUnresolvedSubmissions(
+  const reconciliation = await reconcileUnresolvedSubmissions(
     chain,
     outbox,
     recorder,
     environment.execute,
   );
-  let state = await chain.observe();
+  const combined = combineOperatorReconciliation(
+    reconciliation,
+    dependencies.priorReconciliation,
+  );
+  let maximumConfirmedBlock = combined.minimumBlock;
+  const replacements = combined.replacements;
+  let state = await chain.observe(
+    maximumConfirmedBlock === undefined
+      ? undefined
+      : { minimumBlock: maximumConfirmedBlock },
+  );
   const actors = bindOperatorActors({
     accounts: chain.accounts,
     execute: environment.execute,
@@ -2240,7 +2510,6 @@ export const runOperatorWorkflow = async (
   });
   await recorder.startRun(runStarted);
   const actions: OperatorActionEvidence[] = [];
-  let maximumConfirmedBlock: bigint | undefined;
   const refreshAfterTerminalSubmission = async (
     action: OperatorActionEvidence,
   ): Promise<void> => {
@@ -2322,6 +2591,7 @@ export const runOperatorWorkflow = async (
     });
   }
   return {
+    replacements,
     schemaVersion: 5,
     mode: environment.execute ? "execute" : "dry-run",
     reconciliationStatus: submittedUnknown ? "submitted-unknown" : "reconciled",
@@ -2421,20 +2691,26 @@ export const operatorProgram = Effect.scoped(
         "HISTORY_INGEST_API_TOKEN",
       ),
     });
-    yield* rpc("Operator prior submissions are unresolved", async () => {
-      if ((await chain.getChainId()) !== manifest.chainId)
-        throw new Error("Operator RPC chain does not match the deployment");
-      await reconcileUnresolvedSubmissions(
-        chain,
-        outbox,
-        recorder,
-        environment.execute,
-      );
-    });
+    const reconciliation = yield* rpc(
+      "Operator prior submissions are unresolved",
+      async () => {
+        if ((await chain.getChainId()) !== manifest.chainId)
+          throw new Error("Operator RPC chain does not match the deployment");
+        return reconcileUnresolvedSubmissions(
+          chain,
+          outbox,
+          recorder,
+          environment.execute,
+        );
+      },
+    );
     const discoveryMaintenance = yield* rpc(
       "Base Sepolia discovery maintenance failed",
       () =>
         maintainBaseSepoliaDiscovery({
+          ...(reconciliation.minimumBlock === undefined
+            ? {}
+            : { minimumBlock: reconciliation.minimumBlock }),
           assertMaySign,
           execute: environment.execute,
           manifest,
@@ -2458,7 +2734,13 @@ export const operatorProgram = Effect.scoped(
           environment,
           manifest,
           previousPolQueueObservedAt,
-          { chain, recorder, outbox, runId: randomUUID() },
+          {
+            chain,
+            recorder,
+            outbox,
+            runId: randomUUID(),
+            priorReconciliation: reconciliation,
+          },
         );
       },
     );

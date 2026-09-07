@@ -3,9 +3,15 @@ export type TransactionState =
   | { readonly status: "pending"; readonly label: string }
   | { readonly status: "simulated"; readonly label: string }
   | {
+      readonly status: "submission-unknown";
+      readonly label: string;
+      readonly message: string;
+    }
+  | {
       readonly status: "submitted";
       readonly label: string;
       readonly hash: `0x${string}`;
+      readonly replacement?: "cancelled" | "replaced";
     }
   | {
       readonly status: "confirmed";
@@ -19,6 +25,7 @@ export type TransactionState =
       readonly message: string;
       readonly hash: `0x${string}`;
       readonly reconciling?: boolean;
+      readonly replacement?: "cancelled" | "replaced";
     }
   | {
       readonly status: "failed" | "retriable";
@@ -31,6 +38,11 @@ export type TransactionEvent =
   | { readonly type: "prepare"; readonly label: string }
   | { readonly type: "simulate" }
   | { readonly type: "submit"; readonly hash: `0x${string}` }
+  | {
+      readonly type: "replace";
+      readonly hash: `0x${string}`;
+      readonly reason: "repriced" | "cancelled" | "replaced";
+    }
   | { readonly type: "confirm" }
   | {
       readonly type: "fail";
@@ -61,6 +73,11 @@ const confirm = (state: TransactionState): TransactionState =>
     ? { status: "confirmed", label: state.label, hash: state.hash }
     : state;
 
+const receiptHash = (state: TransactionState) =>
+  state.status === "submitted" || state.status === "outcome-unknown"
+    ? { hash: state.hash }
+    : {};
+
 const fail = (
   state: TransactionState,
   event: Extract<TransactionEvent, { type: "fail" }>,
@@ -74,18 +91,32 @@ const fail = (
           label: state.label,
           message: event.message,
           hash: state.hash,
+          ...(state.replacement === undefined
+            ? {}
+            : { replacement: state.replacement }),
         }
       : {
           status: event.retriable ? "retriable" : "failed",
           label: state.label,
           message: event.message,
-          ...((state.status === "submitted" ||
-            state.status === "outcome-unknown") && { hash: state.hash }),
+          ...receiptHash(state),
         };
 
 const retry = (state: TransactionState): TransactionState =>
   state.status === "retriable"
     ? { status: "pending", label: state.label }
+    : state;
+
+const replace = (
+  state: TransactionState,
+  event: Extract<TransactionEvent, { type: "replace" }>,
+): TransactionState =>
+  state.status === "submitted" || state.status === "outcome-unknown"
+    ? {
+        ...state,
+        hash: event.hash,
+        ...(event.reason === "repriced" ? {} : { replacement: event.reason }),
+      }
     : state;
 
 export const advanceTransaction = (
@@ -99,6 +130,8 @@ export const advanceTransaction = (
       return simulate(state);
     case "submit":
       return submit(state, event.hash);
+    case "replace":
+      return replace(state, event);
     case "confirm":
       return confirm(state);
     case "fail":
@@ -112,4 +145,5 @@ export const isTransactionInFlight = (state: TransactionState): boolean =>
   state.status === "pending" ||
   state.status === "simulated" ||
   state.status === "submitted" ||
+  state.status === "submission-unknown" ||
   state.status === "outcome-unknown";

@@ -1021,52 +1021,66 @@ describe("exchange review state", () => {
     });
   });
 
-  it("explains the remaining boundary when a fractional buy schedules no Discovery", () => {
-    const wallet = {
-      ...loadedWallet,
-      liquidTokenBalanceWei: 200_000_000_000_000_000n,
-      transientCollectibleCount: 0,
-    };
-    const intent = deriveExchangeIntent({
-      accessState: "ready",
-      amount: "0.001",
-      direction: "buy",
-      readerAvailable: true,
-      wallet,
-    });
-
-    const result = deriveExchangeReviewState({
-      intent,
-      nowMilliseconds: reviewNowMilliseconds,
-      observedBlock: 102n,
-      quoteRead: loadedQuote(
-        {
-          liquidTokenForWeth: false,
-          amountIn: 1_000_000_000_000_000n,
-          amountInFormatted: "0.001",
-          amountOut: 300_000_000_000_000_000n,
-          amountOutFormatted: "0.3",
-          tradingFee: 30_000_000_000_000n,
-          tradingFeeFormatted: "0.00003",
-          observedBlock: 100n,
-          expiresAtBlock: 105n,
-          tradingFeeBps: 300,
-          discovery: discoveryForWallet(
-            "buy",
-            wallet,
-            300_000_000_000_000_000n,
-          ),
-        },
-        quoteReceivedAtMilliseconds,
+  it.each([
+    {
+      balance: 200_000_000_000_000_000n,
+      output: 300_000_000_000_000_000n,
+      exactOutput: "0.3",
+      displayOutput: "0.3",
+      remaining: "0.5",
+    },
+    {
+      balance: 0n,
+      output: 88_675_214_684_693_132n,
+      exactOutput: "0.088675214684693132",
+      displayOutput: "0.088675",
+      remaining: "0.91133",
+    },
+  ])(
+    "explains the rounded-up remaining boundary ($remaining) when a fractional buy schedules no Discovery",
+    ({ balance, output, exactOutput, displayOutput, remaining }) => {
+      const wallet = {
+        ...loadedWallet,
+        liquidTokenBalanceWei: balance,
+        transientCollectibleCount: 0,
+      };
+      const intent = deriveExchangeIntent({
+        accessState: "ready",
+        amount: "0.001",
+        direction: "buy",
+        readerAvailable: true,
         wallet,
-      ),
-      transactionPending: false,
-    });
+      });
 
-    expect(requireReadyReview(result).sentence).toBe(
-      "You pay 0.001 WETH and receive 0.3 $FUEL. The 3.00% fee is 0.00003 WETH. After this trade, 0.5 $FUEL remains before the next random Discovery.",
-    );
-  });
+      const result = deriveExchangeReviewState({
+        intent,
+        nowMilliseconds: reviewNowMilliseconds,
+        observedBlock: 102n,
+        quoteRead: loadedQuote(
+          {
+            liquidTokenForWeth: false,
+            amountIn: 1_000_000_000_000_000n,
+            amountInFormatted: "0.001",
+            amountOut: output,
+            amountOutFormatted: exactOutput,
+            tradingFee: 30_000_000_000_000n,
+            tradingFeeFormatted: "0.00003",
+            observedBlock: 100n,
+            expiresAtBlock: 105n,
+            tradingFeeBps: 300,
+            discovery: discoveryForWallet("buy", wallet, output),
+          },
+          quoteReceivedAtMilliseconds,
+          wallet,
+        ),
+        transactionPending: false,
+      });
+
+      expect(requireReadyReview(result).sentence).toBe(
+        `You pay 0.001 WETH and receive ${displayOutput} $FUEL. The 3.00% fee is 0.00003 WETH. After this trade, ${remaining} $FUEL remains before the next random Discovery.`,
+      );
+    },
+  );
 
   it("states when a fractional sale preserves every collectible", () => {
     const wallet = {

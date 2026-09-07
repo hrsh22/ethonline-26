@@ -78,6 +78,76 @@ const loop = [
   },
 ] as const;
 
+function CollectorHelpTopics() {
+  const topics = [
+    {
+      id: "discovery",
+      title: "My collectible is still arriving",
+      body: `Crossing a whole ${liquid} boundary records a Pending Discovery. The draw first waits for verified randomness, then the delivery service completes the onchain result. A delayed result stays recorded. Keep its backing ${liquid} in the wallet if you want to keep the discovery; moving that whole unit can cancel it. Check ${identity.navigation.collection} for the current stage and Status for service availability. Buying again or repeating a wallet prompt does not speed up delivery.`,
+    },
+    {
+      id: "transaction",
+      title: "My wallet action has not finished",
+      body: "If a transaction hash exists, use its onchain link to follow that submission. Confirmation and the app's updated collection can arrive at different times. An unknown outcome is not a failed transaction, so do not submit it again. If the wallet prompt was interrupted before a hash reached the app, check wallet activity before returning to review. An expired quote needs a fresh review; cancelling a wallet prompt does not spend assets.",
+    },
+    {
+      id: "wallet-artwork",
+      title: "My collection and my wallet's NFT tab disagree",
+      body: "Check the collectible's current owner and state through its onchain link. Wallets and explorers can cache an older name or state after Launch. Compare it with the current state in the app; a stale label does not undo Launch or change ownership. The current deployment uses sealed placeholder metadata; the website's illustrations are previews. Use the collection address and identity number from the detail page if your wallet supports manual NFT import.",
+    },
+    {
+      id: "rewards",
+      title: "Why are there no rewards to claim?",
+      body: `${terms.commitment} makes an ordinary collectible permanent and reward-eligible. Rewards still require market activity and completed conversions. A confirmed zero means no units are currently attached to that identity for claiming; unavailable means the amount could not be checked. Queued conversion funds are not your wallet balance. Relic pots may accrue before ${terms.commitment}, but become claimable only afterward. Each token is shown separately and these Base Sepolia assets have no value.`,
+    },
+  ];
+  return (
+    <Section
+      headingId="help"
+      title="Help with collecting"
+      description="Find the explanation for the step you are on."
+    >
+      <div className="grid gap-4 tablet:grid-cols-2">
+        {topics.map((topic) => (
+          <article key={topic.id} aria-labelledby={`help-${topic.id}`}>
+            <h3
+              id={`help-${topic.id}`}
+              className="scroll-mt-24 text-title-sm font-semibold"
+            >
+              {topic.title}
+            </h3>
+            <p className="mt-2 max-w-[64ch] text-body text-ink-soft">
+              {topic.body}
+            </p>
+          </article>
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <ButtonLink href="/status" variant="outline">
+          Check service status
+        </ButtonLink>
+        <a
+          className={outlineLink}
+          href={`${repositoryUrl}/issues`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Report a problem
+        </a>
+        <a className={outlineLink} href="#verify">
+          Verify contracts
+        </a>
+      </div>
+      <p className="mt-3 text-body-sm text-ink-soft">
+        The project repository is the current support channel. Include the
+        public support details copied from the affected screen. There is no
+        guaranteed response time or published private security-reporting
+        channel. Do not post secrets or exploitable details in a public issue.
+      </p>
+    </Section>
+  );
+}
+
 function CollectingLoop() {
   return (
     <Section
@@ -199,8 +269,11 @@ function SafetyPanels() {
               is an investment, a promise of value, or a mainnet asset.
             </li>
             <li>
-              Every wallet prompt names the exact {liquid} amount it will move,
-              so reject any prompt that asks for more.
+              Match the wallet request to the action you reviewed. A funding
+              proof signs a message; a token approval sets a spending allowance;
+              a trade, Launch, transfer, or claim submits a transaction. Wallet
+              decoding varies. Cancel if the network, recipient, allowance, or
+              amount is different from your review.
             </li>
             <li>This site never asks for a seed phrase or private key.</li>
           </ul>
@@ -347,8 +420,8 @@ function HistoryPanel() {
 
 const limitations = [
   "Base Sepolia and all displayed assets are for testing only; there is no mainnet deployment.",
-  "Collectible artwork and metadata remain placeholder proof-of-concept material.",
-  "Public status is a point-in-time read and cannot prove that an offchain operator is continuously running.",
+  "Web illustrations are previews. The current sealed wallet metadata remains placeholder material.",
+  "Delivery status reports the latest service heartbeat and processing setting. It is not an uptime guarantee.",
   "Indexed history can lag the chain; every status surface preserves its observation time and reports partial coverage.",
   "Singapore is only a provisional operator-jurisdiction assumption and has not been validated by counsel or presented as an incorporated operating entity.",
   "No private vulnerability-reporting channel is currently published, so do not put secrets or exploitable details in a public issue.",
@@ -407,6 +480,7 @@ export default function LearnPage() {
         title="Learn and verify"
       />
 
+      <CollectorHelpTopics />
       <CollectingLoop />
 
       <Section

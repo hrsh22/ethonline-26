@@ -1,17 +1,4 @@
-/**
- * The face of a collectible.
- *
- * The collection has 4,444 identities and no artwork — every asset in the
- * identity configuration is a `placeholder://` string — so a craft is drawn
- * from its own number. The generator is pure and seeded only by the identity,
- * so a craft is the same on every render, server and session, and the whole
- * component is server-safe.
- *
- * A Grounded Craft is a grey outline: hull, fins, engines, a row of ports. An
- * Orbiter is the same craft lit — ports and exhaust in signal orange — because
- * Launch changes the state of an identity, not the identity. Relics have their
- * own bespoke drawings: three Stations and the Observatory.
- */
+/** Deterministic web artwork. Canonical sealed metadata may use different art. */
 
 import { useId } from "react";
 
@@ -57,7 +44,7 @@ interface Craft {
 }
 
 /** Pure geometry for one identity, so the component stays a plain view. */
-const craftGeometry = (identityId: number, track: number): Craft => {
+export const craftGeometry = (identityId: number, track: number): Craft => {
   const random = seededRandom(identityId);
   const family = pick(random, ["needle", "capsule", "wedge", "tug"] as const);
   const nose = 14 + random() * 8;
@@ -144,11 +131,12 @@ const craftGeometry = (identityId: number, track: number): Craft => {
       ? `M${point(AXIS, nose)}L${point(AXIS, nose - 7)}M${point(AXIS - 3, nose - 7)}L${point(AXIS + 3, nose - 7)}`
       : undefined;
 
+  const plumeDepth = Math.min(20, SIZE - 2 - tail);
   const plume = mirrored([
     [0, tail + 2],
     [halfWidth * 0.55, tail + 4],
-    [halfWidth * 0.3, tail + 14 + random() * 6],
-    [0, tail + 20],
+    [halfWidth * 0.3, tail + plumeDepth * (0.7 + random() * 0.3)],
+    [0, tail + plumeDepth],
   ]);
 
   return { hull, fins, engines, tail, ports, stripes, antenna, plume };
@@ -193,7 +181,19 @@ function OrdinaryCraft({
       {craft.fins.map((d, index) => (
         <path d={d} fill="var(--surface-1)" key={index} stroke={line} />
       ))}
-      <path d={craft.hull} fill="var(--surface-1)" stroke={line} />
+      <path d={craft.hull} fill="var(--surface-2)" stroke={line} />
+      <g
+        clipPath={`url(#${clipId})`}
+        stroke={line}
+        strokeWidth="0.7"
+        opacity="0.45"
+      >
+        <path d={`M48 18V${craft.tail}M72 18V${craft.tail}`} />
+        <path d={`M30 ${craft.tail - 25}H90`} />
+        <path
+          d={`M54 ${craft.tail - 23}V${craft.tail - 19}H66V${craft.tail - 23}Z`}
+        />
+      </g>
       {craft.stripes.map((y) => (
         <line
           key={y}
@@ -240,27 +240,44 @@ function OrdinaryCraft({
 }
 
 /** The three Stations: a hub with two, four or six solar arrays on a truss. */
-function Station({ variant }: { readonly variant: 1 | 2 | 3 }) {
+function Station({
+  variant,
+  lit,
+}: {
+  readonly variant: 1 | 2 | 3;
+  readonly lit: boolean;
+}) {
   const line = "var(--text-primary)";
-  const signal = "var(--accent-text)";
+  const signal = lit ? "var(--accent-text)" : "var(--text-secondary)";
   const arrays = variant * 2;
   return (
     <>
       <line stroke={line} x1={18} x2={102} y1={AXIS} y2={AXIS} />
       {Array.from({ length: arrays }, (_unused, index) => {
         const side = index % 2 === 0 ? -1 : 1;
-        const offset = 30 + Math.floor(index / 2) * 14;
+        const offset = 24 + Math.floor(index / 2) * 13;
         const y = AXIS - 11;
         return (
-          <rect
-            fill="var(--surface-1)"
-            height={22}
-            key={index}
-            stroke={line}
-            width={10}
-            x={AXIS + side * offset - 5}
-            y={y}
-          />
+          <g key={index}>
+            <rect
+              fill={
+                lit
+                  ? "var(--accent-subtle, var(--surface-2))"
+                  : "var(--surface-1)"
+              }
+              height={22}
+              key={index}
+              stroke={line}
+              width={10}
+              x={AXIS + side * offset - 5}
+              y={y}
+            />
+            <path
+              d={`M${AXIS + side * offset - 5} ${y + 7}h10m-10 7h10`}
+              stroke={signal}
+              strokeWidth="0.7"
+            />
+          </g>
         );
       })}
       <rect
@@ -280,9 +297,9 @@ function Station({ variant }: { readonly variant: 1 | 2 | 3 }) {
 }
 
 /** The Observatory: a telescope tube, an aperture ring, and a dish. */
-function Observatory() {
+function Observatory({ lit }: { readonly lit: boolean }) {
   const line = "var(--text-primary)";
-  const signal = "var(--accent-text)";
+  const signal = lit ? "var(--accent-text)" : "var(--text-secondary)";
   return (
     <>
       <path
@@ -317,8 +334,11 @@ export function CraftArt({
   kind = "transient",
   label,
   track = 1,
+  lit = true,
 }: {
   readonly className?: string | undefined;
+  /** Relic preview state only; never changes ownership. */
+  readonly lit?: boolean;
   /** Set when the drawing sits beside the identity number it depicts. */
   readonly decorative?: boolean;
   readonly identityId: number;
@@ -351,9 +371,9 @@ export function CraftArt({
           track={track}
         />
       ) : variant === "observatory" ? (
-        <Observatory />
+        <Observatory lit={lit} />
       ) : (
-        <Station variant={variant} />
+        <Station lit={lit} variant={variant} />
       )}
     </svg>
   );

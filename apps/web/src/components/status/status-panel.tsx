@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useObservationExpiry } from "@/hooks/use-observation-expiry";
+import { DeliveryStatusPanel } from "./delivery-status-panel";
 
 import { ProtocolOverview } from "@/components/status/protocol-overview";
 import { StateFeedback } from "@/components/state-feedback";
@@ -59,20 +60,7 @@ const launchBlock = () => {
 function HealthBoard({ model }: { readonly model: PublicStatusModel }) {
   const expiresAt =
     model.observedAt * 1_000 + WEB_QUERY_STALE_TIME_MILLISECONDS;
-  const subscribe = useCallback(
-    (notify: () => void) => {
-      const remaining = expiresAt - Date.now() + 1;
-      if (remaining <= 0) return () => undefined;
-      const timer = setTimeout(notify, remaining);
-      return () => clearTimeout(timer);
-    },
-    [expiresAt],
-  );
-  const expired = useSyncExternalStore(
-    subscribe,
-    () => Date.now() > expiresAt,
-    () => false,
-  );
+  const expired = useObservationExpiry(expiresAt);
   const freshness =
     model.freshness === "fresh" && expired ? "stale" : model.freshness;
   return (
@@ -225,6 +213,7 @@ export function StatusPanel() {
   const feedback = feedbackFor(protocol);
   return (
     <>
+      <DeliveryStatusPanel />
       {feedback === undefined ? null : (
         <StateFeedback
           action={

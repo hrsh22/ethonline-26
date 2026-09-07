@@ -6,6 +6,15 @@ Amended on 31 August 2026: funding status accepts no recipient for service-only 
 an optional recipient for wallet-specific eligibility. The exact query-parameter name allowlist
 remains unchanged.
 
+Amended on 6 September 2026: `GET /v1/delivery/status` exposes a bounded, read-only
+operator delivery projection. The API authenticates to the existing loopback listener's dedicated
+`GET /v1/delivery-status`; it does not forward the admin state or command routes. Responses contain
+only deployment identity, observation expiry, saved processing policy, heartbeat evidence, and a
+bounded latest-run outcome. Audit actors, writer leases, commands, raw diagnostics, and credentials
+are excluded by the public schema. Missing dependency-readiness and work-eligibility evidence is
+explicitly unknown; neither is inferred from Live policy or a successful heartbeat. The route uses
+the existing public method, origin, query, body-size, rate, and upstream-timeout controls.
+
 ## Context
 
 The Historical Read Model, Keeper, and testnet-funding signer already have lifecycles that are
@@ -44,6 +53,7 @@ origin/method/body/timeout policy, and gives the web application one versioned b
 Add `apps/api`, a TypeScript/Effect application with this public interface:
 
 - `GET /healthz` for process liveness;
+- `GET /v1/delivery/status` for timestamped, read-only delivery-service evidence;
 - `GET /readyz` for bounded dependency readiness;
 - `GET /v1/history/status`;
 - `GET /v1/history/market/swaps` and `GET /v1/history/market/fees`;
@@ -82,3 +92,12 @@ replica each where persistence or signing requires it.
 A future move from SQLite or split of the public interface does not change browser callers while
 the versioned interface remains stable. Base mainnet still requires a separate reviewed
 deployment manifest and operational decision.
+
+### 6 September 2026: public collector Discovery history
+
+`GET /v1/history/protocol/discoveries` projects the existing authenticated history
+service's `/v1/protocol/discoveries` page. It accepts the standard bounded history
+parameters and an optional validated EVM `account` filter. The browser reader
+always supplies the connected account. No write route or operator control is
+exposed. The page retains canonical manifest, snapshot, coverage, and cursor
+semantics from ADR 0009; unsafe history failures hide retained facts.

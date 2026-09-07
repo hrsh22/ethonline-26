@@ -17,6 +17,13 @@ const shellState = vi.hoisted(() => ({
 
 // The live readout needs the protocol provider; the shell tests exercise
 // navigation and wallet states, not protocol reads.
+// Activity has its own provider and browser journeys; these checks isolate shell navigation.
+vi.mock("@/components/shell/collector-activity", () => ({
+  CollectorActivity: () => null,
+}));
+vi.mock("@/providers/protocol-client-provider", () => ({
+  useProtocolClient: () => ({ transaction: { status: "idle" } }),
+}));
 vi.mock("@/components/shell/live-pulse", () => ({ LivePulse: () => null }));
 vi.mock("next/navigation", () => ({
   usePathname: () => shellState.pathname,
@@ -77,7 +84,13 @@ describe("collector shell wallet states", () => {
       "Wallet connection is not configured for this deployment.",
     );
     expect(html).toMatch(/class="wallet-session wallet-control-state[^"]*"/u);
-    expect(html).toMatch(/class="flex min-w-0 items-center gap-2[^"]*"/u);
+    const actionClasses =
+      /class="(?<classes>flex min-w-0[^"]*items-center[^"]*gap-2[^"]*)"/u
+        .exec(html)
+        ?.groups?.classes?.split(" ");
+    expect(actionClasses).toEqual(
+      expect.arrayContaining(["flex", "min-w-0", "items-center", "gap-2"]),
+    );
     const toggleClasses =
       /<button[^>]*aria-controls="collector-navigation"[^>]*class="(?<classes>[^"]+)"/u.exec(
         html,

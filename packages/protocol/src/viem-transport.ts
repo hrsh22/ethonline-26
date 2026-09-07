@@ -21,8 +21,6 @@ import type {
 } from "./reader.js";
 
 const MULTICALL_READ_BATCH = 250;
-const MULTICALL_RETRY_BATCH = 50;
-const MULTICALL_READ_ATTEMPTS = 3;
 export const publicQuoteCaller =
   "0x0000000000000000000000000000000000004444" as const satisfies Address;
 
@@ -72,6 +70,8 @@ export const makeViemProtocolTransport = (
       );
       const results = (await client.multicall({
         allowFailure: true,
+        // The outer loop already bounds each batch to 250 calls.
+        batchSize: 0,
         blockNumber,
         contracts: callBatch,
       } as never)) as unknown as Array<
@@ -96,47 +96,8 @@ export const makeViemProtocolTransport = (
       });
     }
 
-    for (let attempt = 1; attempt < MULTICALL_READ_ATTEMPTS; attempt += 1) {
-      const failedIndexes = mappedResults.flatMap((result, index) =>
-        result.status === "failure" ? [index] : [],
-      );
-      if (failedIndexes.length === 0) break;
-
-      for (
-        let offset = 0;
-        offset < failedIndexes.length;
-        offset += MULTICALL_RETRY_BATCH
-      ) {
-        signal?.throwIfAborted();
-        const retryIndexes = failedIndexes.slice(
-          offset,
-          offset + MULTICALL_RETRY_BATCH,
-        );
-        const results = (await client.multicall({
-          allowFailure: true,
-          blockNumber,
-          contracts: retryIndexes.map((index) => calls[index]),
-        } as never)) as unknown as Array<
-          | { status: "success"; result: unknown }
-          | { status: "failure"; error: unknown }
-        >;
-        signal?.throwIfAborted();
-        retryIndexes.forEach((requestIndex, retryIndex) => {
-          const result = results[retryIndex];
-          mappedResults[requestIndex] =
-            result === undefined
-              ? {
-                  status: "failure",
-                  error: new Error(
-                    "Multicall result missing for requested contract read",
-                  ),
-                }
-              : result.status === "success"
-                ? { status: "success", value: result.result }
-                : { status: "failure", error: result.error };
-        });
-      }
-    }
+    // The RPC transport owns retries. Replaying failed slots here multiplies
+    // exhausted network retries and repeats deterministic contract reverts.
     return mappedResults as ContractReadResults<Requests>;
   };
 
@@ -168,7 +129,17 @@ export const makeViemProtocolTransport = (
       blockNumber,
     );
     signal?.throwIfAborted();
-    const failedState = states.find((state) => state?.status === "failure");
+    const failedState = states.find((state, index) => {
+      if (state?.status !== "failure") return false;
+      // Previously held Grounded Craft can return to the available pool.
+      // Their ownerOf revert is irrelevant once non-permanence is observed.
+      const permanentState = states[index + 1];
+      return (
+        index % 2 !== 0 ||
+        permanentState?.status !== "success" ||
+        permanentState.value !== false
+      );
+    });
     if (failedState?.status === "failure") throw failedState.error;
     return candidates.filter((_identityId, index) => {
       const ownerState = states[index * 2];

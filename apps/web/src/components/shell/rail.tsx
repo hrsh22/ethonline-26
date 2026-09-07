@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, X } from "lucide-react";
+import { Menu, MoreHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useMemo, useRef, useState } from "react";
 
@@ -71,7 +71,10 @@ export function BrandMark({
   return (
     <Link
       aria-label={`${identity.brand}: ${applicationCopy.shell.home}`}
-      className={cn("flex min-h-11 items-center gap-3", className)}
+      className={cn(
+        "flex min-h-11 items-center gap-3 laptop:shrink-0",
+        className,
+      )}
       href={href}
     >
       <span
@@ -161,28 +164,47 @@ function NavigationGroup({
  * cycle skips them, leaving no keyboard path to the wallet while the drawer
  * is open.
  */
+const secondaryRouteActive = (
+  sections: readonly RailSection[],
+  mobileDestinations: readonly NavigationDestination[] | undefined,
+) =>
+  mobileDestinations !== undefined &&
+  !mobileDestinations.some((destination) => destination.active) &&
+  sections
+    .flatMap((section) => section.groups.flatMap((group) => group.destinations))
+    .some((destination) => destination.active);
+
 export function ShellRail({
   brand,
   children,
   icons = {},
   navigationId,
   sections,
+  mobileDestinations,
+  mobileActivityIndicator,
+  mobileActivityLink,
 }: {
   readonly brand: React.ReactNode;
   readonly children: React.ReactNode;
   readonly icons?: NavigationIcons;
   readonly navigationId: string;
+  readonly mobileDestinations?: readonly NavigationDestination[];
+  readonly mobileActivityIndicator?: React.ReactNode;
+  readonly mobileActivityLink?: React.ReactNode;
   readonly sections: readonly RailSection[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const moreActive = secondaryRouteActive(sections, mobileDestinations);
   const menuButton = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
+  const mobileNavigation = useRef<HTMLElement>(null);
+  const activeMenuButton = useRef<HTMLButtonElement>(null);
   const railActions = useRef<HTMLDivElement>(null);
-  const peers = useMemo(() => [railActions], []);
+  const peers = useMemo(() => [railActions, mobileNavigation], []);
 
   const close = useCallback((returnFocus: boolean) => {
     setMenuOpen(false);
-    if (returnFocus) menuButton.current?.focus();
+    if (returnFocus) (activeMenuButton.current ?? menuButton.current)?.focus();
   }, []);
 
   useDismissableMenu({
@@ -194,58 +216,125 @@ export function ShellRail({
   });
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 flex min-h-14 items-center gap-3 border-b border-line bg-surface-1 px-4",
-        "laptop:h-dvh laptop:flex-col laptop:items-stretch laptop:gap-0 laptop:border-r laptop:border-b-0 laptop:px-0",
-      )}
-    >
-      {brand}
-
-      <div
+    <>
+      <header
         className={cn(
-          "absolute inset-x-0 top-full hidden max-h-[calc(100dvh-3.5rem)] flex-col overflow-y-auto border-b border-line bg-surface-1 pb-3 shadow-[var(--shadow-overlay)] data-open:flex",
-          "laptop:static laptop:flex laptop:max-h-none laptop:flex-1 laptop:border-0 laptop:shadow-none",
+          "sticky top-0 z-40 flex min-h-14 flex-wrap items-center gap-3 border-b border-line bg-surface-1 px-4",
+          "laptop:h-dvh laptop:flex-col laptop:items-stretch laptop:gap-0 laptop:border-r laptop:border-b-0 laptop:px-0",
         )}
-        data-open={menuOpen || undefined}
-        id={navigationId}
-        ref={menu}
       >
-        {sections.map((section) => (
-          <nav aria-label={section.ariaLabel} key={section.ariaLabel}>
-            {section.groups.map((group) => (
-              <NavigationGroup group={group} icons={icons} key={group.label} />
-            ))}
-          </nav>
-        ))}
-      </div>
+        {brand}
 
-      <div
-        className="flex min-w-0 items-center gap-2 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&_.wallet-button]:laptop:w-full"
-        ref={railActions}
-      >
-        {children}
-        <button
-          aria-controls={navigationId}
-          aria-expanded={menuOpen}
-          aria-label={
-            menuOpen
-              ? applicationCopy.shell.closeMenu
-              : applicationCopy.shell.openMenu
-          }
-          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-line-strong text-ink transition-colors duration-[var(--motion-fast)] hover:bg-surface-3 laptop:hidden motion-reduce:transition-none"
-          data-open={menuOpen || undefined}
-          onClick={() => setMenuOpen((current) => !current)}
-          ref={menuButton}
-          type="button"
-        >
-          {menuOpen ? (
-            <X aria-hidden="true" className="size-5" />
-          ) : (
-            <Menu aria-hidden="true" className="size-5" />
+        <div
+          className={cn(
+            "absolute inset-x-0 top-full hidden max-h-[calc(100dvh-3.5rem)] flex-col overflow-y-auto border-b border-line bg-surface-1 pb-3 shadow-[var(--shadow-overlay)] data-open:flex",
+            "laptop:static laptop:flex laptop:min-h-0 laptop:max-h-none laptop:flex-1 laptop:border-0 laptop:shadow-none",
+            mobileDestinations !== undefined &&
+              "max-h-[calc(100dvh-7.5rem-env(safe-area-inset-bottom))]",
           )}
-        </button>
-      </div>
-    </header>
+          data-open={menuOpen || undefined}
+          id={navigationId}
+          onClickCapture={(event) => {
+            if ((event.target as HTMLElement).closest("a") !== null)
+              close(false);
+          }}
+          ref={menu}
+        >
+          {sections.map((section) => (
+            <nav
+              className="shrink-0"
+              aria-label={section.ariaLabel}
+              key={section.ariaLabel}
+            >
+              {section.groups.map((group) => (
+                <NavigationGroup
+                  group={group}
+                  icons={icons}
+                  key={group.label}
+                />
+              ))}
+            </nav>
+          ))}
+          {mobileActivityLink}
+        </div>
+
+        <div
+          className="flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&_.wallet-button]:laptop:w-full"
+          ref={railActions}
+        >
+          {children}
+          <button
+            aria-controls={navigationId}
+            aria-expanded={menuOpen}
+            aria-label={
+              menuOpen
+                ? applicationCopy.shell.closeMenu
+                : applicationCopy.shell.openMenu
+            }
+            className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-line-strong text-ink transition-colors duration-[var(--motion-fast)] hover:bg-surface-3 laptop:hidden motion-reduce:transition-none"
+            data-open={menuOpen || undefined}
+            onClick={(event) => {
+              activeMenuButton.current = event.currentTarget;
+              setMenuOpen((current) => !current);
+            }}
+            ref={menuButton}
+            type="button"
+          >
+            {menuOpen ? (
+              <X aria-hidden="true" className="size-5" />
+            ) : (
+              <Menu aria-hidden="true" className="size-5" />
+            )}
+          </button>
+        </div>
+      </header>
+      {mobileDestinations === undefined ? null : (
+        <nav
+          aria-label="Mobile collector navigation"
+          data-mobile-navigation
+          ref={mobileNavigation}
+          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface-1 pb-[env(safe-area-inset-bottom)] laptop:hidden"
+        >
+          {mobileDestinations.map((destination) => {
+            const Icon = icons[destination.href];
+            return (
+              <Link
+                key={destination.href}
+                href={destination.href}
+                aria-current={destination.active ? "page" : undefined}
+                onClick={() => close(false)}
+                className={cn(
+                  "flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-caption",
+                  destination.active ? "text-signal" : "text-ink-soft",
+                )}
+              >
+                {Icon === undefined ? null : (
+                  <Icon className="size-5" aria-hidden="true" />
+                )}
+                {destination.label}
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            aria-label="More navigation"
+            aria-current={moreActive ? "page" : undefined}
+            aria-controls={navigationId}
+            aria-expanded={menuOpen}
+            className={cn(
+              "relative flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-caption",
+              moreActive ? "text-signal" : "text-ink-soft",
+            )}
+            onClick={(event) => {
+              activeMenuButton.current = event.currentTarget;
+              setMenuOpen((current) => !current);
+            }}
+          >
+            <MoreHorizontal className="size-5" aria-hidden="true" />
+            More{mobileActivityIndicator}
+          </button>
+        </nav>
+      )}
+    </>
   );
 }

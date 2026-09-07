@@ -1,0 +1,515 @@
+{
+  "recordedAt": "2026-09-07T08:40:52.353Z",
+  "chainId": 84532,
+  "observedBlock": "46501080",
+  "observedBlockHash": "0x3c566a398e1a48ad3a6f0373059605670e02af92c86700d8ad923ee2cee8fa89",
+  "transactions": [
+    {
+      "kind": "browser-wallet",
+      "hash": "0xb937eb53f1ecba55d4de4c6e31a19dd2ed776b0fd00688c2f15ff9eae23edeb7",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+      "contract": "weth",
+      "value": "0",
+      "blockNumber": "46500060",
+      "blockHash": "0x11d671937ce86fcf9ec7f13c7f0d2320495336610afa36cc52f99ffa48022de2",
+      "status": "success",
+      "decoded": {
+        "functionName": "approve",
+        "args": [
+          "0x8ae640725f1e6d5932B034a0C5F28e281D76C54D",
+          "7000000000000000"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0xcbbbd29c439360903b025d81d0fc143c4850d1601a4ccf95a69e85b391cd4d71",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0x8ae640725f1e6d5932b034a0c5f28e281d76c54d",
+      "contract": "canonicalRouter",
+      "value": "0",
+      "blockNumber": "46500065",
+      "blockHash": "0xf6b3c8d0604b7ae9a0b0b88c296b033f7f2220f792983751cd278020a93a9656",
+      "status": "success",
+      "decoded": {
+        "functionName": "swapExactInput",
+        "args": [
+          {
+            "fuelForWeth": false,
+            "amountIn": "7000000000000000",
+            "amountOutMinimum": "1160217628125015104",
+            "recipient": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "deadline": "1788769004",
+            "useNative": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "to": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "value": "7000000000000000"
+          }
+        },
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "to": "0x9323c22e7BFC65B3f4693f778A4e68A0752980cC",
+            "value": "210000000000000"
+          }
+        },
+        {
+          "address": "0x3ded7308789f311d435f013de681d0f08c961081",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "to": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "value": "1171936998106075863"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0xa0c7211d1d293e9c0e78e9b5534e5f7d211aefaf05990db10e0a7ab78060fb8a",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0x3ded7308789f311d435f013de681d0f08c961081",
+      "contract": "fuelCore",
+      "value": "0",
+      "blockNumber": "46500122",
+      "blockHash": "0x698a2fcf4a1d7f4016ceb055a41f6831fc3027b7c402a9321a06e48918f1b735",
+      "status": "success",
+      "decoded": {
+        "functionName": "commit",
+        "args": [4179]
+      },
+      "effects": [
+        {
+          "address": "0x3ded7308789f311d435f013de681d0f08c961081",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "to": "0x0000000000000000000000000000000000000000",
+            "value": "1000000000000000000"
+          }
+        },
+        {
+          "address": "0x3ded7308789f311d435f013de681d0f08c961081",
+          "eventName": "Committed",
+          "args": {
+            "account": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "identityId": 4179
+          }
+        }
+      ]
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0xe9fe96e6c6b5db3e89e184717e9d180ff02b8236acd3e090a46cda5884df3b4f",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0x3ded7308789f311d435f013de681d0f08c961081",
+      "contract": "fuelCore",
+      "value": "0",
+      "blockNumber": "46500175",
+      "blockHash": "0x494046b4d92cba596b07ad9d8c0243b494b84a28424bb58ddb31df53474c091f",
+      "status": "success",
+      "decoded": {
+        "functionName": "approve",
+        "args": [
+          "0x8ae640725f1e6d5932B034a0C5F28e281D76C54D",
+          "100000000000000000"
+        ]
+      },
+      "effects": []
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0x8a9d954347844e4f39de9b94388011cfdadd9cc958cefa8ba770a0ad0a0f1bfc",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0x8ae640725f1e6d5932b034a0c5f28e281d76c54d",
+      "contract": "canonicalRouter",
+      "value": "0",
+      "blockNumber": "46500179",
+      "blockHash": "0x13ec17e902878a4fc78f59d0b00336bf20bc4a34696dcd50c276feccdde01710",
+      "status": "success",
+      "decoded": {
+        "functionName": "swapExactInput",
+        "args": [
+          {
+            "fuelForWeth": true,
+            "amountIn": "100000000000000000",
+            "amountOutMinimum": "556515998543495",
+            "recipient": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "deadline": "1788769233",
+            "useNative": false
+          }
+        ]
+      },
+      "effects": [
+        {
+          "address": "0x3ded7308789f311d435f013de681d0f08c961081",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "to": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "value": "100000000000000000"
+          }
+        },
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "to": "0x9323c22e7BFC65B3f4693f778A4e68A0752980cC",
+            "value": "17385691925757"
+          }
+        },
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "to": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "value": "562137372266157"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0xdd2a422fc9edbada68a1300b3961ace7576731c25198ed4905cf18472c64efd5",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0x8ae640725f1e6d5932b034a0c5f28e281d76c54d",
+      "contract": "canonicalRouter",
+      "value": "100000000000000",
+      "blockNumber": "46500232",
+      "blockHash": "0x283ee5b6341714071aee84a4f5e03f13ae6e3ac1f3606de42ca15b955f7eb049",
+      "status": "success",
+      "decoded": {
+        "functionName": "swapExactInput",
+        "args": [
+          {
+            "fuelForWeth": false,
+            "amountIn": "100000000000000",
+            "amountOutMinimum": "16570834412831096",
+            "recipient": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "deadline": "1788769348",
+            "useNative": true
+          }
+        ]
+      },
+      "effects": [
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x0000000000000000000000000000000000000000",
+            "to": "0x8ae640725f1e6d5932B034a0C5F28e281D76C54D",
+            "value": "100000000000000"
+          }
+        },
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x8ae640725f1e6d5932B034a0C5F28e281D76C54D",
+            "to": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "value": "100000000000000"
+          }
+        },
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "to": "0x9323c22e7BFC65B3f4693f778A4e68A0752980cC",
+            "value": "3000000000000"
+          }
+        },
+        {
+          "address": "0x3ded7308789f311d435f013de681d0f08c961081",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+            "to": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "value": "16738216578617269"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0x2ad2e49f938690e5e632e45afc5f634ea5679cf12775bd47f3b7ae4f59e88679",
+      "from": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "to": "0x441f6f786c8e9d3eec16748e55ee32626d1f93da",
+      "contract": "fuelMirror",
+      "value": "0",
+      "blockNumber": "46500308",
+      "blockHash": "0xf2dfeee86014c49c95f92b821b0b6db5da912313b0ea662d82797084d36dc93d",
+      "status": "success",
+      "decoded": {
+        "functionName": "safeTransferFrom",
+        "args": [
+          "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+          "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+          "4179"
+        ]
+      },
+      "effects": [
+        {
+          "address": "0x441f6f786c8e9d3eec16748e55ee32626d1f93da",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "to": "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+            "identityId": "4179"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "browser-wallet",
+      "hash": "0xd6836a4277ab3e538bd2f318c76579b3ebf3fe4c0f51d5f4c308f66cdec01777",
+      "from": "0xab211b5b4768ba055b0cf8ce6232335175f8b6d2",
+      "to": "0x441f6f786c8e9d3eec16748e55ee32626d1f93da",
+      "contract": "fuelMirror",
+      "value": "0",
+      "blockNumber": "46500847",
+      "blockHash": "0xdeb6a271b53f9377d55b706b008a730c6f6c6870b96d3740206bfd40e353c267",
+      "status": "success",
+      "decoded": {
+        "functionName": "safeTransferFrom",
+        "args": [
+          "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+          "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+          "4179"
+        ]
+      },
+      "effects": [
+        {
+          "address": "0x441f6f786c8e9d3eec16748e55ee32626d1f93da",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+            "to": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "identityId": "4179"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "funding",
+      "hash": "0xc6370a1c34b00884848e9bf383267d0ba138113a2b5b01c34b724318dca89def",
+      "from": "0x8d01188806aa960f95a3fe4a343dfc26a8a7e6b5",
+      "to": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+      "contract": "weth",
+      "value": "0",
+      "blockNumber": "46500012",
+      "blockHash": "0x0ff9012f676a7e66b893e6157f4b277d2cb6803d3ffa3df80dc5e258b4698885",
+      "status": "success",
+      "decoded": {
+        "functionName": "transfer",
+        "args": [
+          "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+          "100000000000000000"
+        ]
+      },
+      "effects": [
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x8D01188806aA960F95A3fe4A343DFC26A8a7e6B5",
+            "to": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+            "value": "100000000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "funding",
+      "hash": "0x61254bfb5c80a850907988aa4e3af5507be25b416f7949026d8fcbb4558a5aaf",
+      "from": "0x8d01188806aa960f95a3fe4a343dfc26a8a7e6b5",
+      "to": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+      "value": "15620006048337",
+      "blockNumber": "46500015",
+      "blockHash": "0x2313bebeaf0c62ff71570ce375c7f2377ef61ffb640b0b295d488a19f51be632",
+      "status": "success",
+      "effects": [],
+      "decoded": {
+        "functionName": "native transfer",
+        "args": {
+          "recipient": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+          "wei": "15620006048337"
+        }
+      }
+    },
+    {
+      "kind": "funding",
+      "hash": "0xe168c44f98703ca9f83aed1e78fc10b50f912c958d3142df41c3af4bfae4db41",
+      "from": "0x8d01188806aa960f95a3fe4a343dfc26a8a7e6b5",
+      "to": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+      "contract": "weth",
+      "value": "0",
+      "blockNumber": "46500459",
+      "blockHash": "0xbd9be42ce829766f68d92e7bb123f187c70da7316e35a647b5a89de96601940c",
+      "status": "success",
+      "decoded": {
+        "functionName": "transfer",
+        "args": [
+          "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+          "100000000000000000"
+        ]
+      },
+      "effects": [
+        {
+          "address": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+          "eventName": "Transfer",
+          "args": {
+            "from": "0x8D01188806aA960F95A3fe4A343DFC26A8a7e6B5",
+            "to": "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+            "value": "100000000000000000"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "funding",
+      "hash": "0x4553b46bdf72242d1cd60c7cd4c542c963c229c137ebd848a16e21f7876888f9",
+      "from": "0x8d01188806aa960f95a3fe4a343dfc26a8a7e6b5",
+      "to": "0xab211b5b4768ba055b0cf8ce6232335175f8b6d2",
+      "value": "10000000000000000",
+      "blockNumber": "46500461",
+      "blockHash": "0xffb3438ef883f0f6a28d9844706527e9bf7d88a711c1aaebf1feb228959001f6",
+      "status": "success",
+      "effects": [],
+      "decoded": {
+        "functionName": "native transfer",
+        "args": {
+          "recipient": "0xab211b5b4768ba055b0cf8ce6232335175f8b6d2",
+          "wei": "10000000000000000"
+        }
+      }
+    }
+  ],
+  "funding": [
+    {
+      "apiVersion": 1,
+      "observedAt": 1788770445423,
+      "request": {
+        "id": "64b8c224-4215-4029-8b41-11ac189d9a25",
+        "state": "funded",
+        "delayed": false,
+        "transactions": [
+          {
+            "kind": "weth",
+            "state": "confirmed",
+            "hash": "0xc6370a1c34b00884848e9bf383267d0ba138113a2b5b01c34b724318dca89def"
+          },
+          {
+            "kind": "eth",
+            "state": "confirmed",
+            "hash": "0x61254bfb5c80a850907988aa4e3af5507be25b416f7949026d8fcbb4558a5aaf"
+          }
+        ]
+      },
+      "service": {
+        "chainId": 84532,
+        "cooldownSeconds": 86400,
+        "state": "ready",
+        "targets": {
+          "ethWei": "10000000000000000",
+          "wethWei": "100000000000000000"
+        }
+      },
+      "recipient": {
+        "address": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+        "balances": {
+          "ethWei": "9890365848134716",
+          "wethWei": "93562137372266157"
+        },
+        "nextEligibleAt": 1788854725100,
+        "remaining": {
+          "ethWei": "109634151865284",
+          "wethWei": "6437862627733843"
+        },
+        "state": "rate-limited"
+      }
+    },
+    {
+      "apiVersion": 1,
+      "observedAt": 1788770445673,
+      "request": {
+        "id": "8ea0782d-bbe6-42ba-a2c9-92397b4b51b7",
+        "state": "funded",
+        "delayed": false,
+        "transactions": [
+          {
+            "kind": "weth",
+            "state": "confirmed",
+            "hash": "0xe168c44f98703ca9f83aed1e78fc10b50f912c958d3142df41c3af4bfae4db41"
+          },
+          {
+            "kind": "eth",
+            "state": "confirmed",
+            "hash": "0x4553b46bdf72242d1cd60c7cd4c542c963c229c137ebd848a16e21f7876888f9"
+          }
+        ]
+      },
+      "service": {
+        "chainId": 84532,
+        "cooldownSeconds": 86400,
+        "state": "ready",
+        "targets": {
+          "ethWei": "10000000000000000",
+          "wethWei": "100000000000000000"
+        }
+      },
+      "recipient": {
+        "address": "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+        "balances": {
+          "ethWei": "9999395594793488",
+          "wethWei": "100000000000000000"
+        },
+        "nextEligibleAt": 1788855617788,
+        "remaining": {
+          "ethWei": "604405206512",
+          "wethWei": "0"
+        },
+        "state": "rate-limited"
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "address": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+      "ethWei": "9890365848134716",
+      "fuelWei": "88675214684693132",
+      "wethWei": "93562137372266157",
+      "collectibleCount": "1",
+      "pendingDiscoveryCount": "0"
+    },
+    {
+      "address": "0xAB211b5b4768BA055b0cF8cE6232335175f8B6d2",
+      "ethWei": "9999395594793488",
+      "fuelWei": "0",
+      "wethWei": "100000000000000000",
+      "collectibleCount": "0",
+      "pendingDiscoveryCount": "0"
+    }
+  ],
+  "collectible": {
+    "identityId": 4179,
+    "owner": "0xA497893bBE4855b76db26f18BeEf34cD0EE3CfDd",
+    "permanent": true,
+    "pendingRewards": ["0", "0", "0", "0"],
+    "active": true
+  }
+}

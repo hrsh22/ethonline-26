@@ -5,6 +5,13 @@ const routeState = vi.hoisted(() => ({ pathname: "/" }));
 
 // The live readout needs the protocol provider; the shell tests exercise
 // navigation and wallet states, not protocol reads.
+// Activity has its own provider and browser journeys; these checks isolate shell navigation.
+vi.mock("@/components/shell/collector-activity", () => ({
+  CollectorActivity: () => null,
+}));
+vi.mock("@/providers/protocol-client-provider", () => ({
+  useProtocolClient: () => ({ transaction: { status: "idle" } }),
+}));
 vi.mock("@/components/shell/live-pulse", () => ({ LivePulse: () => null }));
 vi.mock("next/navigation", () => ({
   usePathname: () => routeState.pathname,
