@@ -4,6 +4,18 @@ One runner checks the production build's HTTP responses, hydrated accessibility,
 layout, wallet connection, and funding states in Chromium. There is no separate
 SSR/JSDOM axe pass.
 
+Visits run in batches of four, each with a separate browser context, cookies,
+storage, and fixtures. All route, viewport, and state cases still run; the two
+idle checks overlap without shortening their observation windows.
+
+Metric definition-list structure is checked by Axe on the rendered status page,
+with and without hints. The status case also requires the named funds group.
+The existing accessibility self-check moves an actual metric hint outside its
+definition and requires Axe to catch it.
+Source-string wallet/manifest theme checks, mocked font-class checks, aesthetic
+luminance thresholds, and selected CSS-class assertions are not retained. The
+text and non-text contrast tests and behavioral/semantic UI assertions remain.
+
 The release build and its test API use port 18800, separate from the development
 API on 8800. Completed public views stay idle; failed wallet reads are checked
 for bounded automatic recovery.

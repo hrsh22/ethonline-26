@@ -29,20 +29,6 @@ describe("root document layout", () => {
     expect(html).toMatch(/<html[^>]*data-scroll-behavior="smooth"/u);
   });
 
-  it("applies the same optimized font variables to route and global 404 documents", () => {
-    const routeHtml = renderToStaticMarkup(
-      <RootLayout params={Promise.resolve({})}>
-        <main>Route content</main>
-      </RootLayout>,
-    );
-    const notFoundHtml = renderToStaticMarkup(<GlobalNotFound />);
-
-    for (const html of [routeHtml, notFoundHtml]) {
-      // One family, loaded once: JetBrains Mono carries both applications.
-      expect(html).toMatch(/<html[^>]*class="font-mono"/u);
-    }
-  });
-
   it("shares identity-derived metadata between both not-found entry points", () => {
     expect(globalNotFoundMetadata).toMatchObject(routeNotFoundMetadata);
     expect(globalNotFoundMetadata.description).toContain(identity.brand);

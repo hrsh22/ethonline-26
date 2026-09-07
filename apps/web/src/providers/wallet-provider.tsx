@@ -33,7 +33,7 @@ const walletApplicationIcons = (): string[] => {
 };
 
 /* createAppKit registers the wallet modal singleton as a side effect; the
- * returned instance is not needed once the theme is pinned to light. */
+ * returned instance is not needed once the theme is pinned to dark. */
 (() => {
   if (!(isReownConfigured && reownProjectId && wagmiAdapter)) return;
   type AppKitAdapter = NonNullable<
@@ -75,8 +75,7 @@ const walletApplicationIcons = (): string[] => {
     projectId: reownProjectId,
     // The collector ships a single dark theme, so the wallet modal is pinned
     // to dark rather than following the OS preference. The accent and radius
-    // mirror the Graphite tokens; Reown cannot read custom properties, so
-    // these literals are asserted against foundations.css by its theme test.
+    // mirror the Graphite tokens; Reown cannot read custom properties.
     themeMode: "dark",
     themeVariables: {
       "--w3m-accent": "#ff6a1f",

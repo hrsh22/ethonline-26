@@ -555,6 +555,7 @@ const visit = async (
         .getByText("4,400", { exact: true })
         .waitFor({ state: "visible" });
       await page
+        .getByLabel("Destination-locked funds", { exact: true })
         .getByRole("definition")
         .filter({ hasText: /^2\.0000WETH/u })
         .waitFor({ state: "visible" });
@@ -847,8 +848,14 @@ export const runBrowserMatrix = async (
     : [];
   const browser = await chromium.launch();
   try {
-    for (const entry of plan) {
-      cases.push(await visit(browser, entry));
+    // Each visit owns its context, cookies and fixtures. Bound CPU/memory use
+    // while overlapping navigation and the two independent idle windows.
+    for (let index = 0; index < plan.length; index += 4) {
+      cases.push(
+        ...(await Promise.all(
+          plan.slice(index, index + 4).map((entry) => visit(browser, entry)),
+        )),
+      );
     }
   } finally {
     await browser.close();

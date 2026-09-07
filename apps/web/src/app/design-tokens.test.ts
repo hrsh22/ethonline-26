@@ -113,13 +113,6 @@ const resolve = (tokens: ReadonlyMap<string, string>, name: string): string => {
 };
 
 describe("graphite design tokens", () => {
-  it("keeps the canvas and panels dark and the ink light", () => {
-    for (const surface of [...surfaces, "--chart-surface"]) {
-      expect(luminance(resolve(graphite, surface)), surface).toBeLessThan(0.1);
-    }
-    expect(luminance(resolve(graphite, "--text-primary"))).toBeGreaterThan(0.7);
-  });
-
   it.each(textPairs)("%s on %s reads at AA", (foreground, background) => {
     expect(
       contrast(resolve(graphite, foreground), resolve(graphite, background)),

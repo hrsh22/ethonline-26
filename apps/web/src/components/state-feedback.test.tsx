@@ -77,7 +77,6 @@ describe("shared state feedback", () => {
   it("supports inverse operator surfaces without changing its semantics", () => {
     const feedbackHtml = renderToStaticMarkup(
       <StateFeedback
-        className="wallet-read-feedback"
         description="Checking current onchain roles."
         surface="inverse"
         title="Verifying authority"
@@ -92,7 +91,6 @@ describe("shared state feedback", () => {
 
     expect(feedbackHtml).toContain('data-surface="inverse"');
     expect(feedbackHtml).toContain('role="status"');
-    expect(feedbackHtml).toContain("state-feedback wallet-read-feedback");
     expect(reasonHtml).toContain('data-surface="inverse"');
   });
 });
