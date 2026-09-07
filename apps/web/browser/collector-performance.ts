@@ -11,12 +11,12 @@ assert.ok(
   origin && output,
   "Usage: node collector-performance.ts ORIGIN OUTPUT.json [--public | --fleet-50] [--diagnostic]",
 );
-const browser = await chromium.launch();
 const results: unknown[] = [];
 const diagnostic = process.argv.includes("--diagnostic");
 const publicExploration = process.argv.includes("--public");
 const largeFleet = process.argv.includes("--fleet-50");
 assert.ok(!(publicExploration && largeFleet), "Choose one extended scenario");
+const browser = await chromium.launch();
 
 async function install(page: Page, fixture: CollectorFixture) {
   // No external request can escape to a real provider or service.
