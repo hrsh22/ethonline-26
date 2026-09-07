@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { createWalletClient, custom, keccak256, parseAbi } from "viem";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createWalletClient,
+  custom,
+  keccak256,
+  parseAbi,
+  TransactionReceiptNotFoundError,
+} from "viem";
 import type { Address, Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
@@ -611,5 +617,144 @@ describe("Base Sepolia submitted transaction reconciliation", () => {
       status: "submitted-unknown",
       failureClass: "receipt-unavailable",
     });
+  });
+});
+
+describe("operator externally consumed nonce recovery", () => {
+  const fixture = async (failure?: string) => {
+    const signer = privateKeyToAccount(LIQUIDITY_EXECUTOR_KEY);
+    const signed = await signer.signTransaction({
+      chainId: failure === "wrong-chain" ? 84531 : 84532,
+      type: "eip1559",
+      nonce: 1422,
+      to: ACTOR,
+      value: 0n,
+      gas: 21000n,
+      maxFeePerGas: 2n,
+      maxPriorityFeePerGas: 1n,
+    });
+    const raw = failure === "malformed-raw" ? "0x0102" : signed;
+    const original = failure === "hash-mismatch" ? HASH : keccak256(raw);
+    const replacement = `0x${"77".repeat(32)}` as Hex;
+    const blockHash = `0x${"12".repeat(32)}` as Hex;
+    let anchorReads = 0;
+    const nonceRead = vi.fn(
+      async ({ blockNumber }: { blockNumber: bigint }) => {
+        if (failure === "pruned-history" && blockNumber < 8n)
+          throw new Error("old state pruned");
+        if (failure === "archive-unavailable")
+          throw new Error("archive unavailable");
+        if (failure === "malformed-nonce") return NaN;
+        return failure === "nonce-at-genesis" ||
+          (failure !== "pending-only" && blockNumber >= 12n)
+          ? 1423
+          : 1422;
+      },
+    );
+    const chain = {
+      publicClient: {
+        getChainId: async () => 84532,
+        getBlockNumber: async () =>
+          failure === "too-young"
+            ? 13n
+            : failure === "search-bound"
+              ? 2n ** 67n
+              : 14n,
+        getTransactionCount: nonceRead,
+        getBlock: async ({ blockNumber }: { blockNumber: bigint }) => ({
+          number: blockNumber,
+          hash: failure === "reorg" && ++anchorReads > 2 ? HASH : blockHash,
+          timestamp: 1800000012n,
+          transactions: [
+            {
+              hash: failure === "original-included" ? original : replacement,
+              from: failure === "different-sender" ? ACTOR : signer.address,
+              nonce: 1422,
+            },
+          ],
+        }),
+        getTransactionReceipt: async ({ hash }: { hash: Hex }) => {
+          if (failure === "rpc-outage") throw new Error("RPC unavailable");
+          if (hash === original || failure === "replacement-receipt-missing")
+            throw new TransactionReceiptNotFoundError({ hash });
+          return {
+            transactionHash:
+              failure === "wrong-receipt-hash" ? HASH : replacement,
+            status: "success",
+            blockNumber: failure === "wrong-receipt-block" ? 11n : 12n,
+            blockHash: failure === "wrong-receipt-header" ? HASH : blockHash,
+          };
+        },
+      },
+    } as unknown as Parameters<typeof reconcileOperatorSubmission>[0];
+    return { chain, original, raw, replacement, nonceRead };
+  };
+
+  it("proves a different canonical transaction consumed the signed nonce when the original receipt is missing", async () => {
+    const { chain, original, raw, replacement } = await fixture();
+    await expect(
+      reconcileOperatorSubmission(chain, original, raw),
+    ).resolves.toEqual({
+      status: "replaced",
+      blockNumber: 12n,
+      replacementHash: replacement,
+    });
+  });
+
+  it("locates a recent replacement without requiring old pruned account history", async () => {
+    const { chain, original, raw, replacement } =
+      await fixture("pruned-history");
+    await expect(
+      reconcileOperatorSubmission(chain, original, raw),
+    ).resolves.toEqual({
+      status: "replaced",
+      blockNumber: 12n,
+      replacementHash: replacement,
+    });
+  });
+
+  it.each([
+    "pending-only",
+    "nonce-at-genesis",
+    "too-young",
+    "wrong-chain",
+    "hash-mismatch",
+    "malformed-raw",
+    "malformed-nonce",
+    "archive-unavailable",
+    "reorg",
+    "original-included",
+    "different-sender",
+    "wrong-receipt-hash",
+    "wrong-receipt-block",
+    "wrong-receipt-header",
+    "replacement-receipt-missing",
+    "rpc-outage",
+    "search-bound",
+  ])("keeps %s evidence gated", async (failure) => {
+    const { chain, original, raw, nonceRead } = await fixture(failure);
+    await expect(
+      reconcileOperatorSubmission(chain, original, raw),
+    ).resolves.toMatchObject({ status: "submitted-unknown" });
+    expect(nonceRead.mock.calls.length).toBeLessThanOrEqual(64);
+    if (failure === "rpc-outage") expect(nonceRead).not.toHaveBeenCalled();
+  });
+
+  it("retains exact-byte rebroadcast eligibility when the nonce has not been consumed", async () => {
+    const { chain, original, raw } = await fixture("pending-only");
+    await expect(
+      reconcileOperatorSubmission(chain, original, raw),
+    ).resolves.toMatchObject({
+      status: "submitted-unknown",
+      failureClass: "receipt-unavailable",
+    });
+  });
+
+  it("cannot clear a legacy row without its signed bytes", async () => {
+    const { chain, original, nonceRead } = await fixture();
+    await expect(
+      reconcileOperatorSubmission(chain, original),
+    ).resolves.toMatchObject({ status: "submitted-unknown" });
+    expect(nonceRead).not.toHaveBeenCalled();
   });
 });

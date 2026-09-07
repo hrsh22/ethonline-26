@@ -147,6 +147,7 @@ export const maintainBaseSepoliaDiscovery = async ({
   manifest,
   privateKey,
   rpcUrl,
+  minimumBlock,
 }: {
   readonly assertMaySign?: () => void;
   readonly submitTransaction?: (
@@ -156,6 +157,7 @@ export const maintainBaseSepoliaDiscovery = async ({
   readonly manifest: ProtocolDeploymentManifest;
   readonly privateKey: Hex | undefined;
   readonly rpcUrl: string;
+  readonly minimumBlock?: bigint;
 }): Promise<DiscoveryMaintenanceEvidence> => {
   if (execute && privateKey === undefined) {
     throw new Error("Discovery execute mode requires an operator signing key");
@@ -208,6 +210,10 @@ export const maintainBaseSepoliaDiscovery = async ({
   const chain: DiscoveryMaintenanceChain = {
     observe: async () => {
       const block = await publicClient.getBlock();
+      if (minimumBlock !== undefined && block.number < minimumBlock)
+        throw new Error(
+          "Discovery observation is behind the reconciled transaction block",
+        );
       const [requestCount, nextSequence] = await Promise.all([
         publicClient.readContract({
           address: adapter.address,

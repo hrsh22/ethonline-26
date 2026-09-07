@@ -125,8 +125,16 @@ therefore remains an unresolved signing gate after acknowledgement. If journal d
 broadcast is not attempted and the bounded run aborts without recording completion. Before a later process can observe
 eligibility or sign, it replays undelivered rows and reconciles every unresolved hash against an
 exact receipt, its canonical block header, and the two-confirmation floor. Pending, missing,
-malformed, reorged, or otherwise uncertain outcomes keep the whole run gated; only canonical
-success or revert releases the exact row, after which eligibility is observed afresh. The outbox is
+malformed, reorged, or otherwise uncertain outcomes keep the whole run gated; canonical
+success or revert releases the exact row. A missing receipt can also resolve as replaced when
+the exact stored signed bytes identify a different transaction consuming the same sender nonce
+in a canonical block beyond two confirmations. Recovery searches recent account history first,
+using at most 64 nonce reads across the entire search, and validates the replacement receipt and
+canonical headers again before resolving. Unavailable historical state remains gated. Before clearing a replaced row, recovery durably retains its public proof in the existing
+outbox metadata (latest 20); failed proof persistence keeps the gate. The bounded `replacements`
+array in structured operator evidence exposes those original/replacement hashes and canonical blocks across restarts; it does not report the original action as successful. Existing public attempt
+history can still show the original hash as unknown. Subsequent Discovery and Keeper eligibility
+reads must reach the reconciled block before planning new work. The outbox is
 bound to the deployment fingerprint. Version 4 also retains signed transaction bytes, including
 their nonce, in the owner-only `0600` database. Keep this file private: a signed transaction can be
 broadcast by anyone holding it. No private key, RPC credential, provider object, or raw revert

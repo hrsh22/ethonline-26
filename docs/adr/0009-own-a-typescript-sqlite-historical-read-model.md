@@ -123,12 +123,25 @@ The following boundaries are mandatory:
   canonical resolution are separate states: acknowledgement never removes the local signing gate.
   Before a later bounded run can observe eligibility or sign, the operator reconciles each retained
   hash directly through exact receipt/header identity and the confirmation floor, without receiving
-  broad history-read credentials. Only canonical success or revert removes the exact local row;
+  broad history-read credentials. Only canonical success, revert, or a proven canonical nonce replacement removes the exact local row;
   receipt loss, replacement, revert, reorg, and later recovery are explicit states. The public
   projection contains only bounded action kinds, track IDs, hashes, block/time evidence, and safe
   failure classes. Submitted hashes are rechecked until their receipt crosses the configured
   confirmation boundary; pending and reorged hashes remain eligible for recovery. Missing, stale,
   incomplete, malformed, or unavailable evidence remains unknown.
+  On 2026-09-07, the operator also recovers an exact signed submission whose nonce was
+  consumed by a different transaction. It binds the persisted signed bytes to their hash,
+  recovered sender, and deployment chain; finds the nonce-consuming transaction with a
+  bounded canonical account-history search; verifies its receipt and inclusion after two
+  confirmations; and rechecks the canonical headers. Pending/latest nonce alone cannot
+  remove the gate. Missing signed bytes, unavailable archive evidence, and reorg uncertainty
+  remain unresolved. Before clearing the exact row, the operator persists the original hash, replacement hash,
+  and canonical block in the existing manifest-bound outbox metadata (latest 20 proofs).
+  Failed proof persistence keeps the signing gate. These proofs survive restart and appear
+  in the existing structured run evidence; no raw signed bytes enter that evidence. This is replacement evidence, never success
+  of the original action: existing public attempt history may retain that original as unknown
+  until its own receipt is available. The next Discovery or Keeper plan must observe at least
+  the proven block and reevaluate current eligibility; it never blindly retries the old intent.
   `ProtocolHistoryReader` composes that direct source with successful event history; failure-source
   outages never hide already indexed successes. Other direct RPC history remains only as an
   explicit diagnostic fallback for non-browser tooling while it is retired.

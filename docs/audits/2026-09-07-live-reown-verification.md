@@ -42,3 +42,5 @@ Computer Use repeatedly returned `cgWindowNotFound` despite Chrome running and t
 No positive live reward claim was possible: epoch count was zero, track queues were empty, all four pending rewards were zero, and the observed reward pot was about 0.002385 WETH versus the 0.04 WETH epoch minimum. No economic settings were changed to manufacture a claim. No privileged Pause, withdrawal, epoch or POL transaction was submitted.
 
 Physical-phone wallet handoff, virtual keyboards, manual screen readers, final artwork and sessions with five unfamiliar collectors are not established by this run. Issues #44, #48, #53 and #56 retain their remaining acceptance requirements.
+
+The subsequent [Computer Use recovery and positive-claim follow-up](2026-09-07-positive-reward-claim.md) records the native-window recovery and the separately authorized reward-generating trades. Its evidence supersedes the relevant limitations above when the later check is completed.
