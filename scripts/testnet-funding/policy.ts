@@ -5,7 +5,7 @@ import type { TestnetFundingAssetAmounts } from "./types.ts";
 export interface TestnetFundingPolicy {
   readonly target: TestnetFundingAssetAmounts;
   readonly reserve: TestnetFundingAssetAmounts;
-  readonly lifetimeLimit: TestnetFundingAssetAmounts;
+  readonly lifetimeLimit?: TestnetFundingAssetAmounts;
   readonly cooldownMilliseconds: number;
   readonly reconciliationTimeoutMilliseconds: number;
   readonly requestLeaseMilliseconds: number;
@@ -83,10 +83,11 @@ export const evaluateTestnetFundingPolicy = (
   const coolingDown =
     nextEligibleAt !== null && nextEligibleAt > input.nowMilliseconds;
   const lifetimeLimitReached =
-    input.recipientHistory.confirmedWethWei + deficit.wethWei >
+    policy.lifetimeLimit !== undefined &&
+    (input.recipientHistory.confirmedWethWei + deficit.wethWei >
       policy.lifetimeLimit.wethWei ||
-    input.recipientHistory.confirmedEthWei + deficit.ethWei >
-      policy.lifetimeLimit.ethWei;
+      input.recipientHistory.confirmedEthWei + deficit.ethWei >
+        policy.lifetimeLimit.ethWei);
   const requestPending =
     input.activeRecipient !== undefined &&
     sameAddress(input.activeRecipient, input.recipient);

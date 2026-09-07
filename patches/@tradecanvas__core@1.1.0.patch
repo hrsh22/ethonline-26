@@ -1,8 +1,18 @@
 diff --git a/dist/index.js b/dist/index.js
-index 066ed675286f80e04814e22ea9418038f83cd3bb..4da74fcc56519626eab6d15e461af867acf09348 100644
+index 066ed675286f80e04814e22ea9418038f83cd3bb..b40adda8704ad779648fa354c8c7a5faf00fc88a 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -9431,8 +9431,7 @@ var Ri = {
+@@ -6172 +6172,3 @@ var Un = class {
+-		let i = t.close >= t.open ? n.candleUp : n.candleDown, a = (e) => e.toFixed(2), o = new Date(t.time);
++		let i = t.close >= t.open ? n.candleUp : n.candleDown, a = (e) => e.toLocaleString(void 0, {
++			maximumSignificantDigits: 8
++		}), o = new Date(t.time);
+@@ -6288 +6290,3 @@ function V(e) {
+-	return e.toFixed(2);
++	return e.toLocaleString(void 0, {
++		maximumSignificantDigits: 8
++	});
+@@ -9431,8 +9435,7 @@ var Ri = {
  		if (this.config.showOHLC) {
  			e.font = `${s}px ${n.font.family}`;
  			let t = i.close >= i.open, r = (e) => e.toLocaleString(void 0, {

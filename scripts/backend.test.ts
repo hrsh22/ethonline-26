@@ -1,12 +1,15 @@
 import { Buffer } from "node:buffer";
 import { spawn, type ChildProcess } from "node:child_process";
+import crypto from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:net";
+import { join } from "node:path";
 
 import { Effect, Either, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
+  acquireBackendInstance,
   foundationalBackendServices,
   operatorBackendService,
   createBackendLaunchPlan,
@@ -35,6 +38,55 @@ const persistentChild = (): ChildProcess =>
   });
 
 describe("combined backend", () => {
+  it("hands backend ownership to a new supervisor", async () => {
+    const socketPath = join(
+      "/tmp",
+      `orbit-${process.pid}-${crypto.randomUUID()}.sock`,
+    );
+    const firstRelease: { current?: () => Promise<void> } = {};
+    const first = await acquireBackendInstance({
+      socketPath,
+      shutdownCurrent: () => void firstRelease.current?.(),
+    });
+    firstRelease.current = first.release;
+
+    const second = await acquireBackendInstance({ socketPath });
+
+    await second.release();
+  });
+  it("keeps ownership until delayed worker cleanup releases it", async () => {
+    const socketPath = join(
+      "/tmp",
+      `orbit-${process.pid}-${crypto.randomUUID()}.sock`,
+    );
+    let shutdownCount = 0;
+    const shutdownRequested = Promise.withResolvers<void>();
+    const first = await acquireBackendInstance({
+      socketPath,
+      shutdownCurrent: () => {
+        shutdownCount += 1;
+        shutdownRequested.resolve();
+      },
+    });
+    let acquired = false;
+    const secondPromise = acquireBackendInstance({ socketPath }).then(
+      (instance) => {
+        acquired = true;
+        return instance;
+      },
+    );
+    try {
+      await shutdownRequested.promise;
+      // Simulate workers still releasing their listeners after SIGTERM.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(acquired).toBe(false);
+      expect(shutdownCount).toBe(1);
+    } finally {
+      await first.release();
+      const second = await secondPromise;
+      await second.release();
+    }
+  });
   it("projects a launch plan without retaining the combined source environment", () => {
     const plan = createBackendLaunchPlan({
       AWS_SECRET_ACCESS_KEY: "sentinel-cloud-secret",

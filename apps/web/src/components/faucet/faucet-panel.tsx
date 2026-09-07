@@ -63,6 +63,24 @@ const faucetAmount = (
 const amountText = (amount: FaucetAmount): string =>
   `${amount.display} ${amount.symbol}`;
 
+const assetPairText = (
+  amounts: { readonly ethWei: string; readonly wethWei: string } | undefined,
+): string | undefined => {
+  if (amounts === undefined) return undefined;
+  const eth = faucetAmount(amounts.ethWei, "ETH")!;
+  const weth = faucetAmount(amounts.wethWei, "WETH")!;
+  return `${amountText(eth)} / ${amountText(weth)}`;
+};
+
+const durationText = (seconds: number): string => {
+  if (seconds % 3_600 === 0) {
+    const hours = seconds / 3_600;
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+  const minutes = seconds / 60;
+  return `${minutes.toLocaleString()} minutes`;
+};
+
 const assetAmounts = (
   response: TestnetFundingResponse | undefined,
   asset: "ethWei" | "wethWei",
@@ -130,10 +148,24 @@ const badgeTone: Record<StateFeedbackTone, BadgeTone> = {
   error: "danger",
 };
 
+const DAILY_LIMIT_CODES = new Set([
+  "funding-daily-budget",
+  "funding-daily-grant-limit",
+]);
+
 const nextEligibleAt = (
   response: TestnetFundingResponse | undefined,
-): number | undefined =>
-  response?.recipient?.nextEligibleAt ?? response?.error?.nextEligibleAt;
+): number | undefined => {
+  if (response === undefined) return undefined;
+  const recipientDeadline = response.recipient?.nextEligibleAt;
+  if (recipientDeadline !== undefined && recipientDeadline !== null) {
+    return recipientDeadline;
+  }
+  const error = response.error;
+  if (error === undefined) return undefined;
+  if (error.nextEligibleAt !== undefined) return error.nextEligibleAt;
+  return DAILY_LIMIT_CODES.has(error.code) ? error.windowResetsAt : undefined;
+};
 
 function FaucetAction({
   fund,
@@ -193,7 +225,7 @@ function AssetMetric({
       ? amounts.target === undefined
         ? undefined
         : applicationCopy.faucet.target(amountText(amounts.target))
-      : applicationCopy.faucet.remaining(amountText(amounts.remaining));
+      : `${amountText(amounts.remaining)} to reach target`;
   return (
     <Metric
       hint={hint}
@@ -211,10 +243,16 @@ function AssetMetric({
 
 const cooldownHint = (
   response: TestnetFundingResponse | undefined,
+  view: TestnetFundingView,
 ): string | undefined => {
   const seconds = response?.service?.cooldownSeconds;
-  if (seconds === undefined) return undefined;
-  return applicationCopy.faucet.cooldownHint((seconds / 3600).toFixed(0));
+  if (
+    seconds === undefined ||
+    (view.state !== "cooldown" && view.state !== "funded")
+  ) {
+    return undefined;
+  }
+  return `${durationText(seconds)} after a successful top-up`;
 };
 
 /**
@@ -242,14 +280,24 @@ function EligibleAgainWithoutDeadline({
   ) {
     return <Unavailable reason={applicationCopy.common.notObserved} />;
   }
-  if (view.state === "lifetime-exhausted") {
-    return (
-      <span className="text-body text-ink-soft">
-        {applicationCopy.faucet.states["lifetime-exhausted"].title}
-      </span>
-    );
+  const labelByState: Partial<Record<TestnetFundingViewState, string>> = {
+    disabled: "When service resumes",
+    funded: "After a balance falls below target",
+    "inventory-empty": "After inventory returns",
+    "lifetime-exhausted": "No automatic reset",
+  };
+  const label = labelByState[view.state];
+  if (label !== undefined) {
+    return <span className="text-body text-ink-soft">{label}</span>;
   }
-  return <>{applicationCopy.faucet.eligibleNow}</>;
+  const availableNow =
+    isTestnetFundingComplete(response) || view.state === "eligible";
+  if (availableNow) return <>{applicationCopy.faucet.eligibleNow}</>;
+  return (
+    <span className="text-body text-ink-soft">
+      {applicationCopy.faucet.eligibleUnknown}
+    </span>
+  );
 }
 
 function EligibleAgainMetric({
@@ -273,7 +321,7 @@ function EligibleAgainMetric({
     );
   return (
     <Metric
-      hint={cooldownHint(response)}
+      hint={cooldownHint(response, view)}
       label={applicationCopy.faucet.nextEligible}
       tone={
         eligibleAt === undefined && view.state === "eligible"
@@ -322,11 +370,58 @@ function EligibilityBoard({
   );
 }
 
-const requestCopy = (
+interface RequestCopy {
+  readonly title: string;
+  readonly body: string;
+}
+
+const lifetimeRequestCopy = (
   response: TestnetFundingResponse | undefined,
   state: TestnetFundingView["state"],
-) => {
-  return response?.request?.delayed
+): RequestCopy | undefined => {
+  if (state !== "lifetime-exhausted") return undefined;
+  const service = response?.service;
+  const lifetime = assetPairText(service?.limits?.lifetime);
+  return {
+    title: applicationCopy.faucet.states["lifetime-exhausted"].title,
+    body: `The next top-up would exceed this wallet’s lifetime grant cap for at least one asset. ${lifetime === undefined ? "" : `The caps are ${lifetime}. `}Waiting does not reset them.`,
+  };
+};
+
+const disabledRequestCopy = (
+  state: TestnetFundingView["state"],
+): RequestCopy | undefined =>
+  state === "disabled"
+    ? {
+        title: applicationCopy.faucet.states.disabled.title,
+        body: "Self-service funding is paused for every wallet. It resumes only when the operator enables it; this wallet’s balance and limits did not cause the pause.",
+      }
+    : undefined;
+
+const dailyLimitRequestCopy = (
+  response: TestnetFundingResponse | undefined,
+): RequestCopy | undefined => {
+  const errorCode = response?.error?.code ?? "";
+  if (!DAILY_LIMIT_CODES.has(errorCode)) return undefined;
+  return {
+    title: "Faucet daily limit reached",
+    body: "A service-wide daily limit has been reached across all wallets. Try again after the daily reset.",
+  };
+};
+
+const policyRequestCopy = (
+  response: TestnetFundingResponse | undefined,
+  state: TestnetFundingView["state"],
+): RequestCopy | undefined =>
+  lifetimeRequestCopy(response, state) ??
+  disabledRequestCopy(state) ??
+  dailyLimitRequestCopy(response);
+
+const transferRequestCopy = (
+  response: TestnetFundingResponse | undefined,
+  state: TestnetFundingView["state"],
+): RequestCopy =>
+  response?.request?.delayed
     ? {
         title: "Your top-up is taking longer than usual",
         body: "The service is still checking the saved transfers. You can leave this page; no further signature is needed.",
@@ -337,7 +432,12 @@ const requestCopy = (
           body: "Any received assets remain in your wallet. Check your current eligibility before requesting another top-up.",
         }
       : fundingStateCopy(state);
-};
+
+const requestCopy = (
+  response: TestnetFundingResponse | undefined,
+  state: TestnetFundingView["state"],
+): RequestCopy =>
+  policyRequestCopy(response, state) ?? transferRequestCopy(response, state);
 
 function TransferProgress({
   response,
@@ -364,6 +464,107 @@ function TransferProgress({
         </li>
       ))}
     </ul>
+  );
+}
+
+function OptionalLimitRow({
+  label,
+  note,
+  value,
+}: {
+  readonly label: string;
+  readonly note?: string | undefined;
+  readonly value: string | undefined;
+}) {
+  if (value === undefined) return null;
+  return <DataRow label={label} note={note} value={value} />;
+}
+
+const optionalDuration = (seconds: number | undefined): string | undefined =>
+  seconds === undefined
+    ? undefined
+    : `${durationText(seconds)} after a successful top-up`;
+
+type ServiceLimits = NonNullable<
+  NonNullable<TestnetFundingResponse["service"]>["limits"]
+>;
+
+const lifetimePolicy = (
+  limits: ServiceLimits | undefined,
+): {
+  readonly note: string | undefined;
+  readonly value: string | undefined;
+} => {
+  if (limits === undefined) return { note: undefined, value: undefined };
+  const lifetime = assetPairText(limits.lifetime);
+  if (lifetime === undefined) {
+    return {
+      note: "Recurring top-ups; wallet cooldown still applies",
+      value: "None",
+    };
+  }
+  return {
+    note: "Confirmed grants; no automatic reset",
+    value: lifetime,
+  };
+};
+
+function FaucetLimits({
+  response,
+}: {
+  readonly response: TestnetFundingResponse | undefined;
+}) {
+  if (response === undefined) return null;
+  const service = response.service;
+  if (service === undefined) return null;
+  const limits = service.limits;
+  const target = assetPairText(service.targets);
+  const lifetime = lifetimePolicy(limits);
+  const dailyBudget = assetPairText(limits?.dailyBudget);
+  const cooldown = optionalDuration(service.cooldownSeconds);
+  const hasLimits = [target, lifetime.value, dailyBudget, cooldown].some(
+    (value) => value !== undefined,
+  );
+  if (!hasLimits) return null;
+  return (
+    <Panel title="Faucet limits">
+      <p className="max-w-[72ch] text-body-sm text-ink-soft">
+        Each top-up restores only the shortfall to the wallet targets. Wallet
+        and service-wide limits are separate.
+      </p>
+      <DataList className="mt-3">
+        <OptionalLimitRow
+          label="Top-up balance targets"
+          note="Only the shortfall is sent"
+          value={target}
+        />
+        <OptionalLimitRow
+          label="Wallet lifetime grant cap"
+          note={lifetime.note}
+          value={lifetime.value}
+        />
+        <OptionalLimitRow label="Wallet cooldown" value={cooldown} />
+        <OptionalLimitRow
+          label="Service daily asset budget"
+          note="Across all wallets; resets 00:00 UTC"
+          value={dailyBudget}
+        />
+        <OptionalLimitRow
+          label="Service daily top-up limit"
+          note="Across all wallets; resets 00:00 UTC"
+          value={limits?.dailyGrantLimit.toLocaleString()}
+        />
+        <OptionalLimitRow
+          label="Client request limit"
+          note={
+            limits === undefined
+              ? undefined
+              : `Per fixed ${durationText(limits.clientWindowSeconds)} window`
+          }
+          value={limits?.clientWindowLimit.toLocaleString()}
+        />
+      </DataList>
+    </Panel>
   );
 }
 
@@ -532,6 +733,7 @@ export function FaucetPanel() {
         view={funding.view}
         weth={weth}
       />
+      <FaucetLimits response={funding.response} />
       <RequestPanel
         fund={funding.fund}
         response={funding.response}

@@ -843,6 +843,27 @@ const projectFundingService = (service: TestnetFundingResponse["service"]) =>
           ? {}
           : { cooldownSeconds: service.cooldownSeconds }),
         state: service.halted ? "disabled" : service.state,
+        ...(service.limits === undefined
+          ? {}
+          : {
+              limits: {
+                ...(service.limits.lifetime === undefined
+                  ? {}
+                  : {
+                      lifetime: {
+                        ethWei: service.limits.lifetime.ethWei,
+                        wethWei: service.limits.lifetime.wethWei,
+                      },
+                    }),
+                dailyBudget: {
+                  ethWei: service.limits.dailyBudget.ethWei,
+                  wethWei: service.limits.dailyBudget.wethWei,
+                },
+                dailyGrantLimit: service.limits.dailyGrantLimit,
+                clientWindowSeconds: service.limits.clientWindowSeconds,
+                clientWindowLimit: service.limits.clientWindowLimit,
+              },
+            }),
         ...(service.targets === undefined
           ? {}
           : {

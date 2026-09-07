@@ -32,6 +32,14 @@ const fundingQueryKey = (address: ProtocolClient["address"]) =>
     protocolDeploymentFingerprint,
   ] as const;
 
+const withFundingPolicy = (
+  previous: TestnetFundingResponse,
+  next: TestnetFundingResponse,
+): TestnetFundingResponse =>
+  next.service === undefined && previous.service !== undefined
+    ? { ...next, service: previous.service }
+    : next;
+
 const newerFundingResponse = (
   previous: TestnetFundingResponse | undefined,
   next: TestnetFundingResponse,
@@ -53,7 +61,9 @@ const newerFundingResponse = (
     ["pending", "retryable"].includes(nextRequest.state)
   )
     return previous;
-  return next;
+  // Grant responses omit service policy; keep the last observed rules visible
+  // until a fresh status response replaces them for this wallet-scoped query.
+  return withFundingPolicy(previous, next);
 };
 
 const validateFundingScope = (

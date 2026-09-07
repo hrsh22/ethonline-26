@@ -1,7 +1,11 @@
 /** @vitest-environment jsdom */
 
 import type { MarketCandle } from "@orbit/protocol/market-history";
-import type { DataSeries } from "@tradecanvas/chart";
+import {
+  CrosshairTooltip,
+  DARK_THEME,
+  type DataSeries,
+} from "@tradecanvas/chart";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -114,6 +118,29 @@ describe("hydrated market chart accessibility", () => {
     container.remove();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("keeps sub-cent OHLC values precise in the advanced-chart hover card", () => {
+    const tooltip = new CrosshairTooltip();
+    tooltip.create(container);
+    tooltip.show(
+      { x: 100, y: 100 },
+      {
+        time: Date.parse("2026-09-07T12:00:00Z"),
+        open: 0.005927444312077907,
+        high: 0.005927444312077907,
+        low: 0.005795143499402389,
+        close: 0.005795143499402389,
+        volume: 0.291,
+      },
+      DARK_THEME,
+      { width: 400, height: 300 },
+    );
+
+    expect(container.textContent).toContain("O 0.0059274443 H 0.0059274443");
+    expect(container.textContent).toContain("L 0.0057951435 C 0.0057951435");
+    expect(container.textContent).not.toContain("O 0.01 H 0.01");
+    tooltip.destroy();
   });
 
   it("keeps the chosen chart view while refreshed candles update", async () => {

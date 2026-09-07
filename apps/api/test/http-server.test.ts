@@ -1853,6 +1853,19 @@ describe("VM-owned public API", () => {
         service: {
           chainId: 84_532,
           cooldownSeconds: 120,
+          limits: {
+            lifetime: {
+              ethWei: "20000000000000000",
+              wethWei: "200000000000000000",
+            },
+            dailyBudget: {
+              ethWei: "200000000000000000",
+              wethWei: "2000000000000000000",
+            },
+            dailyGrantLimit: 20,
+            clientWindowSeconds: 3600,
+            clientWindowLimit: 5,
+          },
           inventory: {
             ethWei: "9000000000000000000",
             state: "available",
@@ -1931,6 +1944,19 @@ describe("VM-owned public API", () => {
           service: {
             chainId: 84_532,
             cooldownSeconds: 120,
+            limits: {
+              lifetime: {
+                ethWei: "20000000000000000",
+                wethWei: "200000000000000000",
+              },
+              dailyBudget: {
+                ethWei: "200000000000000000",
+                wethWei: "2000000000000000000",
+              },
+              dailyGrantLimit: 20,
+              clientWindowSeconds: 3600,
+              clientWindowLimit: 5,
+            },
             state: "ready",
             targets: {
               ethWei: "10000000000000000",

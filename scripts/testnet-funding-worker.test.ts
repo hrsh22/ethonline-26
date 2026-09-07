@@ -592,7 +592,28 @@ describe("testnet funding HTTP interface", () => {
           const statusText = yield* Effect.promise(() => status.text());
           expect(status.status).toBe(200);
           expect(JSON.parse(statusText)).toMatchObject({
-            service: { state: "disabled", chainId: 84_532 },
+            service: {
+              state: "disabled",
+              chainId: 84_532,
+              targets: {
+                ethWei: "10000000000000000",
+                wethWei: "100000000000000000",
+              },
+              cooldownSeconds: 86400,
+              limits: {
+                lifetime: {
+                  ethWei: "20000000000000000",
+                  wethWei: "200000000000000000",
+                },
+                dailyBudget: {
+                  ethWei: "200000000000000000",
+                  wethWei: "2000000000000000000",
+                },
+                dailyGrantLimit: 20,
+                clientWindowSeconds: 3600,
+                clientWindowLimit: 5,
+              },
+            },
             recipient: { address: recipient, state: "unavailable" },
           });
           expect(statusText).not.toContain(secret);
@@ -644,6 +665,19 @@ describe("testnet funding HTTP interface", () => {
                 ethWei: "10000000000000000",
               },
               cooldownSeconds: 86_400,
+              limits: {
+                lifetime: {
+                  ethWei: "20000000000000000",
+                  wethWei: "200000000000000000",
+                },
+                dailyBudget: {
+                  ethWei: "200000000000000000",
+                  wethWei: "2000000000000000000",
+                },
+                dailyGrantLimit: 20,
+                clientWindowSeconds: 3600,
+                clientWindowLimit: 5,
+              },
               inventory: {
                 state: "available",
                 wethWei: "900000000000000000",
@@ -704,6 +738,19 @@ describe("testnet funding HTTP interface", () => {
                 ethWei: "10000000000000000",
               },
               cooldownSeconds: 86_400,
+              limits: {
+                lifetime: {
+                  ethWei: "20000000000000000",
+                  wethWei: "200000000000000000",
+                },
+                dailyBudget: {
+                  ethWei: "200000000000000000",
+                  wethWei: "2000000000000000000",
+                },
+                dailyGrantLimit: 20,
+                clientWindowSeconds: 3600,
+                clientWindowLimit: 5,
+              },
               inventory: {
                 state: "available",
                 wethWei: "900000000000000000",
@@ -1776,12 +1823,13 @@ describe("testnet funding worker configuration", () => {
       signer: signerAddress,
       policy: {
         target: {
-          wethWei: 100_000_000_000_000_000n,
+          wethWei: 10_000_000_000_000_000n,
           ethWei: 10_000_000_000_000_000n,
         },
         cooldownMilliseconds: 86_400_000,
       },
     });
+    expect(resolved.policy.lifetimeLimit).toBeUndefined();
     expect(
       JSON.stringify(resolved, (_key, value) =>
         typeof value === "bigint" ? value.toString() : value,

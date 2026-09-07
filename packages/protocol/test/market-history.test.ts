@@ -192,6 +192,61 @@ const fee = ({
   });
 
 describe("canonical indexed market history", () => {
+  it("opens a traded minute at the prior close so a single sell is a down candle", () => {
+    const firstTransaction = hash("3");
+    const sellTransaction = hash("4");
+    const base = 1_699_999_200n;
+    const snapshot = deriveCanonicalMarketHistorySnapshot({
+      manifest,
+      identity,
+      index: serviceStatus(),
+      swaps: source([
+        swap({
+          timestamp: base + 10n,
+          sqrtPriceX96: q96 * 2n,
+          transactionIndex: 0,
+          logIndex: 2,
+          transactionHash: firstTransaction,
+        }),
+        swap({
+          timestamp: base + 70n,
+          sqrtPriceX96: q96,
+          transactionIndex: 1,
+          logIndex: 2,
+          transactionHash: sellTransaction,
+        }),
+      ]),
+      fees: source([
+        fee({
+          timestamp: base + 10n,
+          transactionIndex: 0,
+          logIndex: 1,
+          transactionHash: firstTransaction,
+          wethVolume: 200n,
+          totalFee: 6n,
+        }),
+        fee({
+          timestamp: base + 70n,
+          transactionIndex: 1,
+          logIndex: 1,
+          transactionHash: sellTransaction,
+          wethVolume: 100n,
+          totalFee: 3n,
+        }),
+      ]),
+      liquidityCycles: source([]),
+    });
+
+    expect(snapshot.candles).toHaveLength(2);
+    expect(snapshot.candles[1]).toMatchObject({
+      openWethPerLiquidTokenX18: 4n * 10n ** 18n,
+      highWethPerLiquidTokenX18: 4n * 10n ** 18n,
+      lowWethPerLiquidTokenX18: 10n ** 18n,
+      closeWethPerLiquidTokenX18: 10n ** 18n,
+      swapCount: 1,
+    });
+  });
+
   it("orders same-block swaps and aggregates traded minutes without synthetic gaps", () => {
     const firstTransaction = hash("5");
     const secondTransaction = hash("6");

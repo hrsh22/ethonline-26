@@ -105,6 +105,55 @@ export type ContractReadResults<
 };
 
 export type RewardTrack = 1 | 2 | 3 | 4;
+export interface StockBalanceSnapshot {
+  readonly owner: Address;
+  readonly observedBlock: bigint;
+  readonly observedAt: number;
+  readonly balances: readonly {
+    readonly track: string;
+    readonly trackId: RewardTrack;
+    readonly tokenAddress: Address;
+    readonly status: "observed" | "unavailable";
+    readonly rawTokenUnits: bigint | undefined;
+    readonly decimals: number | undefined;
+  }[];
+}
+const isValidRawTokenUnits = (value: unknown): value is bigint =>
+  typeof value === "bigint" && value >= 0n;
+const isValidTokenDecimals = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= 0 &&
+  value <= 255;
+const stockBalanceObservation = (
+  balanceResult: ContractReadResult | undefined,
+  decimalsResult: ContractReadResult | undefined,
+) => {
+  if (
+    balanceResult?.status !== "success" ||
+    decimalsResult?.status !== "success"
+  ) {
+    return {
+      status: "unavailable" as const,
+      rawTokenUnits: undefined,
+      decimals: undefined,
+    };
+  }
+  const rawTokenUnits: unknown = balanceResult.value;
+  const decimals: unknown = decimalsResult.value;
+  if (!isValidRawTokenUnits(rawTokenUnits) || !isValidTokenDecimals(decimals)) {
+    return {
+      status: "unavailable" as const,
+      rawTokenUnits: undefined,
+      decimals: undefined,
+    };
+  }
+  return {
+    status: "observed" as const,
+    rawTokenUnits,
+    decimals,
+  };
+};
 type HealthTrack = RewardTrack;
 const BYTECODE_READ_CONCURRENCY = 4;
 const mapWithConcurrency = async <Item, Result>(
@@ -1584,6 +1633,46 @@ export const createProtocolReader = ({
     ["mockMetac", 3],
     ["mockNvdac", 4],
   ] as const;
+
+  const readStockBalances = async (
+    owner: Address,
+  ): Promise<StockBalanceSnapshot> => {
+    await verifyChain();
+    const block = await executeRead(
+      copy.reader.walletBlock,
+      () => transport.getBlock(),
+      identity,
+    );
+    const requests = stockContracts.flatMap(([contract]) => [
+      {
+        contract,
+        functionName: "balanceOf",
+        args: [owner],
+      } as const,
+      { contract, functionName: "decimals" } as const,
+    ]);
+    const results = await executeRead(
+      copy.reader.walletSummary,
+      () => transport.readMany(requests, block.number),
+      identity,
+    );
+    const balances = stockContracts.map(([contract, trackId], index) => {
+      const balanceResult = results[index * 2];
+      const decimalsResult = results[index * 2 + 1];
+      return {
+        track: identity.rewardTrackLabels[trackId],
+        trackId,
+        tokenAddress: contracts[contract].address,
+        ...stockBalanceObservation(balanceResult, decimalsResult),
+      };
+    });
+    return {
+      owner,
+      observedBlock: block.number,
+      observedAt: Number(block.timestamp),
+      balances,
+    };
+  };
   const adapterContracts = [
     "aaplcConversionAdapter",
     "googlcConversionAdapter",
@@ -4152,6 +4241,7 @@ export const createProtocolReader = ({
     manifest,
     verifyChain,
     readWallet,
+    readStockBalances,
     readCollectible,
     readExchangeAllowance,
     quoteExactInput,

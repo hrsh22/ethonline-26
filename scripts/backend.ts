@@ -1,5 +1,6 @@
 import type { ChildProcess } from "node:child_process";
-import { createServer } from "node:net";
+import { lstat, mkdir, unlink } from "node:fs/promises";
+import { connect, createServer, type Server } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -62,6 +63,154 @@ export interface BackendLaunchPlan {
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const SUPERVISOR_TAG = "backend";
+const BACKEND_CONTROL_SOCKET = join(repositoryRoot, ".data/backend.sock");
+const BACKEND_TAKEOVER_TIMEOUT_MILLISECONDS = 15_000;
+
+interface BackendInstanceOptions {
+  readonly socketPath?: string;
+  readonly shutdownCurrent?: () => void;
+}
+
+export interface BackendInstance {
+  readonly release: () => Promise<void>;
+}
+
+const errorCode = (cause: unknown): string | undefined =>
+  cause !== null && typeof cause === "object" && "code" in cause
+    ? String(cause.code)
+    : undefined;
+
+const listenForBackendTakeover = (
+  socketPath: string,
+  shutdownCurrent: () => void,
+): Promise<Server> =>
+  new Promise((resolve, reject) => {
+    let shutdownRequested = false;
+    const server = createServer((connection) => {
+      connection.end();
+      // Retain ownership until the session finalizer has stopped every worker.
+      if (!shutdownRequested) {
+        shutdownRequested = true;
+        shutdownCurrent();
+      }
+    });
+    const onError = (cause: Error): void => {
+      server.removeListener("listening", onListening);
+      reject(cause);
+    };
+    const onListening = (): void => {
+      server.removeListener("error", onError);
+      resolve(server);
+    };
+    server.once("error", onError);
+    server.once("listening", onListening);
+    server.listen(socketPath);
+  });
+
+const requestBackendTakeover = (
+  socketPath: string,
+  timeoutMilliseconds: number,
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const connection = connect(socketPath);
+    const timeout = setTimeout(() => {
+      connection.destroy(new Error("Timed out requesting backend shutdown"));
+    }, timeoutMilliseconds);
+    connection.once("connect", () => connection.end());
+    connection.once("close", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+    connection.once("error", reject);
+  });
+
+const removeStaleBackendSocket = async (
+  socketPath: string,
+  inode: bigint,
+): Promise<void> => {
+  try {
+    if ((await lstat(socketPath, { bigint: true })).ino === inode) {
+      await unlink(socketPath);
+    }
+  } catch (cause) {
+    if (errorCode(cause) !== "ENOENT") throw cause;
+  }
+};
+
+const backendSocketInode = async (
+  socketPath: string,
+): Promise<bigint | undefined> => {
+  try {
+    return (await lstat(socketPath, { bigint: true })).ino;
+  } catch (cause) {
+    if (errorCode(cause) === "ENOENT") return undefined;
+    throw cause;
+  }
+};
+
+const recoverBackendSocket = async (
+  socketPath: string,
+  inode: bigint,
+  cause: unknown,
+): Promise<void> => {
+  if (errorCode(cause) === "ENOENT") return;
+  if (errorCode(cause) !== "ECONNREFUSED") throw cause;
+  await removeStaleBackendSocket(socketPath, inode);
+};
+
+/**
+ * Owns a repository-local control socket. A later supervisor asks the current
+ * owner to shut down, then takes ownership after its Effect scope has released
+ * every managed worker.
+ */
+export const acquireBackendInstance = async (
+  options: BackendInstanceOptions = {},
+): Promise<BackendInstance> => {
+  const socketPath = options.socketPath ?? BACKEND_CONTROL_SOCKET;
+  const shutdownCurrent =
+    options.shutdownCurrent ?? (() => process.kill(process.pid, "SIGTERM"));
+  const deadline = Date.now() + BACKEND_TAKEOVER_TIMEOUT_MILLISECONDS;
+  await mkdir(dirname(socketPath), { recursive: true });
+
+  while (Date.now() < deadline) {
+    try {
+      const server = await listenForBackendTakeover(
+        socketPath,
+        shutdownCurrent,
+      );
+      let released = false;
+      return {
+        release: () =>
+          new Promise((resolve, reject) => {
+            if (released || !server.listening) {
+              released = true;
+              resolve();
+              return;
+            }
+            released = true;
+            server.close((cause) => {
+              if (cause === undefined) resolve();
+              else reject(cause);
+            });
+          }),
+      };
+    } catch (cause) {
+      if (errorCode(cause) !== "EADDRINUSE") throw cause;
+      const inode = await backendSocketInode(socketPath);
+      if (inode === undefined) continue;
+      try {
+        await requestBackendTakeover(
+          socketPath,
+          Math.max(1, deadline - Date.now()),
+        );
+      } catch (connectionCause) {
+        await recoverBackendSocket(socketPath, inode, connectionCause);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  throw new Error("Timed out waiting for the existing backend to stop");
+};
 
 /**
  * Wide enough for the longest service tag and the supervisor's own, so the
@@ -487,32 +636,45 @@ const createBackendLaunchPlanFromRoot = (
     }),
   );
 
-const backendSession = Effect.gen(function* () {
-  const launchPlan = yield* fileSystem(
-    "Unable to load or validate the root .env for pnpm backend",
-    () => createBackendLaunchPlanFromRoot(process.env),
-  );
-  replaceProcessEnvironment(launchPlan.supervisorEnvironment);
-  yield* runBackendServices({
-    preflight: ensureBackendBindingsAvailable(
-      launchPlan.configuration.bindings,
-    ),
-    startService: (service) =>
-      spawnRuntimeServiceProcess({
-        arguments: service.arguments,
-        command: service.command,
-        cwd: repositoryRoot,
-        environment: launchPlan.serviceEnvironments[service.id],
-        service: backendRuntimeService(service.id),
-        // Must match the default above: this is the entry point that actually
-        // runs, and an inherited stream cannot be attributed to its service.
-        stdio: ["ignore", "pipe", "pipe"],
+const backendSession = Effect.scoped(
+  Effect.gen(function* () {
+    const launchPlan = yield* fileSystem(
+      "Unable to load or validate the root .env for pnpm backend",
+      () => createBackendLaunchPlanFromRoot(process.env),
+    );
+    replaceProcessEnvironment(launchPlan.supervisorEnvironment);
+    yield* Effect.acquireRelease(
+      Effect.tryPromise({
+        try: () => acquireBackendInstance(),
+        catch: (cause) =>
+          new SubprocessError({
+            message: "Could not acquire backend supervisor ownership",
+            cause,
+          }),
       }),
-    waitForOperatorDependency: waitForHistoryReadiness(
-      launchPlan.configuration.historyReadiness,
-    ),
-  });
-});
+      (instance) => Effect.promise(instance.release),
+    );
+    yield* runBackendServices({
+      preflight: ensureBackendBindingsAvailable(
+        launchPlan.configuration.bindings,
+      ),
+      startService: (service) =>
+        spawnRuntimeServiceProcess({
+          arguments: service.arguments,
+          command: service.command,
+          cwd: repositoryRoot,
+          environment: launchPlan.serviceEnvironments[service.id],
+          service: backendRuntimeService(service.id),
+          // Must match the default above: this is the entry point that actually
+          // runs, and an inherited stream cannot be attributed to its service.
+          stdio: ["ignore", "pipe", "pipe"],
+        }),
+      waitForOperatorDependency: waitForHistoryReadiness(
+        launchPlan.configuration.historyReadiness,
+      ),
+    });
+  }),
+);
 
 if (
   process.argv[1] !== undefined &&

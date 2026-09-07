@@ -168,6 +168,15 @@ describe("collector testnet faucet", () => {
               ethWei: "10000000000000000",
               wethWei: "100000000000000000",
             },
+            limits: {
+              dailyBudget: {
+                ethWei: "1000000000000000000",
+                wethWei: "20000000000000000000",
+              },
+              dailyGrantLimit: 100,
+              clientWindowSeconds: 3_600,
+              clientWindowLimit: 10,
+            },
           },
           recipient: {
             address,
@@ -190,8 +199,12 @@ describe("collector testnet faucet", () => {
     const metric = [...container.querySelectorAll("div")].find((node) =>
       node.textContent?.startsWith(applicationCopy.faucet.nextEligible),
     );
-    expect(metric?.textContent).toContain(applicationCopy.faucet.eligibleNow);
+    expect(metric?.textContent).toContain("After a balance falls below target");
     expect(metric?.textContent).not.toContain("—");
+    expect(container.textContent).toContain("Wallet lifetime grant capNone");
+    expect(container.textContent).toContain(
+      "Recurring top-ups; wallet cooldown still applies",
+    );
   });
 
   it("shows exact inventory-backed balances and completes one bounded top-up", async () => {
@@ -259,9 +272,9 @@ describe("collector testnet faucet", () => {
     await flushPanel();
 
     expect(container.textContent).toContain("0.001 ETH");
-    expect(container.textContent).toContain("0.009 ETH remaining");
+    expect(container.textContent).toContain("0.009 ETH to reach target");
     expect(container.textContent).toContain("0.025 WETH");
-    expect(container.textContent).toContain("0.075 WETH remaining");
+    expect(container.textContent).toContain("0.075 WETH to reach target");
     const eligibleAgain = [...container.querySelectorAll("dt")].find(
       (term) => term.textContent === "Eligible again",
     )?.nextElementSibling;
@@ -284,9 +297,9 @@ describe("collector testnet faucet", () => {
     );
     expect(container.textContent).toContain("Buy $FUEL on Trade");
     expect(container.textContent).toContain("0.01 ETH");
-    expect(container.textContent).toContain("0 ETH remaining");
+    expect(container.textContent).toContain("0 ETH to reach target");
     expect(container.textContent).toContain("0.1 WETH");
-    expect(container.textContent).toContain("0 WETH remaining");
+    expect(container.textContent).toContain("0 WETH to reach target");
     expect(container.querySelector("time")?.dateTime).toBe(
       "2023-11-15T22:13:20.000Z",
     );
@@ -708,6 +721,124 @@ describe("collector testnet faucet", () => {
       expect(container.textContent).toContain(title);
     },
   );
+
+  it("explains why a partially funded wallet cannot receive another top-up", async () => {
+    testState.protocol = protocol("ready");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          apiVersion: 1,
+          service: {
+            chainId: 84_532,
+            state: "ready",
+            targets: {
+              ethWei: "10000000000000000",
+              wethWei: "100000000000000000",
+            },
+            cooldownSeconds: 86_400,
+            limits: {
+              lifetime: {
+                ethWei: "20000000000000000",
+                wethWei: "200000000000000000",
+              },
+              dailyBudget: {
+                ethWei: "200000000000000000",
+                wethWei: "2000000000000000000",
+              },
+              dailyGrantLimit: 20,
+              clientWindowSeconds: 3_600,
+              clientWindowLimit: 5,
+            },
+          },
+          recipient: {
+            address,
+            state: "limit-reached",
+            nextEligibleAt: null,
+            balances: {
+              ethWei: "10277000000000000",
+              wethWei: "94020000000000000",
+            },
+            remaining: {
+              ethWei: "0",
+              wethWei: "5980000000000000",
+            },
+          },
+        }),
+      ),
+    );
+
+    await renderPanel();
+    await flushPanel();
+
+    const limitState = container.querySelector(
+      "[data-funding-state='lifetime-exhausted']",
+    );
+    expect(limitState?.textContent).toContain(
+      "The next top-up would exceed this wallet’s lifetime grant cap for at least one asset.",
+    );
+    expect(limitState?.textContent).toContain("Waiting does not reset them.");
+    expect(container.textContent).toContain("0.01 ETH");
+    expect(container.textContent).toContain("0.1 WETH");
+    expect(container.textContent).toContain("0.02 ETH");
+    expect(container.textContent).toContain("0.2 WETH");
+    expect(container.textContent).toContain(
+      "24 hours after a successful top-up",
+    );
+    expect(container.textContent).toContain("No automatic reset");
+  });
+
+  it("distinguishes a global pause from a wallet limit", async () => {
+    testState.protocol = protocol("ready");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          apiVersion: 1,
+          service: { chainId: 84_532, state: "disabled" },
+          recipient: { address, state: "unavailable" },
+        }),
+      ),
+    );
+
+    await renderPanel();
+    await flushPanel();
+
+    const paused = container.querySelector("[data-funding-state='disabled']");
+    expect(paused?.textContent).toContain(
+      "Self-service funding is paused for every wallet.",
+    );
+    expect(paused?.textContent).toContain(
+      "this wallet’s balance and limits did not cause the pause",
+    );
+    expect(container.textContent).toContain("When service resumes");
+  });
+
+  it("shows the reset for a service-wide daily limit", async () => {
+    testState.protocol = protocol("ready");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          apiVersion: 1,
+          service: { chainId: 84_532, state: "ready" },
+          error: {
+            code: "funding-daily-grant-limit",
+            windowResetsAt: 1_700_086_400_000,
+          },
+        }),
+      ),
+    );
+
+    await renderPanel();
+    await flushPanel();
+
+    expect(container.textContent).toContain("Faucet daily limit reached");
+    expect(container.textContent).toContain("Try again after the daily reset.");
+    expect(container.querySelector("time")?.dateTime).toBe(
+      "2023-11-15T22:13:20.000Z",
+    );
+  });
 
   it("interprets the worker cooldown boundary as epoch milliseconds", async () => {
     testState.protocol = protocol("ready");

@@ -194,16 +194,12 @@ export const resolveTestnetFundingEnvironment = (
     port: port(optional(environment, "TESTNET_FUNDING_PORT")),
     policy: {
       target: {
-        wethWei: parseEther("0.1"),
+        wethWei: parseEther("0.01"),
         ethWei: parseEther("0.01"),
       },
       reserve: {
         wethWei: parseEther("0.1"),
         ethWei: parseEther("0.01"),
-      },
-      lifetimeLimit: {
-        wethWei: parseEther("0.2"),
-        ethWei: parseEther("0.02"),
       },
       cooldownMilliseconds: 86_400_000,
       reconciliationTimeoutMilliseconds: 120_000,
@@ -214,12 +210,12 @@ export const resolveTestnetFundingEnvironment = (
     // too. Both are persisted, so a restart does not reset them.
     abusePolicy: {
       dailyBudget: {
-        wethWei: parseEther("2"),
-        ethWei: parseEther("0.2"),
+        wethWei: parseEther("1"),
+        ethWei: parseEther("1"),
       },
-      dailyGrantLimit: 20,
+      dailyGrantLimit: 100,
       clientWindowMilliseconds: 3_600_000,
-      clientWindowLimit: 5,
+      clientWindowLimit: 10,
       elevatedUsageRatio: 0.6,
       criticalUsageRatio: 0.9,
     },

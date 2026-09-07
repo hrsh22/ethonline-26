@@ -1209,7 +1209,7 @@ export const createIdentityApplicationCopy = (
     rewards: {
       eyebrow: identity.terms.rewardLedger,
       title: identity.navigation.rewards,
-      introduction: `Converted ${identity.terms.stockReward} units attached to your ${identity.terms.permanentCollectible}s, claimable by the current owner.`,
+      introduction: `Stock tokens in your wallet and ${identity.terms.stockReward} units attached to your ${identity.terms.permanentCollectible}s, ready for the current owner to claim.`,
       pending: identity.terms.pendingRewards,
       tracksLabel: "Four reward tracks",
       trackMeta: (index: number) => `Track ${index}`,

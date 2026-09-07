@@ -64,6 +64,18 @@ const TestnetFundingServiceSchema = Schema.Struct({
   state: TestnetFundingServiceStateSchema,
   chainId: Schema.Number.pipe(Schema.int(), Schema.positive()),
   targets: Schema.optional(AssetAmounts),
+  limits: Schema.optional(
+    Schema.Struct({
+      lifetime: Schema.optional(AssetAmounts),
+      dailyBudget: AssetAmounts,
+      dailyGrantLimit: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
+      clientWindowSeconds: Schema.Number.pipe(
+        Schema.int(),
+        Schema.nonNegative(),
+      ),
+      clientWindowLimit: Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
+    }),
+  ),
   cooldownSeconds: Schema.optional(
     Schema.Number.pipe(Schema.int(), Schema.nonNegative()),
   ),

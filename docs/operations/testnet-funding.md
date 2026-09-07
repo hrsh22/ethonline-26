@@ -43,8 +43,8 @@ sweeping hook -- confirms every transfer and never gains a balance, which left t
 executing forever while every retry blamed a healthy RPC. The reconciliation window still absorbs a
 balance read lagging its own confirmed transfer, and reports `funding-confirming` while it does;
 `funding-rpc-unavailable` now means only that the node could not be reached. A wallet that does not
-retain a top-up still spends its cooldown, lifetime allowance, and the daily budget, because the
-inventory really did leave.
+retain a top-up still spends its cooldown and the daily budget, plus any configured lifetime
+allowance, because the inventory really did leave.
 
 ### Accepted requests recover automatically
 
@@ -68,7 +68,7 @@ persisted setting survives restart. Never run two workers against one signer key
 
 ### Service-wide bounds
 
-Per-recipient cooldowns and lifetime limits cannot stop one actor cycling fresh addresses, so the
+Per-recipient cooldowns and optional lifetime limits cannot stop one actor cycling fresh addresses, so the
 service also enforces:
 
 - a daily WETH/ETH budget and a daily grant count, accumulated per fixed 24-hour window;
@@ -89,8 +89,9 @@ allowlist of reviewed browser-public variables before starting Next.js.
 
 Controls limit accidental and basic automated depletion:
 
-- exact top-up targets of `0.1` test WETH and `0.01` Base Sepolia ETH;
-- a 24-hour per-address cooldown and lifetime caps of `0.2` WETH and `0.02` ETH;
+- balance top-up targets of `0.01` test WETH and `0.01` Base Sepolia ETH; only the shortfall is sent;
+- a 24-hour per-address cooldown after a successful top-up, with no lifetime cutoff; a wallet already at both targets receives nothing;
+- shared daily budgets of `1` WETH and `1` ETH, at most 100 grants per UTC day, and 10 requests per client per hour;
 - finite inventory reserves of `0.1` WETH and `0.01` ETH that are never offered;
 - one global signer request at a time, with a persistent lease and pending-request recovery;
 - a two-minute post-confirmation reconciliation bound; a recipient that drains confirmed assets

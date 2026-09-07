@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { RewardsPanel } from "@/components/rewards/rewards-panel";
+import { StockBalancesPanel } from "@/components/rewards/stock-balances-panel";
 import { PageFrame, PageHeading } from "@/components/ui/page";
 import { applicationCopy } from "@/lib/identity";
 
@@ -17,6 +18,7 @@ export default function RewardsPage() {
         lede={applicationCopy.rewards.introduction}
         title={applicationCopy.rewards.title}
       />
+      <StockBalancesPanel />
       <RewardsPanel />
     </PageFrame>
   );

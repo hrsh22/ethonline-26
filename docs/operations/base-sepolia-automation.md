@@ -275,13 +275,13 @@ update a running API. Check the running command/start time and build the API
 before restarting; a new public route returning `route-not-found` can indicate an
 old process or stale API build even when `/readyz` succeeds.
 
-Use one coordinated supervisor refresh: verify the supervisor PID, stop it with
-SIGTERM, wait for all of its workers/listeners to exit, then launch exactly one
-`node scripts/backend.ts` with file-backed stdout/stderr and detached stdin, as
-specified in the browser runbook. Do not replace an API child in isolation: the
-supervisor treats a persistent child's exit as failure and tears down its group.
-Keep the existing environment and durable databases. Do not issue a new Live,
-Stop, or one-shot command merely to refresh code.
+Use one coordinated supervisor refresh by starting `pnpm backend` in the new
+terminal. The new supervisor asks the existing repository-local supervisor to
+stop, waits for all of its workers/listeners to exit, and then starts its own
+group. Do not replace an API child in isolation: the supervisor treats a
+persistent child's exit as failure and tears down its group. Keep the existing
+environment and durable databases. Do not issue a new Live, Stop, or one-shot
+command merely to refresh code.
 
 A matching deployment resumes the saved authorized operator policy. Newly tracked
 history events can require the existing one-time bounded replay; during replay,

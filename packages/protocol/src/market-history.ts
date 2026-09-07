@@ -308,18 +308,25 @@ const candleFrom = (
   start: bigint,
   duration: bigint,
   observations: readonly MatchedSwap[],
+  previousClose: bigint | undefined,
 ): MarketCandle => {
   const prices = observations.map((observation) => observation.priceX18);
+  const extentPrices =
+    previousClose === undefined ? prices : [previousClose, ...prices];
   const matchedFees = observations.flatMap((observation) =>
     observation.fee === undefined ? [] : [observation.fee],
   );
   return {
     intervalStart: start,
     intervalEnd: start + duration,
-    openWethPerLiquidTokenX18: prices[0],
+    // A Swap event reports the pool price after the trade. The prior traded
+    // close is therefore the only observed price immediately before a later
+    // interval's first swap, and preserves that swap's direction in OHLC.
+    openWethPerLiquidTokenX18: previousClose ?? prices[0],
     highWethPerLiquidTokenX18:
-      prices.length === 0 ? undefined : maximum(prices),
-    lowWethPerLiquidTokenX18: prices.length === 0 ? undefined : minimum(prices),
+      extentPrices.length === 0 ? undefined : maximum(extentPrices),
+    lowWethPerLiquidTokenX18:
+      extentPrices.length === 0 ? undefined : minimum(extentPrices),
     closeWethPerLiquidTokenX18: prices.at(-1),
     grossWethVolume: matchedFees.reduce(
       (total, fee) => total + fee.wethVolume,
@@ -354,13 +361,17 @@ const minuteCandles = (
   // A no-trade minute is not market data. Omitting empty buckets keeps sparse
   // testnet activity honest without manufacturing carried-forward prices or
   // stretching a handful of real swaps across hundreds of empty marks.
-  return starts.map((start) =>
-    candleFrom(
+  let previousClose: bigint | undefined;
+  return starts.map((start) => {
+    const candle = candleFrom(
       start,
       MINUTELY_INTERVAL_SECONDS,
       byInterval.get(start.toString()) ?? [],
-    ),
-  );
+      previousClose,
+    );
+    previousClose = candle.closeWethPerLiquidTokenX18;
+    return candle;
+  });
 };
 
 const minimumDefined = (

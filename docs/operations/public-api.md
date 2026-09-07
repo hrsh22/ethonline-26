@@ -71,7 +71,8 @@ schema validation rather than being forced into the collector-result shape.
 Funding responses are not transparent worker proxies. The VM reads at most 16 KiB, decodes the
 worker schema, requires any returned recipient to match the requested wallet, and constructs an
 exact collector DTO. Status may include sanitized service availability, chain ID, fixed funding
-targets, cooldown, and that recipient's balances, remaining top-up, eligibility state, and next
+targets, cooldown, configured lifetime caps and shared service limits (daily asset budgets,
+grant count, and client request window), and that recipient's balances, remaining top-up, eligibility state, and next
 eligible time. Fund responses contain only the recipient outcome and confirmed destination
 totals. Signer inventory, global metrics, policy ledgers, internal request IDs, transaction hashes
 and preparation/broadcast/retry state, unknown fields, and worker error messages never cross the
@@ -185,9 +186,10 @@ pnpm dev
 
 The combined backend waits for authenticated history readiness before starting operator watch,
 so the operator's immediate first pass cannot race the history worker. `Ctrl-C` stops the entire
-backend group. Run only one backend command because the funding signer, history writer, and
-operator watch are single-replica processes. With `OPERATOR_EXECUTE=true`, the included operator
-will sign eligible Base Sepolia transactions.
+backend group. Starting `pnpm backend` in another terminal gracefully stops the existing supervisor
+and its workers before the new supervisor starts them. This keeps the funding signer, history
+writer, and operator watch single-replica. With `OPERATOR_EXECUTE=true`, the included operator will
+sign eligible Base Sepolia transactions.
 
 The four processes can still be run in separate terminals when debugging their individual
 lifecycles: `pnpm history:worker`, `pnpm funding:worker`, `pnpm api:serve`, and
@@ -258,7 +260,7 @@ trusted effective client address. A syntactically valid cookie selects the sessi
 class before any store lookup, so a single address can draw on each class's budget once; the
 cookie never becomes a client key, so rotating client-supplied handles cannot
 bypass limits or fill one map entry per fake handle. The funding worker's durable per-recipient
-cooldown and lifetime limits remain authoritative. A deployment may add edge rate-limiting, but
+cooldown and any configured lifetime limits remain authoritative. A deployment may add edge rate-limiting, but
 it must not weaken the worker policy.
 
 ## Vercel deployment

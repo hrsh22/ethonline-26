@@ -11,7 +11,7 @@ patchedDependencies:
   '@reown/appkit-adapter-wagmi@1.8.23': c040f3f745aafaf5ac65863be6a8f01c4b0f098b975452f2a9c2ce60e5be1fe0
   '@reown/appkit-ui@1.8.23': 7fc227c2d7534614067e39bdf721652d66ec7c6071cb693e33ab830ffcf3df2b
   '@tradecanvas/chart@1.1.0': 3c0e61af50bbd9676c49957fb94a47808b7f68932d2e1ea8c2b58b205147cdd6
-  '@tradecanvas/core@1.1.0': bcf2cb9f1e1750b6a52e0dd5d7fbdf7fac07df87a35b9272a946ac97fcdd492a
+  '@tradecanvas/core@1.1.0': 5bc489d21a03ae8764a72d5ab7ac97e77ebd8e08625643c78d43fd51d9794e4b
 
 importers:
 
@@ -6677,11 +6677,11 @@ snapshots:
   '@tradecanvas/chart@1.1.0(patch_hash=3c0e61af50bbd9676c49957fb94a47808b7f68932d2e1ea8c2b58b205147cdd6)':
     dependencies:
       '@tradecanvas/commons': 1.1.0
-      '@tradecanvas/core': 1.1.0(patch_hash=bcf2cb9f1e1750b6a52e0dd5d7fbdf7fac07df87a35b9272a946ac97fcdd492a)
+      '@tradecanvas/core': 1.1.0(patch_hash=5bc489d21a03ae8764a72d5ab7ac97e77ebd8e08625643c78d43fd51d9794e4b)
 
   '@tradecanvas/commons@1.1.0': {}
 
-  '@tradecanvas/core@1.1.0(patch_hash=bcf2cb9f1e1750b6a52e0dd5d7fbdf7fac07df87a35b9272a946ac97fcdd492a)':
+  '@tradecanvas/core@1.1.0(patch_hash=5bc489d21a03ae8764a72d5ab7ac97e77ebd8e08625643c78d43fd51d9794e4b)':
     dependencies:
       '@tradecanvas/commons': 1.1.0
 

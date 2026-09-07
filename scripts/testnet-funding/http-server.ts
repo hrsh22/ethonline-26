@@ -153,6 +153,32 @@ const recipientFromStatus = (url: URL): Address | undefined => {
   return recipient;
 };
 
+const publicFundingPolicy = (configuration: TestnetFundingConfiguration) => ({
+  targets: {
+    wethWei: configuration.policy.target.wethWei.toString(),
+    ethWei: configuration.policy.target.ethWei.toString(),
+  },
+  cooldownSeconds: configuration.policy.cooldownMilliseconds / 1_000,
+  limits: {
+    ...(configuration.policy.lifetimeLimit === undefined
+      ? {}
+      : {
+          lifetime: {
+            ethWei: configuration.policy.lifetimeLimit.ethWei.toString(),
+            wethWei: configuration.policy.lifetimeLimit.wethWei.toString(),
+          },
+        }),
+    dailyBudget: {
+      ethWei: configuration.abusePolicy.dailyBudget.ethWei.toString(),
+      wethWei: configuration.abusePolicy.dailyBudget.wethWei.toString(),
+    },
+    dailyGrantLimit: configuration.abusePolicy.dailyGrantLimit,
+    clientWindowSeconds:
+      configuration.abusePolicy.clientWindowMilliseconds / 1_000,
+    clientWindowLimit: configuration.abusePolicy.clientWindowLimit,
+  },
+});
+
 const disabledStatus = (
   configuration: TestnetFundingConfiguration,
   recipient: Address | undefined,
@@ -160,6 +186,7 @@ const disabledStatus = (
   service: {
     state: "disabled",
     chainId: configuration.chainId,
+    ...publicFundingPolicy(configuration),
   },
   ...(recipient === undefined
     ? {}
@@ -219,11 +246,7 @@ const readyStatus = (
     service: {
       state: evaluation.serviceInventoryAvailable ? "ready" : "inventory-empty",
       chainId: configuration.chainId,
-      targets: {
-        wethWei: configuration.policy.target.wethWei.toString(),
-        ethWei: configuration.policy.target.ethWei.toString(),
-      },
-      cooldownSeconds: configuration.policy.cooldownMilliseconds / 1_000,
+      ...publicFundingPolicy(configuration),
       inventory: {
         state: evaluation.serviceInventoryAvailable ? "available" : "empty",
         wethWei: evaluation.available.wethWei.toString(),
