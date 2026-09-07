@@ -396,25 +396,30 @@ describe("collector testnet faucet", () => {
       });
     });
     vi.stubGlobal("fetch", fetcher);
+    const waitForState = async (state: string) => {
+      await vi.waitFor(async () => {
+        // React Query batches observer notifications after the fetch resolves.
+        await flushPanel();
+        expect(
+          container.querySelector(`[data-funding-state='${state}']`),
+        ).not.toBeNull();
+      });
+    };
     await renderPanel();
-    await flushPanel();
+    await waitForState("eligible");
     await flushPanel(() =>
       [...container.querySelectorAll("button")]
         .find((button) => button.textContent === "Top up this wallet")
         ?.click(),
     );
-    expect(
-      container.querySelector("[data-funding-state='inventory-empty']"),
-    ).not.toBeNull();
+    await waitForState("inventory-empty");
     available = true;
     await flushPanel(() =>
       [...container.querySelectorAll("button")]
         .find((button) => button.textContent === "Check again")
         ?.click(),
     );
-    expect(
-      container.querySelector("[data-funding-state='eligible']"),
-    ).not.toBeNull();
+    await waitForState("eligible");
     expect(
       fetcher.mock.calls.filter(([, init]) => init?.method === "POST"),
     ).toHaveLength(1);

@@ -219,7 +219,7 @@ export function ShellRail({
     <>
       <header
         className={cn(
-          "sticky top-0 z-40 flex min-h-14 items-center gap-3 border-b border-line bg-surface-1 px-4",
+          "sticky top-0 z-40 flex min-h-14 flex-wrap items-center gap-3 border-b border-line bg-surface-1 px-4",
           "laptop:h-dvh laptop:flex-col laptop:items-stretch laptop:gap-0 laptop:border-r laptop:border-b-0 laptop:px-0",
         )}
       >
@@ -259,7 +259,7 @@ export function ShellRail({
         </div>
 
         <div
-          className="flex min-w-0 items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&_.wallet-button]:laptop:w-full"
+          className="flex min-w-0 max-w-full items-center gap-2 laptop:shrink-0 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&_.wallet-button]:laptop:w-full"
           ref={railActions}
         >
           {children}

@@ -1,0 +1,1028 @@
+{
+  "origin": "http://127.0.0.1:3131",
+  "browserVersion": "151.0.7922.34",
+  "recordedAt": "2026-09-07T06:57:40.705Z",
+  "viewport": {
+    "width": 375,
+    "height": 812
+  },
+  "network": {
+    "latencyMilliseconds": 150,
+    "downloadBytesPerSecond": 200000,
+    "uploadBytesPerSecond": 93750,
+    "mockedExternalResponseDelayMilliseconds": 150
+  },
+  "cache": "fresh browser context; HTTP cache disabled; wallet storage restored",
+  "results": [
+    {
+      "route": "/fleet",
+      "scenario": "fleet-50",
+      "run": 1,
+      "heldIdentities": 50,
+      "renderedInspectLinks": 50,
+      "rpcHttp": 54,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 16,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6844.5,
+      "cls": 0.3510377668308703,
+      "fcp": 768,
+      "lcp": 768,
+      "lcpElement": "<p class=\"mt-2 text-body text-ink-soft\">Inspect every Grounded Craft and Orbiter held by the connected wallet.</p>",
+      "shifts": [
+        {
+          "at": 1130,
+          "score": 0.1288367566854328,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 96.1875,
+                "width": 375,
+                "height": 715.8125,
+                "top": 96.1875,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 88,
+                "width": 375,
+                "height": 724,
+                "top": 88,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 101.71875,
+                "y": 5.5,
+                "width": 257.28125,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 101.71875
+              },
+              "after": {
+                "x": 152.875,
+                "y": 5.5,
+                "width": 206.125,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 152.875
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 59,
+                "width": 343,
+                "height": 32.1875,
+                "top": 59,
+                "right": 359,
+                "bottom": 91.1875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 62.703125,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 62.703125,
+                "right": 301.21875,
+                "bottom": 79.296875,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex-1\"><main class=\"mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6\" id=\"main-content\"><header class=\"flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between\"><div class=\"min-w-0 max-w-[60ch]\"><p class=\"font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase\"",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><button type=\"button\" ta",
+            "<p class=\"flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase\" role=\"status\"><span class=\"text-[var(--status-warning-text)]\">BASE SEPOLIA</span><span>No-value test assets.</span></p>"
+          ]
+        },
+        {
+          "at": 5530.200000017881,
+          "score": 0.212128078817734,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 16,
+                "y": 248.5625,
+                "width": 343,
+                "height": 65.375,
+                "top": 248.5625,
+                "right": 359,
+                "bottom": 313.9375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 755.40625,
+                "width": 375,
+                "height": 56.59375,
+                "top": 755.40625,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 16,
+                "y": 325.9375,
+                "width": 343,
+                "height": 61,
+                "top": 325.9375,
+                "right": 359,
+                "bottom": 386.9375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<section aria-atomic=\"true\" aria-live=\"polite\" class=\"grid grid-cols-[0.1875rem_minmax(0,1fr)] items-start gap-3 rounded-[var(--radius-control)] border p-3 border-line bg-surface-2 text-ink state-feedback\" data-state=\"loading\" data-surface=\"default\" role=\"status\" aria-busy=\"true\"><span aria-hidden=\"true\" class=\"min-h-8 w-[0.1875rem] self-stretch ro",
+            "<footer class=\"border-t border-line\"><div class=\"flex w-full flex-col gap-3 px-4 py-5 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:px-6\"><p class=\"font-mono text-label tracking-[0.1em] text-ink-faint uppercase\"><span class=\"text-ink-soft\">ORBIT 4444</span> \u00b7 <!-- -->No-value test assets.</p><nav aria-label=\"Protocol navigatio",
+            "<nav aria-label=\"Onchain record\" class=\"flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-4\"><span class=\"font-mono text-label tracking-[0.12em] text-ink-faint uppercase\">Onchain record</span><a class=\"flex min-h-11 items-center text-body-sm font-medium text-[var(--accent-text)] underline decoration-1 underline-offset-4 hover:deco"
+          ]
+        },
+        {
+          "at": 6418.300000011921,
+          "score": 0.1389096880131363,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 755.40625,
+                "width": 375,
+                "height": 56.59375,
+                "top": 755.40625,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 325.9375,
+                "width": 343,
+                "height": 61,
+                "top": 325.9375,
+                "right": 359,
+                "bottom": 386.9375,
+                "left": 16
+              },
+              "after": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<footer class=\"border-t border-line\"><div class=\"flex w-full flex-col gap-3 px-4 py-5 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:px-6\"><p class=\"font-mono text-label tracking-[0.1em] text-ink-faint uppercase\"><span class=\"text-ink-soft\">ORBIT 4444</span> \u00b7 <!-- -->No-value test assets.</p><nav aria-label=\"Protocol navigatio",
+            "<nav aria-label=\"Onchain record\" class=\"flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-4\"><span class=\"font-mono text-label tracking-[0.12em] text-ink-faint uppercase\">Onchain record</span><a class=\"flex min-h-11 items-center text-body-sm font-medium text-[var(--accent-text)] underline decoration-1 underline-offset-4 hover:deco"
+          ]
+        },
+        {
+          "at": 7657.200000017881,
+          "score": 0.01366358077119076,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 88,
+                "width": 375,
+                "height": 724,
+                "top": 88,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 100.1875,
+                "width": 375,
+                "height": 711.8125,
+                "top": 100.1875,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 62.703125,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 62.703125,
+                "right": 301.21875,
+                "bottom": 79.296875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 59,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 59,
+                "right": 301.21875,
+                "bottom": 75.59375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex-1\"><main class=\"mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6\" id=\"main-content\"><header class=\"flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between\"><div class=\"min-w-0 max-w-[60ch]\"><p class=\"font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase\"",
+            "<p class=\"flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase\" role=\"status\"><span class=\"text-[var(--status-warning-text)]\">BASE SEPOLIA</span><span>No-value test assets.</span></p>"
+          ]
+        }
+      ],
+      "elapsed": 15005.09999999404
+    },
+    {
+      "route": "/fleet",
+      "scenario": "fleet-50",
+      "run": 2,
+      "heldIdentities": 50,
+      "renderedInspectLinks": 50,
+      "rpcHttp": 50,
+      "methods": {
+        "eth_blockNumber": 1,
+        "eth_call": 16,
+        "eth_chainId": 3,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6815.5,
+      "cls": 0.3510377668308703,
+      "fcp": 764,
+      "lcp": 764,
+      "lcpElement": "<p class=\"mt-2 text-body text-ink-soft\">Inspect every Grounded Craft and Orbiter held by the connected wallet.</p>",
+      "shifts": [
+        {
+          "at": 1132.0999999940395,
+          "score": 0.1288367566854328,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 96.1875,
+                "width": 375,
+                "height": 715.8125,
+                "top": 96.1875,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 88,
+                "width": 375,
+                "height": 724,
+                "top": 88,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 101.71875,
+                "y": 5.5,
+                "width": 257.28125,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 101.71875
+              },
+              "after": {
+                "x": 152.875,
+                "y": 5.5,
+                "width": 206.125,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 152.875
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 59,
+                "width": 343,
+                "height": 32.1875,
+                "top": 59,
+                "right": 359,
+                "bottom": 91.1875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 62.703125,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 62.703125,
+                "right": 301.21875,
+                "bottom": 79.296875,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex-1\"><main class=\"mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6\" id=\"main-content\"><header class=\"flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between\"><div class=\"min-w-0 max-w-[60ch]\"><p class=\"font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase\"",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><button type=\"button\" ta",
+            "<p class=\"flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase\" role=\"status\"><span class=\"text-[var(--status-warning-text)]\">BASE SEPOLIA</span><span>No-value test assets.</span></p>"
+          ]
+        },
+        {
+          "at": 5531.300000011921,
+          "score": 0.212128078817734,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 16,
+                "y": 248.5625,
+                "width": 343,
+                "height": 65.375,
+                "top": 248.5625,
+                "right": 359,
+                "bottom": 313.9375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 755.40625,
+                "width": 375,
+                "height": 56.59375,
+                "top": 755.40625,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 16,
+                "y": 325.9375,
+                "width": 343,
+                "height": 61,
+                "top": 325.9375,
+                "right": 359,
+                "bottom": 386.9375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<section aria-atomic=\"true\" aria-live=\"polite\" class=\"grid grid-cols-[0.1875rem_minmax(0,1fr)] items-start gap-3 rounded-[var(--radius-control)] border p-3 border-line bg-surface-2 text-ink state-feedback\" data-state=\"loading\" data-surface=\"default\" role=\"status\" aria-busy=\"true\"><span aria-hidden=\"true\" class=\"min-h-8 w-[0.1875rem] self-stretch ro",
+            "<footer class=\"border-t border-line\"><div class=\"flex w-full flex-col gap-3 px-4 py-5 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:px-6\"><p class=\"font-mono text-label tracking-[0.1em] text-ink-faint uppercase\"><span class=\"text-ink-soft\">ORBIT 4444</span> \u00b7 <!-- -->No-value test assets.</p><nav aria-label=\"Protocol navigatio",
+            "<nav aria-label=\"Onchain record\" class=\"flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-4\"><span class=\"font-mono text-label tracking-[0.12em] text-ink-faint uppercase\">Onchain record</span><a class=\"flex min-h-11 items-center text-body-sm font-medium text-[var(--accent-text)] underline decoration-1 underline-offset-4 hover:deco"
+          ]
+        },
+        {
+          "at": 6371.5,
+          "score": 0.1389096880131363,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 755.40625,
+                "width": 375,
+                "height": 56.59375,
+                "top": 755.40625,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 325.9375,
+                "width": 343,
+                "height": 61,
+                "top": 325.9375,
+                "right": 359,
+                "bottom": 386.9375,
+                "left": 16
+              },
+              "after": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<footer class=\"border-t border-line\"><div class=\"flex w-full flex-col gap-3 px-4 py-5 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:px-6\"><p class=\"font-mono text-label tracking-[0.1em] text-ink-faint uppercase\"><span class=\"text-ink-soft\">ORBIT 4444</span> \u00b7 <!-- -->No-value test assets.</p><nav aria-label=\"Protocol navigatio",
+            "<nav aria-label=\"Onchain record\" class=\"flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-4\"><span class=\"font-mono text-label tracking-[0.12em] text-ink-faint uppercase\">Onchain record</span><a class=\"flex min-h-11 items-center text-body-sm font-medium text-[var(--accent-text)] underline decoration-1 underline-offset-4 hover:deco"
+          ]
+        },
+        {
+          "at": 7631.9000000059605,
+          "score": 0.01366358077119076,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 88,
+                "width": 375,
+                "height": 724,
+                "top": 88,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 100.1875,
+                "width": 375,
+                "height": 711.8125,
+                "top": 100.1875,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 62.703125,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 62.703125,
+                "right": 301.21875,
+                "bottom": 79.296875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 59,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 59,
+                "right": 301.21875,
+                "bottom": 75.59375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex-1\"><main class=\"mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6\" id=\"main-content\"><header class=\"flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between\"><div class=\"min-w-0 max-w-[60ch]\"><p class=\"font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase\"",
+            "<p class=\"flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase\" role=\"status\"><span class=\"text-[var(--status-warning-text)]\">BASE SEPOLIA</span><span>No-value test assets.</span></p>"
+          ]
+        }
+      ],
+      "elapsed": 15003.300000011921
+    },
+    {
+      "route": "/fleet",
+      "scenario": "fleet-50",
+      "run": 3,
+      "heldIdentities": 50,
+      "renderedInspectLinks": 50,
+      "rpcHttp": 54,
+      "methods": {
+        "eth_blockNumber": 2,
+        "eth_call": 16,
+        "eth_chainId": 6,
+        "eth_getBalance": 1,
+        "eth_getBlockByNumber": 2,
+        "eth_getCode": 27
+      },
+      "readyMilliseconds": 6841.5,
+      "cls": 0.3510377668308703,
+      "fcp": 772,
+      "lcp": 772,
+      "lcpElement": "<p class=\"mt-2 text-body text-ink-soft\">Inspect every Grounded Craft and Orbiter held by the connected wallet.</p>",
+      "shifts": [
+        {
+          "at": 1131,
+          "score": 0.1288367566854328,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 96.1875,
+                "width": 375,
+                "height": 715.8125,
+                "top": 96.1875,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 88,
+                "width": 375,
+                "height": 724,
+                "top": 88,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 101.71875,
+                "y": 5.5,
+                "width": 257.28125,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 101.71875
+              },
+              "after": {
+                "x": 152.875,
+                "y": 5.5,
+                "width": 206.125,
+                "height": 44,
+                "top": 5.5,
+                "right": 359,
+                "bottom": 49.5,
+                "left": 152.875
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 59,
+                "width": 343,
+                "height": 32.1875,
+                "top": 59,
+                "right": 359,
+                "bottom": 91.1875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 62.703125,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 62.703125,
+                "right": 301.21875,
+                "bottom": 79.296875,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex-1\"><main class=\"mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6\" id=\"main-content\"><header class=\"flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between\"><div class=\"min-w-0 max-w-[60ch]\"><p class=\"font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase\"",
+            "<div class=\"flex min-w-0 items-center gap-2 laptop:flex-col laptop:items-stretch laptop:border-t laptop:border-line laptop:p-3 [&amp;_.wallet-button]:laptop:w-full\"><div class=\"wallet-session wallet-control-state flex min-w-0 flex-wrap items-center gap-2 laptop:flex-col laptop:items-stretch\" data-wallet-state=\"disconnected\"><button type=\"button\" ta",
+            "<p class=\"flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase\" role=\"status\"><span class=\"text-[var(--status-warning-text)]\">BASE SEPOLIA</span><span>No-value test assets.</span></p>"
+          ]
+        },
+        {
+          "at": 5559.199999988079,
+          "score": 0.212128078817734,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 16,
+                "y": 248.5625,
+                "width": 343,
+                "height": 65.375,
+                "top": 248.5625,
+                "right": 359,
+                "bottom": 313.9375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "grid",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 755.40625,
+                "width": 375,
+                "height": 56.59375,
+                "top": 755.40625,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "after": {
+                "x": 16,
+                "y": 325.9375,
+                "width": 343,
+                "height": 61,
+                "top": 325.9375,
+                "right": 359,
+                "bottom": 386.9375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<section aria-atomic=\"true\" aria-live=\"polite\" class=\"grid grid-cols-[0.1875rem_minmax(0,1fr)] items-start gap-3 rounded-[var(--radius-control)] border p-3 border-line bg-surface-2 text-ink state-feedback\" data-state=\"loading\" data-surface=\"default\" role=\"status\" aria-busy=\"true\"><span aria-hidden=\"true\" class=\"min-h-8 w-[0.1875rem] self-stretch ro",
+            "<footer class=\"border-t border-line\"><div class=\"flex w-full flex-col gap-3 px-4 py-5 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:px-6\"><p class=\"font-mono text-label tracking-[0.1em] text-ink-faint uppercase\"><span class=\"text-ink-soft\">ORBIT 4444</span> \u00b7 <!-- -->No-value test assets.</p><nav aria-label=\"Protocol navigatio",
+            "<nav aria-label=\"Onchain record\" class=\"flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-4\"><span class=\"font-mono text-label tracking-[0.12em] text-ink-faint uppercase\">Onchain record</span><a class=\"flex min-h-11 items-center text-body-sm font-medium text-[var(--accent-text)] underline decoration-1 underline-offset-4 hover:deco"
+          ]
+        },
+        {
+          "at": 6432.799999982119,
+          "score": 0.1389096880131363,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 755.40625,
+                "width": 375,
+                "height": 56.59375,
+                "top": 755.40625,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 325.9375,
+                "width": 343,
+                "height": 61,
+                "top": 325.9375,
+                "right": 359,
+                "bottom": 386.9375,
+                "left": 16
+              },
+              "after": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0,
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<footer class=\"border-t border-line\"><div class=\"flex w-full flex-col gap-3 px-4 py-5 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:px-6\"><p class=\"font-mono text-label tracking-[0.1em] text-ink-faint uppercase\"><span class=\"text-ink-soft\">ORBIT 4444</span> \u00b7 <!-- -->No-value test assets.</p><nav aria-label=\"Protocol navigatio",
+            "<nav aria-label=\"Onchain record\" class=\"flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-line pt-4\"><span class=\"font-mono text-label tracking-[0.12em] text-ink-faint uppercase\">Onchain record</span><a class=\"flex min-h-11 items-center text-body-sm font-medium text-[var(--accent-text)] underline decoration-1 underline-offset-4 hover:deco"
+          ]
+        },
+        {
+          "at": 7684.9000000059605,
+          "score": 0.01366358077119076,
+          "bounds": [
+            {
+              "before": {
+                "x": 0,
+                "y": 88,
+                "width": 375,
+                "height": 724,
+                "top": 88,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "after": {
+                "x": 0,
+                "y": 100.1875,
+                "width": 375,
+                "height": 711.8125,
+                "top": 100.1875,
+                "right": 375,
+                "bottom": 812,
+                "left": 0
+              },
+              "styles": {
+                "font": "",
+                "display": "block",
+                "position": "static"
+              }
+            },
+            {
+              "before": {
+                "x": 16,
+                "y": 62.703125,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 62.703125,
+                "right": 301.21875,
+                "bottom": 79.296875,
+                "left": 16
+              },
+              "after": {
+                "x": 16,
+                "y": 59,
+                "width": 285.21875,
+                "height": 16.59375,
+                "top": 59,
+                "right": 301.21875,
+                "bottom": 75.59375,
+                "left": 16
+              },
+              "styles": {
+                "font": "",
+                "display": "flex",
+                "position": "static"
+              }
+            }
+          ],
+          "sources": [
+            "<div class=\"flex-1\"><main class=\"mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6\" id=\"main-content\"><header class=\"flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between\"><div class=\"min-w-0 max-w-[60ch]\"><p class=\"font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase\"",
+            "<p class=\"flex flex-wrap items-baseline gap-x-2 font-mono text-label tracking-[0.1em] text-ink-soft uppercase\" role=\"status\"><span class=\"text-[var(--status-warning-text)]\">BASE SEPOLIA</span><span>No-value test assets.</span></p>"
+          ]
+        }
+      ],
+      "elapsed": 15003.09999999404
+    }
+  ],
+  "productSource": "c16067c04bcfe5f08399a2de5a9b57077b9accef",
+  "productionBuildId": "-oXMbP6E6hfUvQSrfJEEx"
+}

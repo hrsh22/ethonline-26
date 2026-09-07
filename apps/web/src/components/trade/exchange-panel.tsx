@@ -23,6 +23,7 @@ import {
   ExchangeMarketReference,
 } from "@/components/trade/exchange-instrument";
 import {
+  exchangeAccessQuoteMessage,
   ExchangeDecisionReview,
   ExchangeTradeEvidence,
 } from "@/components/trade/exchange-review-checklist";
@@ -411,6 +412,7 @@ const submitLabels: Record<
 };
 
 function ExchangeActions({
+  accessMessage,
   canSubmit,
   direction,
   onQuote,
@@ -418,6 +420,7 @@ function ExchangeActions({
   pending,
   retryQuote,
 }: {
+  readonly accessMessage: string | undefined;
   readonly canSubmit: boolean;
   readonly direction: ExchangeDirection;
   readonly onQuote: () => Promise<void>;
@@ -429,7 +432,8 @@ function ExchangeActions({
     ? undefined
     : pending
       ? "Wait for the current transaction to finish before submitting another exchange."
-      : "Enter an amount and wait for a current quote before submitting the exchange.";
+      : (accessMessage ??
+        "Enter an amount and wait for a current quote before submitting the exchange.");
   return (
     <div>
       <div className="grid gap-2" data-exchange-actions>
@@ -452,6 +456,7 @@ function ExchangeActions({
           }
           className="w-full"
           disabled={!canSubmit}
+          focusableWhenDisabled
           onClick={onSubmit}
           size="lg"
           type="button"
@@ -768,6 +773,7 @@ export function ExchangePanel() {
         />
         <div className="grid gap-3">
           <ExchangeActions
+            accessMessage={exchangeAccessQuoteMessage(reviewState.status)}
             canSubmit={reviewState.submitEnabled}
             direction={direction}
             onQuote={quoteState.refresh}

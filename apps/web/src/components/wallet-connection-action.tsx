@@ -21,12 +21,13 @@ export function WalletConnectionAction({
   readonly size?: "default" | "sm";
 }) {
   return (
-    <div className="relative flex items-center gap-1">
+    <div className="relative flex min-w-0 max-w-full flex-wrap items-center gap-1">
       <Button
         aria-describedby={ariaDescribedBy}
         aria-haspopup="dialog"
         className={className}
         disabled={disabled}
+        focusableWhenDisabled
         onClick={onContinue}
         size={size}
       >

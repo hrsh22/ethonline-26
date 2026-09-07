@@ -46,16 +46,20 @@ export function PublicGallery() {
               key={id}
               href={`/fleet/${id}`}
               prefetch={false}
-              className="flex flex-col items-center gap-2 rounded-[var(--radius-surface)] border border-line bg-surface-1 p-3 hover:border-[var(--accent-border)] focus-visible:ring-3 focus-visible:ring-ring"
+              className="flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-surface)] border border-line bg-surface-1 p-3 hover:border-[var(--accent-border)] focus-visible:ring-3 focus-visible:ring-ring"
             >
-              <CraftArt
-                className="size-32"
-                decorative
-                identityId={id}
-                kind={id > 4440 ? "relic" : "transient"}
-                track={track}
-              />
-              <span className="font-mono">Identity #{id}</span>
+              <div className="aspect-square w-32 max-w-full [content-visibility:auto]">
+                <CraftArt
+                  className="size-full"
+                  decorative
+                  identityId={id}
+                  kind={id > 4440 ? "relic" : "transient"}
+                  track={track}
+                />
+              </div>
+              <span className="max-w-full font-mono [overflow-wrap:anywhere]">
+                Identity #{id}
+              </span>
               <span className="text-caption text-ink-soft">
                 Illustrative preview
               </span>

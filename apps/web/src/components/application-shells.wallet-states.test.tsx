@@ -84,7 +84,13 @@ describe("collector shell wallet states", () => {
       "Wallet connection is not configured for this deployment.",
     );
     expect(html).toMatch(/class="wallet-session wallet-control-state[^"]*"/u);
-    expect(html).toMatch(/class="flex min-w-0 items-center gap-2[^"]*"/u);
+    const actionClasses =
+      /class="(?<classes>flex min-w-0[^"]*items-center[^"]*gap-2[^"]*)"/u
+        .exec(html)
+        ?.groups?.classes?.split(" ");
+    expect(actionClasses).toEqual(
+      expect.arrayContaining(["flex", "min-w-0", "items-center", "gap-2"]),
+    );
     const toggleClasses =
       /<button[^>]*aria-controls="collector-navigation"[^>]*class="(?<classes>[^"]+)"/u.exec(
         html,

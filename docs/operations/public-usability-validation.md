@@ -4,19 +4,19 @@ Implementation record for specs #53 and #56, 6 September 2026.
 
 The collector app now has Fleet, Trade, Rewards, and More in a persistent mobile navigation bar. The existing drawer handles More, Escape, and focus restoration. The page reserves the bar's height and bottom safe area. The bar remains stable when focus moves from an input to an action; hiding it on input focus caused it to reappear over the submit button between pointerdown and pointerup. Virtual-keyboard behavior on a physical device remains a manual acceptance check. Phone body and explanatory text use 16 px tokens with 1.6 line height; numeric form controls use explicit 16 px text. Desktop layout, tabular monospace, reduced motion, and native browser Back remain in place.
 
-Component checks exercise primary links, active routes, More/Escape focus restoration, menu keyboard containment, and URL-backed Fleet filters. These are automated desktop DOM checks. The production browser matrix separately covers rendered narrow layouts, control sizing, contrast, keyboard navigation, and reduced motion. The implementation does not establish support for every wallet or mobile browser.
+Component checks exercise primary links, active routes, More/Escape focus restoration, menu keyboard containment, and URL-backed Fleet filters. These are automated desktop DOM checks. The production browser matrix separately covers rendered narrow layouts, control sizing, contrast, and keyboard navigation. A focused 375px case emulates reduced motion, checks the Relic preview transition is disabled, enlarges root text to 200%, visits Relics, Fleet, Trade, Rewards and the public gallery, and checks native browser Back restores Trade and its active navigation link. These are browser emulation checks, not physical text-size or wallet-handoff validation. The implementation does not establish support for every wallet or mobile browser.
 
 ## Validation still required
 
 No unfamiliar-user session, physical-device wallet handoff, or manual screen-reader session is recorded as completed by this implementation.
 
-| Check                                                        | Status        | Record when performed                                                                                                           |
-| ------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Five unfamiliar collectors complete the journey              | Not performed | Anonymous participant ID, date, observed misunderstandings and fixes                                                            |
-| Physical mobile wallet connection and return                 | Not performed | Device, OS, browser, wallet versions, connection method and observed result                                                     |
-| Physical virtual keyboard and text enlargement               | Not performed | Device/browser, amount entry, final action reachability, and navigation overlap                                                 |
-| Manual screen reader                                         | Not performed | Screen reader/browser, focus order, meaningful announcements and repeated announcements                                         |
-| Comparable constrained-network measurements before and after | Partial       | [Recorded for one-craft Fleet and idle Trade](./collector-performance.md); public exploration and 50 holdings remain unmeasured |
+| Check                                                        | Status        | Record when performed                                                                                                                                                                            |
+| ------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Five unfamiliar collectors complete the journey              | Not performed | Anonymous participant ID, date, observed misunderstandings and fixes                                                                                                                             |
+| Physical mobile wallet connection and return                 | Not performed | Device, OS, browser, wallet versions, connection method and observed result                                                                                                                      |
+| Physical virtual keyboard and text enlargement               | Not performed | Device/browser, amount entry, final action reachability, and navigation overlap                                                                                                                  |
+| Manual screen reader                                         | Not performed | Screen reader/browser, focus order, meaningful announcements and repeated announcements                                                                                                          |
+| Comparable constrained-network measurements before and after | Recorded      | [Matched startup measurements](./collector-performance.md) cover public home, one-craft/50-holding Fleet and idle Trade; gallery interaction and physical devices remain outside these scenarios |
 
 ## Session tasks
 
@@ -38,6 +38,6 @@ Use the same build mode, seeded wallet and collection size for each comparable r
 
 ## Integrated browser coverage
 
-The final production matrix passed 109 cases, including the seven [collector journeys](collector-journeys.md). The mobile public-lookup journey also proves that navigation remains stable between input focus and submit; its regression failed before the focus-driven hiding rule was removed and passed afterward.
+The 7 September Chrome follow-up production matrix passed 110 cases, including the enlarged-text/Back/reduced-motion case and the seven [collector journeys](collector-journeys.md). The mobile public-lookup journey also proves that navigation remains stable between input focus and submit; its regression failed before the focus-driven hiding rule was removed and passed afterward.
 
 Whole-journey request counts include navigation, confirmation and reconciliation. Use the [controlled startup comparison](collector-performance.md) for the comparable idle-load RPC and rendering measurements; they have a different measurement window.

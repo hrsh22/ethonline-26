@@ -17,7 +17,7 @@ export function RelicPreview({ identityId }: { readonly identityId: number }) {
   return (
     <div className="flex flex-col items-center gap-3 p-4">
       <CraftArt
-        className="size-40"
+        className="h-auto w-40 max-w-full"
         identityId={identityId}
         kind="relic"
         lit={lit}

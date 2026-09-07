@@ -209,6 +209,75 @@ describe("Exchange panel", () => {
     queryClient.clear();
   });
 
+  it("retains submit focus without allowing another activation during pending or after the amount clears", async () => {
+    const protocol = createProtocol();
+    let confirm: (value: { status: string }) => void = () => undefined;
+    protocol.execute.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          confirm = resolve;
+        }),
+    );
+    testState.protocol = protocol;
+    const render = () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      );
+    await act(async () => render());
+    const input =
+      container.querySelector<HTMLInputElement>("#exchange-amount")!;
+    await act(async () => enterAmount(input, "1"));
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+    });
+    const submit = container.querySelector<HTMLButtonElement>(
+      "[data-exchange-actions] button",
+    )!;
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(submit.getAttribute("aria-disabled")).not.toBe("true"),
+      );
+    });
+    await act(async () => {
+      submit.focus();
+      submit.click();
+    });
+    expect(protocol.execute).toHaveBeenCalledOnce();
+    testState.protocol = {
+      ...protocol,
+      transaction: { status: "pending", label: "Buy $FUEL" },
+    };
+    await act(async () => render());
+    expect(document.activeElement).toBe(submit);
+    expect(submit.disabled).toBe(false);
+    expect(submit.getAttribute("aria-disabled")).toBe("true");
+    await act(async () => {
+      submit.click();
+      submit.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+      );
+      submit.dispatchEvent(
+        new KeyboardEvent("keyup", { key: "Enter", bubbles: true }),
+      );
+    });
+    expect(protocol.execute).toHaveBeenCalledOnce();
+    await act(async () => {
+      confirm({ status: "confirmed" });
+    });
+    testState.protocol = {
+      ...protocol,
+      transaction: { status: "confirmed", label: "Buy $FUEL" },
+    };
+    await act(async () => render());
+    expect(input.value).toBe("");
+    expect(document.activeElement).toBe(submit);
+    expect(submit.getAttribute("aria-disabled")).toBe("true");
+    await act(async () => submit.click());
+    expect(protocol.execute).toHaveBeenCalledOnce();
+  });
+
   it("starts blank without requesting or enabling an unsafe default trade", async () => {
     await act(async () =>
       root.render(
@@ -234,7 +303,7 @@ describe("Exchange panel", () => {
         button.textContent === "Buy $FUEL" ||
         button.textContent === "Sell $FUEL",
     );
-    expect(submit?.disabled).toBe(true);
+    expect(submit!.getAttribute("aria-disabled") === "true").toBe(true);
     const reasonId = submit?.getAttribute("aria-describedby");
     expect(reasonId).toBe("exchange-submit-disabled-reason");
     expect(container.querySelector(`#${reasonId}`)?.textContent).toContain(
@@ -272,7 +341,7 @@ describe("Exchange panel", () => {
         button.textContent === "Selling $FUEL…",
     );
     expect(pendingButton).toBeDefined();
-    expect(pendingButton?.disabled).toBe(true);
+    expect(pendingButton!.getAttribute("aria-disabled") === "true").toBe(true);
     expect(pendingButton?.getAttribute("aria-describedby")).toBe(
       "exchange-submit-disabled-reason",
     );
@@ -313,7 +382,9 @@ describe("Exchange panel", () => {
         button.textContent === "Selling $FUEL…",
     );
     expect(simulatedButton).toBeDefined();
-    expect(simulatedButton?.disabled).toBe(true);
+    expect(simulatedButton!.getAttribute("aria-disabled") === "true").toBe(
+      true,
+    );
   });
 
   it("shows both sides of the pair and marks the one being paid", async () => {
@@ -417,6 +488,55 @@ describe("Exchange panel", () => {
     expect(protocol.refreshWallet).not.toHaveBeenCalled();
     expect(protocol.execute).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["disconnected", "Connect your wallet to get a live quote."],
+    ["wrong-network", "Switch to Base Sepolia to get a live quote."],
+  ] as const)(
+    "explains %s before quoting and preserves the entered amount",
+    async (accessState, message) => {
+      testState.protocol = {
+        ...createProtocol(),
+        accessState,
+        connected: accessState !== "disconnected",
+        address:
+          accessState === "disconnected" ? undefined : createProtocol().address,
+        walletRead: { status: "blocked", accessState },
+        nativeBalanceRead: { status: "blocked", accessState },
+      };
+      const render = () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <ExchangePanel />
+          </QueryClientProvider>,
+        );
+      await act(async () => render());
+      const input =
+        container.querySelector<HTMLInputElement>("#exchange-amount")!;
+      await act(async () => enterAmount(input, "0.01"));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      });
+      expect(container.textContent).toContain(message);
+      expect(
+        container.querySelector("#exchange-submit-disabled-reason")
+          ?.textContent,
+      ).toContain(message);
+      expect(container.textContent).not.toContain(
+        "Enter an amount to get an automatic live quote",
+      );
+      expect(testState.quoteExactInput).not.toHaveBeenCalled();
+      expect(input.value).toBe("0.01");
+      testState.protocol = createProtocol();
+      await act(async () => render());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      });
+      expect(input.value).toBe("0.01");
+      expect(testState.quoteExactInput).toHaveBeenCalledTimes(1);
+      expect(container.textContent).not.toContain(message);
+    },
+  );
 
   it("disables balance refresh until wallet reads are available", async () => {
     testState.protocol = {
@@ -577,11 +697,13 @@ describe("Exchange panel", () => {
         ...container.querySelectorAll<HTMLButtonElement>(
           "[data-exchange-actions] button",
         ),
-      ].find(
-        (button) =>
-          button.textContent === "Buy $FUEL" ||
-          button.textContent === "Sell $FUEL",
-      )?.disabled,
+      ]
+        .find(
+          (button) =>
+            button.textContent === "Buy $FUEL" ||
+            button.textContent === "Sell $FUEL",
+        )!
+        .getAttribute("aria-disabled") === "true",
     ).toBe(true);
   });
 
@@ -685,11 +807,13 @@ describe("Exchange panel", () => {
         ...container.querySelectorAll<HTMLButtonElement>(
           "[data-exchange-actions] button",
         ),
-      ].find(
-        (button) =>
-          button.textContent === "Buy $FUEL" ||
-          button.textContent === "Sell $FUEL",
-      )?.disabled,
+      ]
+        .find(
+          (button) =>
+            button.textContent === "Buy $FUEL" ||
+            button.textContent === "Sell $FUEL",
+        )!
+        .getAttribute("aria-disabled") === "true",
     ).toBe(false);
   });
 
@@ -723,7 +847,11 @@ describe("Exchange panel", () => {
           button.textContent === "Sell $FUEL",
       );
     await act(async () => {
-      await vi.waitFor(() => expect(submitButton()?.disabled).toBe(false));
+      await vi.waitFor(() =>
+        expect(submitButton()!.getAttribute("aria-disabled") === "true").toBe(
+          false,
+        ),
+      );
     });
 
     let resolveRefreshedQuote: (value: typeof quote) => void = () => undefined;
@@ -756,7 +884,7 @@ describe("Exchange panel", () => {
       );
     });
 
-    expect(submitButton()?.disabled).toBe(true);
+    expect(submitButton()!.getAttribute("aria-disabled") === "true").toBe(true);
     expect(container.textContent).toContain("Getting a current quote…");
     expect(container.textContent).not.toContain(
       "You pay 1 WETH and receive 1.2 $FUEL",
@@ -764,7 +892,11 @@ describe("Exchange panel", () => {
 
     await act(async () => {
       resolveRefreshedQuote(quote);
-      await vi.waitFor(() => expect(submitButton()?.disabled).toBe(false));
+      await vi.waitFor(() =>
+        expect(submitButton()!.getAttribute("aria-disabled") === "true").toBe(
+          false,
+        ),
+      );
     });
   });
 
@@ -837,11 +969,13 @@ describe("Exchange panel", () => {
         ...container.querySelectorAll<HTMLButtonElement>(
           "[data-exchange-actions] button",
         ),
-      ].find(
-        (button) =>
-          button.textContent === "Buy $FUEL" ||
-          button.textContent === "Sell $FUEL",
-      )?.disabled,
+      ]
+        .find(
+          (button) =>
+            button.textContent === "Buy $FUEL" ||
+            button.textContent === "Sell $FUEL",
+        )!
+        .getAttribute("aria-disabled") === "true",
     ).toBe(true);
   });
 
@@ -968,7 +1102,11 @@ describe("Exchange panel", () => {
           button.textContent === "Sell $FUEL",
       );
     await act(async () => {
-      await vi.waitFor(() => expect(submitButton()?.disabled).toBe(false));
+      await vi.waitFor(() =>
+        expect(submitButton()!.getAttribute("aria-disabled") === "true").toBe(
+          false,
+        ),
+      );
     });
 
     const refreshedProtocol = createProtocol();
@@ -999,7 +1137,7 @@ describe("Exchange panel", () => {
       );
     });
 
-    expect(submitButton()?.disabled).toBe(true);
+    expect(submitButton()!.getAttribute("aria-disabled") === "true").toBe(true);
     expect(container.textContent).toContain("Getting a current quote…");
     expect(container.textContent).not.toContain("64.25");
     expect(
@@ -1033,7 +1171,7 @@ describe("Exchange panel", () => {
       );
     });
 
-    expect(submitButton()?.disabled).toBe(true);
+    expect(submitButton()!.getAttribute("aria-disabled") === "true").toBe(true);
   });
 
   it("submits the exact reviewed quote with the bounded minimum output", async () => {
@@ -1127,11 +1265,13 @@ describe("Exchange panel", () => {
         ...container.querySelectorAll<HTMLButtonElement>(
           "[data-exchange-actions] button",
         ),
-      ].find(
-        (button) =>
-          button.textContent === "Buy $FUEL" ||
-          button.textContent === "Sell $FUEL",
-      )?.disabled,
+      ]
+        .find(
+          (button) =>
+            button.textContent === "Buy $FUEL" ||
+            button.textContent === "Sell $FUEL",
+        )!
+        .getAttribute("aria-disabled") === "true",
     ).toBe(true);
   });
 
@@ -1182,11 +1322,13 @@ describe("Exchange panel", () => {
         ...container.querySelectorAll<HTMLButtonElement>(
           "[data-exchange-actions] button",
         ),
-      ].find(
-        (button) =>
-          button.textContent === "Buy $FUEL" ||
-          button.textContent === "Sell $FUEL",
-      )?.disabled,
+      ]
+        .find(
+          (button) =>
+            button.textContent === "Buy $FUEL" ||
+            button.textContent === "Sell $FUEL",
+        )!
+        .getAttribute("aria-disabled") === "true",
     ).toBe(true);
   });
 
@@ -1254,11 +1396,13 @@ describe("Exchange panel", () => {
         ...container.querySelectorAll<HTMLButtonElement>(
           "[data-exchange-actions] button",
         ),
-      ].find(
-        (button) =>
-          button.textContent === "Buy $FUEL" ||
-          button.textContent === "Sell $FUEL",
-      )?.disabled,
+      ]
+        .find(
+          (button) =>
+            button.textContent === "Buy $FUEL" ||
+            button.textContent === "Sell $FUEL",
+        )!
+        .getAttribute("aria-disabled") === "true",
     ).toBe(true);
   });
 

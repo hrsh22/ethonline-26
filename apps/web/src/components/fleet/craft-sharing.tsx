@@ -81,10 +81,10 @@ export function CraftSharing({ identityId }: { readonly identityId: number }) {
           Missing from your wallet’s NFT display?
         </summary>
         <p className="mt-2 text-body-sm text-ink-soft">
-          Wallet galleries can update later than the chain. Check the verified
-          owner above and the onchain record. Artwork here is a web
-          illustration; this deployment’s sealed metadata uses placeholder
-          images.
+          Wallets and explorers can show an older name or state after Launch.
+          Check the current state and verified owner above. A cached Grounded
+          label does not undo Launch. Artwork here is a web illustration; this
+          deployment’s sealed metadata uses placeholder images.
         </p>
         <dl className="mt-3 space-y-2 break-all text-body-sm">
           <div>

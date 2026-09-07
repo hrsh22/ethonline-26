@@ -200,6 +200,7 @@ function DisconnectedAdminWalletControl({
             : "admin-wallet-connection-reason"
         }
         disabled={connectionReason !== undefined}
+        focusableWhenDisabled
         onClick={onConnect}
         size="lg"
         type="button"

@@ -22,7 +22,7 @@ export default function Home() {
           <p className="font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase">
             {applicationCopy.home.eyebrow}
           </p>
-          <h1 className="mt-3 max-w-[18ch] font-mono text-hero font-semibold text-balance">
+          <h1 className="mt-3 max-w-[18ch] font-mono text-hero font-semibold text-balance [overflow-wrap:anywhere]">
             {applicationCopy.home.title}
           </h1>
           <p className="mt-4 max-w-[56ch] text-body text-ink-soft">

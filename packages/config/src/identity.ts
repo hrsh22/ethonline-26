@@ -1109,8 +1109,7 @@ export const createIdentityApplicationCopy = (
       sampleTitle: "What a collector holds",
       sampleTransient: `Revealed at random when a wallet receives a whole ${identity.liquidToken.displayName}.`,
       samplePermanent: `Made permanent by ${identity.terms.commitment}; carries ${identity.terms.stockReward} units.`,
-      sampleRelic:
-        "One of four special identities reserved in the collection manifest.",
+      sampleRelic: `One of three ${identity.terms.basketRelic}s; the ${identity.terms.indicatorRelic} is the fourth special identity.`,
       emptyAction: `Buy ${identity.liquidToken.displayName} to trigger a ${identity.terms.discoveryDraw}`,
       inspect: (stateLabel: string) => `Inspect ${stateLabel}`,
       loading: "Reading wallet holdings",
@@ -1243,7 +1242,7 @@ export const createIdentityApplicationCopy = (
     relics: {
       eyebrow: "SPECIAL IDENTITIES",
       title: `${identity.navigation.basketRelics} and ${identity.navigation.indicatorRelic}`,
-      introduction: `Track the special permanent identities that summarize the ${identity.terms.rewardTrack} system without introducing privileged controls.`,
+      introduction: `Explore three ${identity.terms.basketRelic}s and one ${identity.terms.indicatorRelic}. Each has a fixed share of all four ${identity.terms.rewardTrack}s; open an identity to check its current state.`,
       stationTitles: [
         `${identity.terms.basketRelic} One`,
         `${identity.terms.basketRelic} Two`,
