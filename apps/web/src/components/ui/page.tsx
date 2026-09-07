@@ -55,7 +55,7 @@ export function PageHeading({
             {eyebrow}
           </p>
         )}
-        <h1 className="mt-1.5 font-mono text-display font-semibold text-balance text-ink">
+        <h1 className="mt-1.5 font-mono text-display font-semibold text-balance text-ink [overflow-wrap:anywhere]">
           {title}
         </h1>
         {lede === undefined ? null : (

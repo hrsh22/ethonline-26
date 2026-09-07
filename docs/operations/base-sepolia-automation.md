@@ -258,3 +258,26 @@ exact values remain available as a table.
 DEX Screener does not currently index this custom Uniswap v4 pool on Base Sepolia. The dashboard
 therefore links to the official Base Sepolia PoolManager on BaseScan and displays the Pool ID needed
 to identify the exact pool rather than offering a misleading mainnet chart link.
+
+### Refreshing a local backend after code changes
+
+The backend supervisor and its workers do not hot-reload. The API runs
+`apps/api/dist/main.js`, so updating source or rebuilding the web app does not
+update a running API. Check the running command/start time and build the API
+before restarting; a new public route returning `route-not-found` can indicate an
+old process or stale API build even when `/readyz` succeeds.
+
+Use one coordinated supervisor refresh: verify the supervisor PID, stop it with
+SIGTERM, wait for all of its workers/listeners to exit, then launch exactly one
+`node scripts/backend.ts` with file-backed stdout/stderr and detached stdin, as
+specified in the browser runbook. Do not replace an API child in isolation: the
+supervisor treats a persistent child's exit as failure and tears down its group.
+Keep the existing environment and durable databases. Do not issue a new Live,
+Stop, or one-shot command merely to refresh code.
+
+A matching deployment resumes the saved authorized operator policy. Newly tracked
+history events can require the existing one-time bounded replay; during replay,
+`/readyz` remains unavailable and the supervisor waits before starting the operator.
+Afterward require successful `/readyz`, `/v1/delivery/status`, fresh history
+coverage, and an online operator heartbeat. A listening socket alone does not
+prove the refreshed runtime is ready.

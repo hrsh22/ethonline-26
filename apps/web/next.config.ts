@@ -37,8 +37,8 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig: NextConfig = {
-  // The issue badge otherwise covers Disconnect at the bottom of the rail.
-  devIndicators: { position: "bottom-right" },
+  // The floating badge covers wallet controls or mobile navigation.
+  devIndicators: false,
   experimental: {
     globalNotFound: true,
   },

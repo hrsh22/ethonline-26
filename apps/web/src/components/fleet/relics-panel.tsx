@@ -174,14 +174,12 @@ function RelicCard({
           />
         </DataList>
         <p className="mt-auto text-caption text-ink-soft">{caption}</p>
-        {state === "held" ? (
-          <Link
-            className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
-            href={`/fleet/${relic.identityId}`}
-          >
-            {applicationCopy.relics.inspectIdentity(relic.identityId)}
-          </Link>
-        ) : null}
+        <Link
+          className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
+          href={`/fleet/${relic.identityId}`}
+        >
+          {applicationCopy.relics.inspectIdentity(relic.identityId)}
+        </Link>
       </div>
     </article>
   );

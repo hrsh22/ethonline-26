@@ -9,6 +9,7 @@ import {
   checkFundingDiscoveryJourney,
 } from "./collector-journeys.ts";
 import { checkPublicCollection } from "./public-collection.ts";
+import { checkMobileAccessibility } from "./mobile-accessibility.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -462,6 +463,9 @@ const visit = async (
 ): Promise<MatrixCaseResult> => {
   const context = await browser.newContext({
     colorScheme: "dark",
+    ...(input.label === "mobile-accessibility:back-text-motion"
+      ? { reducedMotion: "reduce" as const }
+      : {}),
     viewport: { height: input.viewport.height, width: input.viewport.width },
   });
   const page = await context.newPage();
@@ -516,6 +520,9 @@ const visit = async (
     }
     if (input.label === "public-collection:explore-and-share") {
       await checkPublicCollection(page, input.options.origin);
+    }
+    if (input.label === "mobile-accessibility:back-text-motion") {
+      await checkMobileAccessibility(page, input.options.origin);
     }
     if (input.data === "admin-inputs") {
       observer.allowProtectedRequests();
@@ -818,6 +825,16 @@ export const runBrowserMatrix = async (
       label: "public-collection:explore-and-share",
       options,
       path: "/",
+      viewport: RELEASE_VIEWPORTS[0] as Viewport,
+      wallet: "disconnected" as const,
+    },
+    {
+      axe: true,
+      data: "stubbed" as const,
+      expectFinalPath: "/",
+      label: "mobile-accessibility:back-text-motion",
+      options,
+      path: "/relics",
       viewport: RELEASE_VIEWPORTS[0] as Viewport,
       wallet: "disconnected" as const,
     },

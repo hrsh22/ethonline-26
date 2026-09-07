@@ -211,7 +211,12 @@ function UnloadedCollection({
         blocked.connectable ? (
           <>
             <ConnectWalletAction />
-            <ButtonLink href="/start" size="sm" variant="outline">
+            <ButtonLink
+              className="h-auto max-w-full whitespace-normal py-2"
+              href="/start"
+              size="sm"
+              variant="outline"
+            >
               {applicationCopy.fleet.connectAction}
             </ButtonLink>
           </>

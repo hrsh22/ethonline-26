@@ -28,7 +28,7 @@ export default function Home() {
           <p className="mt-4 max-w-[56ch] text-body text-ink-soft">
             {applicationCopy.home.introduction}
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-2">
+          <div className="mt-6 flex flex-wrap items-center gap-2 [&>a]:h-auto [&>a]:max-w-full [&>a]:whitespace-normal [&>a]:py-3">
             <ButtonLink href="/start" size="lg">
               {applicationCopy.home.primaryAction}
             </ButtonLink>

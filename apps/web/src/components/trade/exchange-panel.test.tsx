@@ -418,6 +418,55 @@ describe("Exchange panel", () => {
     expect(protocol.execute).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["disconnected", "Connect your wallet to get a live quote."],
+    ["wrong-network", "Switch to Base Sepolia to get a live quote."],
+  ] as const)(
+    "explains %s before quoting and preserves the entered amount",
+    async (accessState, message) => {
+      testState.protocol = {
+        ...createProtocol(),
+        accessState,
+        connected: accessState !== "disconnected",
+        address:
+          accessState === "disconnected" ? undefined : createProtocol().address,
+        walletRead: { status: "blocked", accessState },
+        nativeBalanceRead: { status: "blocked", accessState },
+      };
+      const render = () =>
+        root.render(
+          <QueryClientProvider client={queryClient}>
+            <ExchangePanel />
+          </QueryClientProvider>,
+        );
+      await act(async () => render());
+      const input =
+        container.querySelector<HTMLInputElement>("#exchange-amount")!;
+      await act(async () => enterAmount(input, "0.01"));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      });
+      expect(container.textContent).toContain(message);
+      expect(
+        container.querySelector("#exchange-submit-disabled-reason")
+          ?.textContent,
+      ).toContain(message);
+      expect(container.textContent).not.toContain(
+        "Enter an amount to get an automatic live quote",
+      );
+      expect(testState.quoteExactInput).not.toHaveBeenCalled();
+      expect(input.value).toBe("0.01");
+      testState.protocol = createProtocol();
+      await act(async () => render());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      });
+      expect(input.value).toBe("0.01");
+      expect(testState.quoteExactInput).toHaveBeenCalledTimes(1);
+      expect(container.textContent).not.toContain(message);
+    },
+  );
+
   it("disables balance refresh until wallet reads are available", async () => {
     testState.protocol = {
       ...createProtocol(),

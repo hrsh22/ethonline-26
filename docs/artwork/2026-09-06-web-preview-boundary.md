@@ -30,3 +30,7 @@ Manual Chrome checks covered all eight gallery examples at desktop and 375px wid
 The public collection browser journey checks lookup, disconnected navigation, repeated PNG output, native sharing success/cancellation, unsupported sharing, and the manual URL fallback after clipboard failure. The release browser matrix remains the integration boundary.
 
 An unfamiliar-human recognition/comprehension session and actual mobile-wallet image rendering have not been performed. They remain public-release review gates; the checked canonical placeholder URI prevents claiming web/wallet artwork parity. Do not describe this deployment's canonical artwork as finished production metadata.
+
+## Chrome explorer comparison, 7 September 2026
+
+The actual BaseScan page for #1639 showed the correct owner, an empty NFT image, and the stale name Grounded Craft #1639. At Base Sepolia block 46,497,243, read-only calls returned `isPermanentIdentity(1639) = true` and a decoded token URI naming Orbiter #1639 with State Orbiter and image `placeholder://orbit-4444/orbiter`. The live application also showed Orbiter #1639. This distinguishes a stale explorer label from the separate sealed-placeholder image limitation. No metadata update or transaction was submitted. Help now explains both cases.

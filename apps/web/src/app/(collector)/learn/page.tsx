@@ -93,7 +93,7 @@ function CollectorHelpTopics() {
     {
       id: "wallet-artwork",
       title: "My collection and my wallet's NFT tab disagree",
-      body: "Check the collectible's current owner and state through its onchain link. A wallet may take longer to index NFTs or display artwork. This display delay does not change verified ownership. The current deployment uses sealed placeholder metadata; the website's illustrations are previews. Use the collection address and identity number from the detail page if your wallet supports manual NFT import.",
+      body: "Check the collectible's current owner and state through its onchain link. Wallets and explorers can cache an older name or state after Launch. Compare it with the current state in the app; a stale label does not undo Launch or change ownership. The current deployment uses sealed placeholder metadata; the website's illustrations are previews. Use the collection address and identity number from the detail page if your wallet supports manual NFT import.",
     },
     {
       id: "rewards",

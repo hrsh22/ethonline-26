@@ -4,6 +4,7 @@ import { CircleHelp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { identity } from "@/lib/identity";
+import { cn } from "@/lib/utils";
 
 export function WalletConnectionAction({
   ariaDescribedBy,
@@ -21,11 +22,14 @@ export function WalletConnectionAction({
   readonly size?: "default" | "sm";
 }) {
   return (
-    <div className="relative flex items-center gap-1">
+    <div className="relative flex min-w-0 max-w-full flex-wrap items-center gap-1">
       <Button
         aria-describedby={ariaDescribedBy}
         aria-haspopup="dialog"
-        className={className}
+        className={cn(
+          "h-auto min-h-11 max-w-full whitespace-normal py-2",
+          className,
+        )}
         disabled={disabled}
         onClick={onContinue}
         size={size}

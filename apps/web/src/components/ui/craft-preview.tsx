@@ -17,13 +17,18 @@ export function RelicPreview({ identityId }: { readonly identityId: number }) {
   return (
     <div className="flex flex-col items-center gap-3 p-4">
       <CraftArt
-        className="size-40"
+        className="h-auto w-40 max-w-full"
         identityId={identityId}
         kind="relic"
         lit={lit}
         label={`Identity ${identityId}, illustrative ${lit ? "Orbiter" : "Grounded"} preview`}
       />
-      <Button variant="outline" aria-pressed={lit} onClick={() => setLit(!lit)}>
+      <Button
+        className="h-auto max-w-full whitespace-normal py-2"
+        variant="outline"
+        aria-pressed={lit}
+        onClick={() => setLit(!lit)}
+      >
         {lit ? "Preview Grounded" : "Preview Orbiter"}
       </Button>
       <p className="text-caption text-ink-soft">

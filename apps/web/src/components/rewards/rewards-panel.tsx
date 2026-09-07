@@ -1,5 +1,7 @@
 "use client";
 
+import { cn } from "@/lib/utils";
+
 import { CollectorHelp } from "@/components/collector-help";
 import { useState } from "react";
 
@@ -252,7 +254,10 @@ export function ClaimReview({
             ? undefined
             : "rewards-claim-disabled-reason"
         }
-        className={buttonVariants({ size: "lg" })}
+        className={cn(
+          buttonVariants({ size: "lg" }),
+          "h-auto max-w-full whitespace-normal py-3",
+        )}
         disabled={disabledReason !== undefined}
       >
         {applicationCopy.rewards.claim}

@@ -621,6 +621,7 @@ describe("collection surfaces", () => {
       });
       await render(<RelicsPanel />);
 
+      expect(container.querySelectorAll("[data-relic-card] a")).toHaveLength(4);
       expect(container.textContent).not.toContain("Eligible now");
       expect(container.textContent).toContain("Connect a wallet");
       expect(
@@ -698,14 +699,19 @@ describe("collection surfaces", () => {
       expect(container.querySelector("a[href='/exchange']")).toBeNull();
     });
 
-    it("does not link identities the wallet does not hold", async () => {
+    it("lets visitors inspect every public Relic without owning it", async () => {
       testState.protocol = protocol({
         status: "loaded",
         snapshot: walletSnapshot([], []),
       });
       await render(<RelicsPanel />);
 
-      expect(container.querySelector("[data-relic-card] a")).toBeNull();
+      for (const identityId of [4441, 4442, 4443, 4444]) {
+        expect(
+          container.querySelector(`a[href='/fleet/${identityId}']`)
+            ?.textContent,
+        ).toBe(`Inspect #${identityId}`);
+      }
     });
   });
   describe("craft detail rewards", () => {
