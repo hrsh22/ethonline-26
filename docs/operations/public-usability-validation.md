@@ -38,6 +38,6 @@ Use the same build mode, seeded wallet and collection size for each comparable r
 
 ## Integrated browser coverage
 
-The final production matrix passed 109 cases, including the seven [collector journeys](collector-journeys.md). The mobile public-lookup journey also proves that navigation remains stable between input focus and submit; its regression failed before the focus-driven hiding rule was removed and passed afterward.
+The 7 September Chrome follow-up production matrix passed 110 cases, including the enlarged-text/Back/reduced-motion case and the seven [collector journeys](collector-journeys.md). The mobile public-lookup journey also proves that navigation remains stable between input focus and submit; its regression failed before the focus-driven hiding rule was removed and passed afterward.
 
 Whole-journey request counts include navigation, confirmation and reconciliation. Use the [controlled startup comparison](collector-performance.md) for the comparable idle-load RPC and rendering measurements; they have a different measurement window.
