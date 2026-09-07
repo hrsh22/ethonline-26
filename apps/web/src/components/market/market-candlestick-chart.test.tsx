@@ -113,18 +113,18 @@ describe("WETH/FUEL candlestick chart", () => {
   });
 
   it("renders candle dates in the viewer's supplied time zone", () => {
-    const septemberFirstUtc = BigInt(
-      Math.floor(Date.parse("2026-09-01T19:12:00Z") / 1_000),
+    const candleStartUtc = BigInt(
+      Math.floor(Date.parse("2026-09-06T19:12:00Z") / 1_000),
     );
     const table = renderToStaticMarkup(
       <MarketCandleDataTable
-        candles={[candle(septemberFirstUtc)]}
+        candles={[candle(candleStartUtc)]}
         interval="1m"
         timeZone="Asia/Kolkata"
       />,
     );
 
-    expect(table).toContain("Sep 2, 2026");
+    expect(table).toContain("Sep 7, 2026");
     expect(table).toContain("Minute (Asia/Kolkata)");
   });
 

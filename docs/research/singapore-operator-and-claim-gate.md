@@ -1,6 +1,6 @@
 # Singapore operator and tokenized-stock claim gate
 
-_Checked 25 August 2026. Architecture research only; not legal advice._
+_Architecture research only; not legal advice._
 
 ## Conclusion
 

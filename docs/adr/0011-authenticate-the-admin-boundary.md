@@ -1,6 +1,6 @@
 # Authenticate the admin boundary
 
-Status: accepted on 31 August 2026 for the Base Sepolia proof of concept.
+Status: accepted for the Base Sepolia proof of concept.
 
 ## Context
 

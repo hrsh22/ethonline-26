@@ -57,8 +57,8 @@ const session = {
   chainId: 84_532 as const,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: `0x${"f".repeat(64)}` as const,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: {
     hash: `0x${"a".repeat(64)}` as const,
     number: "31000000",
@@ -78,7 +78,7 @@ describe("root admin session lifecycle", () => {
       }
     ).IS_REACT_ACT_ENVIRONMENT = true;
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-31T05:05:00.000Z"));
+    vi.setSystemTime(new Date("2026-09-05T05:05:00.000Z"));
     state.connection = {
       address: session.address,
       chainId: session.chainId,

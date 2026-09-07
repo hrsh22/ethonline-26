@@ -2,7 +2,7 @@
 
 This is the durable public record of deployments, material protocol changes, and incidents. Contract addresses and transaction hashes are sourced from the sealed deployment manifests in this repository.
 
-## 2026-08-31 — Base Sepolia staging proof launched
+## Base Sepolia staging proof launched
 
 - Network: Base Sepolia (chain 84532)
 - Launch block: 46,352,953

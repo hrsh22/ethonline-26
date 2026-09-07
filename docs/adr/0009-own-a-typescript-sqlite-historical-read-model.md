@@ -1,6 +1,6 @@
 # Own a TypeScript and SQLite historical read model
 
-Status: accepted on 29 August 2026 for the Base Sepolia proof of concept.
+Status: accepted for the Base Sepolia proof of concept.
 
 The same-origin Next.js proxy requirements in this ADR are superseded by
 [`ADR 0010`](./0010-expose-a-vm-owned-public-api.md). The Historical Read Model itself and every

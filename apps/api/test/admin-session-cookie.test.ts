@@ -28,12 +28,12 @@ describe("admin session cookie", () => {
     expect(
       serializeAdminSessionCookie({
         appOrigin: "https://app.orbit.example",
-        expiresAt: new Date("2026-08-31T08:15:00.000Z"),
+        expiresAt: new Date("2026-09-05T08:15:00.000Z"),
         handle,
-        issuedAt: new Date("2026-08-31T08:00:00.000Z"),
+        issuedAt: new Date("2026-09-05T08:00:00.000Z"),
       }),
     ).toBe(
-      `orbit_admin_session=${handle}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900; Expires=Mon, 31 Aug 2026 08:15:00 GMT; Secure`,
+      `orbit_admin_session=${handle}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900; Expires=Sat, 05 Sep 2026 08:15:00 GMT; Secure`,
     );
   });
 
@@ -41,9 +41,9 @@ describe("admin session cookie", () => {
     expect(
       serializeAdminSessionCookie({
         appOrigin: "http://127.0.0.1:3000",
-        expiresAt: new Date("2026-08-31T08:15:00.000Z"),
+        expiresAt: new Date("2026-09-05T08:15:00.000Z"),
         handle,
-        issuedAt: new Date("2026-08-31T08:00:00.000Z"),
+        issuedAt: new Date("2026-09-05T08:00:00.000Z"),
       }),
     ).not.toContain("Secure");
     expect(clearAdminSessionCookie("https://app.orbit.example")).toBe(

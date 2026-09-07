@@ -54,8 +54,8 @@ describe("admin authentication contract", () => {
         address: "0x8D01188806aA960F95A3fe4A343DFC26A8a7e6B5",
         appOrigin: origin,
         deploymentFingerprint: `0x${"f".repeat(64)}`,
-        expirationTime: new Date("2026-08-31T08:05:00.000Z"),
-        issuedAt: new Date("2026-08-31T08:00:00.000Z"),
+        expirationTime: new Date("2026-09-05T08:05:00.000Z"),
+        issuedAt: new Date("2026-09-05T08:00:00.000Z"),
         nonce: "ab".repeat(32),
       });
       expect(parseSiweMessage(message).domain).toBe(new URL(origin).host);
@@ -65,8 +65,8 @@ describe("admin authentication contract", () => {
         address: "0x8D01188806aA960F95A3fe4A343DFC26A8a7e6B5",
         appOrigin: "https://admin",
         deploymentFingerprint: `0x${"f".repeat(64)}`,
-        expirationTime: new Date("2026-08-31T08:05:00.000Z"),
-        issuedAt: new Date("2026-08-31T08:00:00.000Z"),
+        expirationTime: new Date("2026-09-05T08:05:00.000Z"),
+        issuedAt: new Date("2026-09-05T08:00:00.000Z"),
         nonce: "ab".repeat(32),
       }),
     ).toThrow(/admin app origin/iu);

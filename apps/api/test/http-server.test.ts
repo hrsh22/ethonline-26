@@ -71,7 +71,7 @@ const testAdminAuth = (
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = randomValues.shift();
         if (value === undefined) throw new Error("Random sequence exhausted");
@@ -324,8 +324,8 @@ const publicFundingFixture = (
       challenge: {
         chainId: 84_532,
         domain: "orbit.test",
-        expiresAt: "2026-09-01T01:00:00.000Z",
-        issuedAt: "2026-09-01T00:55:00.000Z",
+        expiresAt: "2026-09-06T01:00:00.000Z",
+        issuedAt: "2026-09-06T00:55:00.000Z",
         message: "orbit.test wants you to sign in with your Ethereum account:",
         nonce: `0x${"cd".repeat(16)}`,
         recipient,
@@ -1204,8 +1204,8 @@ describe("VM-owned public API", () => {
             address: adminAddress,
             chainId: 84_532,
             deploymentFingerprint,
-            expiresAt: "2026-08-31T08:15:00.000Z",
-            issuedAt: "2026-08-31T08:00:00.000Z",
+            expiresAt: "2026-09-05T08:15:00.000Z",
+            issuedAt: "2026-09-05T08:00:00.000Z",
             observedBlock: {
               hash: observedBlock.hash,
               number: "12345",

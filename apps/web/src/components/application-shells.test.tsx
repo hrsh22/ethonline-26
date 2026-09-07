@@ -31,8 +31,8 @@ const adminSession = {
   chainId: 84_532 as const,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: `0x${"f".repeat(64)}` as const,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: {
     hash: `0x${"a".repeat(64)}` as const,
     number: "31000000",

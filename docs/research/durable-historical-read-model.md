@@ -1,6 +1,6 @@
 # Durable historical read model for ORBIT 4444
 
-_Verified 29 August 2026 against official primary sources and repository state at `598f00c`._
+_Verified against official primary sources and repository state at `598f00c`._
 
 This is an architecture research note for issue #43, not the decision record. The follow-up ADR should make the final choice and supersede any earlier assumption that browser-local bounded log scans are a durable history source.
 
@@ -21,7 +21,7 @@ The checked [Base Sepolia deployment manifest](../../deployments/84532.json) is 
 - canonical Pool ID `0x4000bcdff70b03abb40b8cf387f90b25378c838162db223eef92d9a46da0f599`;
 - canonical currency ordering `Liquid Token 0x0833…16dd` as `currency0` and `WETH-like 0x4fB7…B8fc`
   as `currency1` -- the ordering is a function of the deployed addresses, not a fixed choice, and it
-  reversed at the 2026-09-01 redeployment;
+  reversed at the subsequent redeployment;
 - the Canonical Fee Hook, Fuel Core, Protocol Liquidity Vault, Epoch Converter, and Reward Ledger
   event-source addresses.
 

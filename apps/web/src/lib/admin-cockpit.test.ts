@@ -16,12 +16,12 @@ const input = (overrides: Partial<CockpitInput> = {}): CockpitInput => ({
   checks: [],
   dependenciesReady: true,
   lastOutcome: undefined,
-  nextRunAt: "2026-08-31 20:00:00",
+  nextRunAt: "2026-09-05 20:00:00",
   observedBlock: "46176595",
   pauses: "active",
   roles: ["keeper"],
   service: "online",
-  serviceObservedAt: "2026-08-31 19:59:00",
+  serviceObservedAt: "2026-09-05 19:59:00",
   work: "idle",
   ...overrides,
 });
@@ -37,7 +37,7 @@ describe("admin cockpit view", () => {
       "work-eligibility",
     ]);
     expect(view.roles).toEqual(["keeper"]);
-    expect(view.nextRun).toBe("2026-08-31 20:00:00");
+    expect(view.nextRun).toBe("2026-09-05 20:00:00");
   });
 
   it("reports healthy when nothing needs attention", () => {
@@ -197,7 +197,7 @@ describe("admin cockpit view", () => {
     const view = deriveCockpitView(
       input({
         lastOutcome: {
-          at: "2026-08-31 19:00:00",
+          at: "2026-09-05 19:00:00",
           outcome: "failed",
           sanitizedFailure: "RPC unavailable",
         },

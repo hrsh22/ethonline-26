@@ -1,8 +1,7 @@
 # ORBIT 4444 product-experience and competitive audit
 
-The implemented decision/explanation/proof mapping is maintained in the [collector content inventory](./2026-09-04-content-inventory.md).
+The implemented decision/explanation/proof mapping is maintained in the [collector content inventory](./content-inventory.md).
 
-**Date:** 2026-09-04  
 **Branch:** `audit/ux-competitive-review` from `origin/main` at `b2f2cd1`  
 **Scope:** Collector application, public evidence surfaces, wallet entry, failure and empty states, admin sign-in, responsive/accessibility coverage, and a read-only comparison with the public QUOTRONS application.
 

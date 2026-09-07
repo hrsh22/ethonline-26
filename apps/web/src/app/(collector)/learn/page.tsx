@@ -409,10 +409,7 @@ function HistoryPanel() {
           }
         />
         <DataRow label="Mainnet" value="Not deployed" />
-        <DataRow
-          label="Recorded incidents"
-          value="None as of 4 September 2026"
-        />
+        <DataRow label="Recorded incidents" value="None recorded" />
       </DataList>
     </Panel>
   );
