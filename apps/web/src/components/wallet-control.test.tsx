@@ -15,12 +15,8 @@ const walletState = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@reown/appkit/react", () => ({
-  modal: { open: vi.fn() },
-}));
-
 vi.mock("@/lib/wagmi", () => ({
-  isReownConfigured: true,
+  isWalletConfigured: true,
   protocolChain: { id: 84_532 },
 }));
 
@@ -44,7 +40,7 @@ describe("wallet control", () => {
     walletState.switchChain.mutate.mockReset();
   });
 
-  it("offers the Reown modal when no wallet is connected", () => {
+  it("offers the Privy chooser when no wallet is connected", () => {
     const html = renderToStaticMarkup(<WalletControl />);
 
     expect(html).toContain("Connect wallet");

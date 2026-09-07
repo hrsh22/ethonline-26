@@ -96,7 +96,7 @@ describe("staging web environment", () => {
     const plan = createStagingWebLaunchPlan({
       AWS_SECRET_ACCESS_KEY: "sentinel-cloud-secret",
       NEXT_PUBLIC_API_URL: publicApiUrl,
-      NEXT_PUBLIC_REOWN_PROJECT_ID: "public-project-id",
+      NEXT_PUBLIC_PRIVY_APP_ID: "public-project-id",
       NODE_OPTIONS: "--require=/sentinel/forbidden.cjs",
       OPERATOR_PRIVATE_KEY: "sentinel-operator-secret",
       PATH: "/usr/bin",
@@ -107,7 +107,7 @@ describe("staging web environment", () => {
     expect(plan.webEnvironment).toEqual({
       NEXT_PUBLIC_API_URL: publicApiUrl,
       NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
-      NEXT_PUBLIC_REOWN_PROJECT_ID: "public-project-id",
+      NEXT_PUBLIC_PRIVY_APP_ID: "public-project-id",
       NEXT_PUBLIC_RPC_URL: "https://base-sepolia.example",
       PATH: "/usr/bin",
       __NEXT_PROCESSED_ENV: "true",
@@ -211,14 +211,14 @@ describe("staging web environment", () => {
         TESTNET_FUNDING_API_TOKEN: "funding-secret",
         TESTNET_FUNDING_SIGNER_PRIVATE_KEY: "funding-secret",
         TESTNET_FUNDING_SERVICE_URL: "http://127.0.0.1:8790",
-        NEXT_PUBLIC_REOWN_PROJECT_ID: "public-connector-id",
+        NEXT_PUBLIC_PRIVY_APP_ID: "public-connector-id",
       },
     );
 
     expect(webEnvironment).toMatchObject({
       NEXT_PUBLIC_API_URL: publicApiUrl,
       NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
-      NEXT_PUBLIC_REOWN_PROJECT_ID: "public-connector-id",
+      NEXT_PUBLIC_PRIVY_APP_ID: "public-connector-id",
       NEXT_PUBLIC_RPC_URL: "https://base-sepolia.example",
       __NEXT_PROCESSED_ENV: "true",
     });
@@ -246,7 +246,7 @@ describe("staging web environment", () => {
         HISTORY_INGEST_API_TOKEN: "history-ingest-secret",
         HISTORY_READ_API_TOKEN: "history-read-secret",
         NEXT_PUBLIC_APP_URL: "https://orbit.example",
-        NEXT_PUBLIC_REOWN_PROJECT_ID: "public-connector-id",
+        NEXT_PUBLIC_PRIVY_APP_ID: "public-connector-id",
         NEXT_PUBLIC_UNREVIEWED_SECRET: "mistakenly-public-secret",
         NODE_OPTIONS: "--require=/sentinel/forbidden.cjs",
         PATH: "/usr/bin",
@@ -259,7 +259,7 @@ describe("staging web environment", () => {
       NEXT_PUBLIC_API_URL: publicApiUrl,
       NEXT_PUBLIC_APP_URL: "https://orbit.example",
       NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
-      NEXT_PUBLIC_REOWN_PROJECT_ID: "public-connector-id",
+      NEXT_PUBLIC_PRIVY_APP_ID: "public-connector-id",
       NEXT_PUBLIC_RPC_URL: "https://base-sepolia.example",
       PATH: "/usr/bin",
       __NEXT_PROCESSED_ENV: "true",

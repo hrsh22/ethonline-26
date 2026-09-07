@@ -1,0 +1,46 @@
+name: Graph subgraph
+
+on:
+  pull_request:
+    paths:
+      - "subgraphs/orbit-market/**"
+      - ".github/workflows/subgraph.yml"
+  push:
+    branches: [main, staging]
+    paths:
+      - "subgraphs/orbit-market/**"
+      - ".github/workflows/subgraph.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: subgraph-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    # Matchstick 0.6 publishes its Linux binary for Ubuntu 22.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: subgraphs/orbit-market
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: subgraphs/orbit-market/package-lock.json
+      - name: Install isolated tooling
+        run: npm ci --ignore-scripts
+      - name: Generate event and schema bindings
+        run: npm run codegen
+      - name: Check schema compatibility and mapping behavior
+        run: npm test
+      - name: Compile subgraph
+        run: npm run build

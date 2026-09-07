@@ -11,7 +11,7 @@ Every Base Sepolia asset used by this project is a valueless test asset. Nothing
 - Next.js 16.3.3 and React 19.2.8
 - shadcn/ui with Tailwind CSS 4
 - Effect 3 for typed services, errors, and configuration decoding
-- Reown AppKit, viem, and wagmi for Base connectivity and extension-free email wallets
+- Privy, viem, and wagmi for external wallets and email-created embedded wallets on Base Sepolia
 - Foundry with Solidity 0.8.26
 
 Dependencies are exact in package manifests and resolved by the committed `pnpm-lock.yaml`.
@@ -169,3 +169,7 @@ Chain ID: `84532`
 | Permit2                    | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
 
 The official addresses remain reference infrastructure and the official v4 `PoolManager` is used. The deployed POC settlement addresses come from `deployments/84532.json`; its clearly labelled WETH-like and USDC-like assets are project-owned test fixtures, not the official tokens listed above. The checked-in values are decoded through Effect Schema in `packages/config` before use.
+
+## ETHOnline integrations
+
+See the [integration runbook](docs/operations/ethonline-2026-integrations.md) for Privy setup, live Uniswap transaction evidence, the standardized Graph subgraph, and the free-service boundary. Uniswap developer feedback is in [FEEDBACK.md](FEEDBACK.md).

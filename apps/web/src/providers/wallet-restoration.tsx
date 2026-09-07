@@ -31,8 +31,10 @@ const persistHydrationStore = (
 
 export function WalletRestorationBoundary({
   children,
+  sdkReady = true,
 }: {
   readonly children: ReactNode;
+  readonly sdkReady?: boolean;
 }) {
   const config = useConfig();
   const connection = useConnection();
@@ -84,10 +86,11 @@ export function WalletRestorationBoundary({
   ]);
 
   const settled =
-    connection.status === "connected" ||
-    (hydrated &&
-      connection.status === "disconnected" &&
-      (connectedDuringMount || reconnectGraceElapsed));
+    sdkReady &&
+    (connection.status === "connected" ||
+      (hydrated &&
+        connection.status === "disconnected" &&
+        (connectedDuringMount || reconnectGraceElapsed)));
 
   return (
     <WalletRestorationContext value={settled}>

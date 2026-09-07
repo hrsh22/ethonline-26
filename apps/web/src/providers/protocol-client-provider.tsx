@@ -14,6 +14,7 @@ import {
 } from "react";
 import {
   encodeFunctionData,
+  keccak256,
   formatUnits,
   type Address,
   type WalletClient as ViemWalletClient,
@@ -36,12 +37,19 @@ import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest
 
 import {
   readCollectorTransaction,
+  isObsoleteRecoveryCallback,
   readCompletedCollectorTransactions,
   type CompletedCollectorTransaction,
   writeCollectorTransaction,
   type CollectorTransactionMetadata,
   type SubmittedTransactionPhase,
+  type PreparedCollectorCall,
 } from "@/lib/collector-transaction-record";
+
+import {
+  recoverCollectorTransactionHash,
+  type RecoveredReceipt,
+} from "@/lib/collector-transaction-recovery";
 
 import {
   getCollectorAccessState,
@@ -322,9 +330,12 @@ type ProtocolClientContextValue = {
         readonly identityIds: readonly number[];
         readonly actionType: string;
         readonly createdAt: number;
+        readonly canRecoverHash?: boolean;
       }
     | undefined;
   readonly clearTransaction?: () => void;
+  readonly recoverTransactionHash?: (hash: string) => Promise<void>;
+
   /**
    * A bare refresh reads once. A caller that knows a balance or holding changed
    * passes its block so direct balances and indexed holdings retry together,
@@ -347,6 +358,10 @@ type ProtocolClientContextValue = {
     authorize?: TransactionAuthorization,
   ) => Promise<TransactionState>;
 };
+
+const canonicalRecoveryTargets = Object.values(
+  protocolDeploymentManifest?.contracts ?? {},
+);
 
 const ProtocolClientContext = createContext<ProtocolClientContextValue | null>(
   null,
@@ -865,14 +880,81 @@ const replacementFailure = (
     ? new ReplacedProtocolTransactionError(state.hash, state.replacement)
     : undefined;
 
+const uncertainReceipt = (state: TransactionState) =>
+  advanceTransaction(state, {
+    type: "fail",
+    message:
+      "The transaction’s canonical receipt could not be verified. Keep this attempt open; no new transaction was sent.",
+    retriable: true,
+  });
+const receiptProofIsCurrent = async (
+  verify: ((receipt: RecoveredReceipt) => Promise<void>) | undefined,
+  receipt: RecoveredReceipt,
+): Promise<boolean> => {
+  try {
+    await verify?.(receipt);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const recoveredReceiptVerifier = (
+  metadata: CollectorTransactionMetadata | undefined,
+  hash: `0x${string}`,
+): ((receipt: RecoveredReceipt) => Promise<void>) | undefined => {
+  if (metadata?.recoveredHash === undefined) return undefined;
+  return async (receipt) => {
+    const call = metadata.preparedCall;
+    if (call === undefined || metadata.recoveredHash !== hash)
+      throw new Error("Recovered transaction evidence changed");
+    await recoverCollectorTransactionHash({
+      hash,
+      metadata,
+      address: call.from,
+      chainId: protocolChain.id,
+      canonicalTargets: canonicalRecoveryTargets,
+      reader: protocolTransactionClient,
+      expectedReceipt: receipt,
+    });
+  };
+};
+
+const validatedTransactionReceipt = (receipt: {
+  readonly status: unknown;
+  readonly blockNumber: unknown;
+}): {
+  readonly status: "success" | "reverted";
+  readonly blockNumber: bigint;
+} => {
+  if (receipt.status !== "success" && receipt.status !== "reverted")
+    throw new TypeError("Transaction receipt status is invalid");
+  if (typeof receipt.blockNumber !== "bigint" || receipt.blockNumber < 0n)
+    throw new TypeError("Transaction receipt block number is invalid");
+  return { status: receipt.status, blockNumber: receipt.blockNumber };
+};
+const persistCollectorState = (
+  scope: string | undefined,
+  persist: boolean | undefined,
+  state: TransactionState,
+  phase: SubmittedTransactionPhase | undefined,
+  metadata: CollectorTransactionMetadata | undefined,
+): boolean =>
+  scope === undefined ||
+  persist === false ||
+  metadata === undefined ||
+  writeCollectorTransaction(scope, state, phase, metadata);
+
 const reconcileUnknownTransaction = async ({
   refresh,
   state,
   onState,
+  verifyReceipt,
 }: {
   readonly refresh: (minimumWalletBlock?: bigint) => Promise<void>;
   readonly state: Extract<TransactionState, { status: "outcome-unknown" }>;
   readonly onState: (state: TransactionState) => void;
+  readonly verifyReceipt?:
+    ((receipt: RecoveredReceipt) => Promise<void>) | undefined;
 }): Promise<TransactionState> => {
   let observedState: TransactionState = state;
   let receipt: Awaited<
@@ -908,16 +990,9 @@ const reconcileUnknownTransaction = async ({
   let receiptStatus: "success" | "reverted";
   let blockNumber: bigint;
   try {
-    const observedStatus = receipt.status;
-    const observedBlockNumber = receipt.blockNumber;
-    if (observedStatus !== "success" && observedStatus !== "reverted") {
-      throw new TypeError("Transaction receipt status is invalid");
-    }
-    if (typeof observedBlockNumber !== "bigint" || observedBlockNumber < 0n) {
-      throw new TypeError("Transaction receipt block number is invalid");
-    }
-    receiptStatus = observedStatus;
-    blockNumber = observedBlockNumber;
+    const validated = validatedTransactionReceipt(receipt);
+    receiptStatus = validated.status;
+    blockNumber = validated.blockNumber;
   } catch (cause) {
     const domainError = normalizeProtocolError(cause, identity);
     console.error(
@@ -929,6 +1004,8 @@ const reconcileUnknownTransaction = async ({
       retriable: true,
     });
   }
+  if (!(await receiptProofIsCurrent(verifyReceipt, receipt)))
+    return uncertainReceipt(observedState);
   const replacement = replacementFailure(observedState);
   if (replacement !== undefined) {
     return advanceTransaction(observedState, {
@@ -954,6 +1031,8 @@ const reconcileUnknownTransaction = async ({
       `Protocol transaction post-confirmation refresh failed (${domainError.code})`,
     );
   }
+  if (!(await receiptProofIsCurrent(verifyReceipt, receipt)))
+    return uncertainReceipt(observedState);
   return confirmed;
 };
 
@@ -1059,6 +1138,7 @@ const sendPreparedTransaction = async ({
   failureStep,
   label,
   onState,
+  onPrepared,
   prepared,
   walletClient,
 }: {
@@ -1068,6 +1148,9 @@ const sendPreparedTransaction = async ({
   readonly label: string;
   readonly onState: (state: TransactionState) => void;
   readonly prepared: PreparedTransaction;
+  readonly onPrepared: (
+    call: Omit<PreparedCollectorCall, "afterBlock">,
+  ) => void;
   readonly walletClient: WalletClient;
 }): Promise<ExecutedProtocolTransaction> => {
   const data = encodeFunctionData({
@@ -1081,6 +1164,13 @@ const sendPreparedTransaction = async ({
     data,
     value: prepared.value,
   } as const;
+  onPrepared({
+    chainId: protocolChain.id,
+    from: address,
+    to: prepared.to,
+    dataHash: keccak256(data),
+    value: prepared.value.toString(),
+  });
   return executeProtocolTransaction({
     estimateGas: async () => {
       return retryPreSubmissionPublicRpc({
@@ -1480,6 +1570,7 @@ const displayedTransactionMetadata = (
         identityIds: metadata.affectedIdentityIds,
         actionType: metadata.actionType,
         createdAt: metadata.createdAt,
+        canRecoverHash: metadata.preparedCall !== undefined,
       };
 
 const actionPreparationMessage = (cause: unknown): string =>
@@ -1561,11 +1652,15 @@ export function ProtocolClientProvider({
       },
     ) => {
       const metadata = record.metadata ?? transactionMetadataRef.current;
-      const stored =
-        record.scope === undefined ||
-        record.persist === false ||
-        metadata === undefined ||
-        writeCollectorTransaction(record.scope, state, record.phase, metadata);
+      if (isObsoleteRecoveryCallback(metadata, transactionMetadataRef.current))
+        return;
+      const stored = persistCollectorState(
+        record.scope,
+        record.persist,
+        state,
+        record.phase,
+        metadata,
+      );
       if (
         !mountedRef.current ||
         record.scope !== recordScopeRef.current ||
@@ -2067,7 +2162,7 @@ export function ProtocolClientProvider({
       const executionRecordScope = recordScopeRef.current;
       const executionPersists = !transactionScope.pathname.startsWith("/admin");
       transactionPersistRef.current = executionPersists;
-      const executionMetadata = collectorMetadata(
+      let executionMetadata = collectorMetadata(
         action,
         transactionMetadataRef.current,
       );
@@ -2188,6 +2283,17 @@ export function ProtocolClientProvider({
             assertActiveScope,
             failureStep,
             label: stepLabel,
+            onPrepared: (call) => {
+              executionMetadata = {
+                ...executionMetadata,
+                preparedCall: {
+                  ...call,
+                  afterBlock: transactionRuntime.currentBlock.toString(),
+                },
+              };
+              if (privacyIsCurrent() && scopeIsCurrent())
+                transactionMetadataRef.current = executionMetadata;
+            },
             onState: (state) => {
               executionState.current = state;
               executionPhase.current = phase;
@@ -2351,6 +2457,7 @@ export function ProtocolClientProvider({
               await refresh(block);
           },
           state: reconciling,
+          verifyReceipt: recoveredReceiptVerifier(metadata, current.hash),
           onState: (state) => {
             if (privacyGeneration === transactionPrivacyGenerationRef.current) {
               updateTransaction(state, {
@@ -2401,6 +2508,56 @@ export function ProtocolClientProvider({
       }
     },
     [refresh, updateTransaction],
+  );
+
+  const recoverTransactionHash = useCallback(
+    async (hash: string): Promise<void> => {
+      const current = transactionRef.current;
+      const metadata = transactionMetadataRef.current;
+      const scope = recordScopeRef.current;
+      const generation = transactionPrivacyGenerationRef.current;
+      const address = transactionScopeRef.current.address;
+      if (
+        current.status !== "submission-unknown" ||
+        metadata === undefined ||
+        address === undefined ||
+        !transactionPersistRef.current
+      ) {
+        throw new Error("No recoverable interrupted wallet attempt is active.");
+      }
+      const checkedHash = await recoverCollectorTransactionHash({
+        hash,
+        metadata,
+        address,
+        chainId: protocolChain.id,
+        canonicalTargets: canonicalRecoveryTargets,
+        reader: protocolTransactionClient,
+      });
+      if (
+        generation !== transactionPrivacyGenerationRef.current ||
+        scope !== recordScopeRef.current ||
+        transactionRef.current !== current ||
+        transactionMetadataRef.current?.operationId !== metadata.operationId
+      ) {
+        throw new Error(
+          "Wallet activity changed. Review the current attempt before checking again.",
+        );
+      }
+      const recovered = {
+        status: "outcome-unknown",
+        label: current.label,
+        hash: checkedHash,
+        message:
+          "The supplied transaction matches the saved call. Checking its receipt; no new transaction will be sent.",
+      } as const;
+      transactionMetadataRef.current = {
+        ...metadata,
+        recoveredHash: checkedHash,
+      };
+      updateTransaction(recovered);
+      await retryUnknownOutcome(recovered);
+    },
+    [retryUnknownOutcome, updateTransaction],
   );
 
   const retry = useCallback(
@@ -2579,6 +2736,7 @@ export function ProtocolClientProvider({
       transactionMetadata,
       completedTransactions,
       clearTransaction,
+      recoverTransactionHash,
       refresh,
       refreshWallet,
       refreshMarketHistory,
@@ -2612,6 +2770,7 @@ export function ProtocolClientProvider({
       transactionMetadata,
       completedTransactions,
       clearTransaction,
+      recoverTransactionHash,
       walletSynchronizing,
       minimumCollectibleBlock,
       walletRead,

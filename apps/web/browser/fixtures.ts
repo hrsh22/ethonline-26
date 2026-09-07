@@ -61,7 +61,7 @@ export const cachedPublicSnapshot = {
 } satisfies PublicStatusModel;
 
 /**
- * Installs an EIP-1193 provider before any application script runs. Reown
+ * Installs an EIP-1193 provider before any application script runs. Privy
  * discovers injected providers, so this exercises the real wallet code paths
  * without a browser extension or a live signer.
  */
@@ -71,7 +71,7 @@ export const installWalletFixture = async (
 ): Promise<void> => {
   await page.addInitScript(
     ({ chainId, wallet, mode }) => {
-      if (mode === "disconnected") return;
+      if (window !== window.top || mode === "disconnected") return;
       // The fixture wallet, like an extension, retains its granted account
       // across document navigation. This is not application wallet state.
       let accounts: string[] =
@@ -377,43 +377,81 @@ export const installDataFixture = async (
     });
   });
 
-  // Wallet discovery is local EIP-6963; CI needs no Reown account or directory.
-  await page.route("https://api.web3modal.org/**", async (route) => {
-    const pathname = new URL(route.request().url()).pathname;
-    const json =
-      pathname === "/appkit/v1/config"
-        ? { features: [] }
-        : pathname === "/appkit/v1/project-limits"
-          ? {
-              planLimits: {
-                tier: "unlimited",
-                isAboveMauLimit: false,
-                isAboveRpcLimit: false,
-              },
-            }
-          : pathname === "/projects/v1/origins"
-            ? {
-                allowedOrigins: [
-                  "http://127.0.0.1:3108",
-                  "http://localhost:3000",
-                ],
-              }
-            : pathname === "/getWallets"
-              ? { data: [], count: 0 }
-              : undefined;
-    if (json !== undefined) return route.fulfill({ status: 200, json });
-    if (
-      pathname.startsWith("/public/getAssetImage/") ||
-      pathname.startsWith("/getWalletImage/")
-    ) {
-      return route.fulfill({
-        status: 200,
-        contentType: "image/svg+xml",
-        body: '<svg xmlns="http://www.w3.org/2000/svg" />',
-      });
-    }
-    return route.continue();
+  // Public SDK bootstrap only. Wallet discovery and connection still go through
+  // Privy's real EIP-6963 connector; no user, OTP, token, or session is fabricated.
+  await page.route("https://auth.privy.io/api/v1/apps/*", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+    const appId = new URL(route.request().url()).pathname.split("/").at(-1);
+    await route.fulfill({
+      status: 200,
+      json: {
+        id: appId,
+        name: "Browser Matrix",
+        wallet_auth: true,
+        email_auth: true,
+        external_wallets_for_signup_enabled: true,
+        show_wallet_login_first: true,
+        allowed_domains: ["http://127.0.0.1:3108", "http://localhost:3000"],
+        allowlist_config: {
+          error_title: null,
+          error_detail: null,
+          cta_text: null,
+          cta_link: null,
+        },
+        embedded_wallet_config: {
+          ethereum: { create_on_login: "users-without-wallets" },
+          solana: { create_on_login: "off" },
+          user_owned_recovery_options: ["user-passcode"],
+          require_user_owned_recovery_on_create: false,
+          mode: "user-controlled-server-wallets-only",
+        },
+        enforce_wallet_uis: true,
+        legacy_wallet_ui_config: false,
+        enabled_captcha_provider: null,
+        mfa_methods: [],
+        custom_oauth_providers: [],
+        smart_wallet_config: { enabled: false },
+      },
+    });
   });
+  // External-wallet cases never use the remote embedded-wallet execution frame.
+  // Acknowledge only transport readiness; reject all embedded-wallet operations.
+  // Email creation and the real remote frame are validated live separately.
+  await page.route("https://auth.privy.io/apps/*/embedded-wallets?*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: `<!doctype html><title>Embedded wallet boundary</title>
+        <script>
+          addEventListener("message", (message) => {
+            if (message.source !== parent || !message.data?.event?.startsWith("privy:")) return;
+            const { id, event } = message.data;
+            parent.postMessage(event === "privy:iframe:ready"
+              ? { id, event, data: {} }
+              : { id, event, error: { type: "unsupported", message: "Embedded wallet operations are outside the external-wallet fixture" } }, message.origin);
+          });
+        </script>`,
+    }),
+  );
+  // The production test origin is metadata, not a public DNS deployment.
+  // Serve its actual icon through the running application without changing the asset.
+  await page.route("https://orbit.test/icon.svg", async (route) => {
+    const response = await page.request.get(
+      new URL("/icon.svg", page.url()).href,
+    );
+    await route.fulfill({ response });
+  });
+  // Logout acknowledges teardown only; it does not create or authenticate a session.
+  await page.route("https://auth.privy.io/api/v1/sessions/logout", (route) =>
+    route.request().method() === "POST"
+      ? route.fulfill({ status: 200, json: {} })
+      : route.continue(),
+  );
+  await page.route("https://auth.privy.io/api/v1/analytics_events", (route) =>
+    route.request().method() === "POST"
+      ? route.fulfill({ status: 200, json: {} })
+      : route.continue(),
+  );
 
   await page.route("**/v1/funding/**", async (route) => {
     if (fixture === "loading") {

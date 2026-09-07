@@ -38,7 +38,7 @@ This prevents an attacker-controlled overlay from presenting wallet prompts, aut
 or admin controls as part of another page.
 
 This is deliberately a framing-only CSP. It does not set `default-src`, `frame-src`, `connect-src`,
-or another child-resource directive, so it does not constrain Reown's connection modal, wallet
+or another child-resource directive, so it does not constrain Privy's connection modal, wallet
 popups, fonts, RPC requests, analytics, or Next.js assets. It also does not make public onchain
 evidence confidential or replace the admin session, CSRF, live-role, contract-authorization, and
 wallet-confirmation checks. The deployed CDN or reverse proxy must preserve both response headers.
@@ -270,7 +270,7 @@ Vercel receives only browser-public configuration:
 ```dotenv
 NEXT_PUBLIC_API_URL=https://api.example.com
 NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=https://your-public-read-provider.example
-NEXT_PUBLIC_REOWN_PROJECT_ID=your-project-id
+NEXT_PUBLIC_PRIVY_APP_ID=your-privy-app-id
 NEXT_PUBLIC_APP_URL=https://app.example.com
 NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT=staging
 ```

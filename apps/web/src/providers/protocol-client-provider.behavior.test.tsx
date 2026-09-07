@@ -16,6 +16,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   CallExecutionError,
   encodeErrorResult,
+  encodeFunctionData,
   InvalidParamsRpcError,
   RawContractError,
   RpcRequestError,
@@ -141,6 +142,22 @@ const testState = vi.hoisted(() => {
     },
     sendTransaction: vi.fn(async () => hash),
     transactionClient: {
+      getChainId: vi.fn(async () => 84532),
+      getTransaction: vi.fn(async () => ({
+        hash,
+        from: address,
+        to: address,
+        input: "0x1234",
+        value: 0n,
+        blockNumber: 102n,
+        blockHash: hash,
+      })),
+      getTransactionReceipt: vi.fn(async () => ({
+        transactionHash: hash,
+        blockHash: hash,
+        blockNumber: 102n,
+        status: "success",
+      })),
       call: vi.fn(async () => undefined),
       estimateGas: vi.fn(async () => 100_000n),
       getBlock: vi.fn(async () => ({
@@ -204,7 +221,10 @@ vi.mock("@orbit/protocol/viem-transport", () => ({
 
 vi.mock("@/lib/deployment", () => ({
   deploymentEnvironment: { chainId: 84_532 },
-  protocolDeploymentManifest: { launch: { transactionHash: testState.hash } },
+  protocolDeploymentManifest: {
+    launch: { transactionHash: testState.hash },
+    contracts: { fuelCore: testState.address },
+  },
 }));
 
 vi.mock("@/lib/wagmi", () => ({
@@ -462,6 +482,142 @@ describe("protocol client transaction coordination", () => {
     expect(testState.sendTransaction).toHaveBeenCalledOnce();
     expect(currentProtocol.transaction).toMatchObject({ hash: testState.hash });
   });
+
+  it("persists the prepared call before a wallet can mine without returning its hash", async () => {
+    testState.pathname = "/fleet/1639";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    let returnHash: (hash: string) => void = () => {};
+    testState.sendTransaction.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          returnHash = resolve;
+        }),
+    );
+    let execution: ReturnType<ProtocolClient["execute"]> | undefined;
+    await act(async () => {
+      execution = currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+      await vi.waitFor(() =>
+        expect(testState.sendTransaction).toHaveBeenCalledOnce(),
+      );
+    });
+    const storedKey = Object.keys(localStorage).find((key) =>
+      key.startsWith("orbit:collector-transaction:"),
+    );
+    const stored = JSON.parse(localStorage.getItem(storedKey ?? "") ?? "null");
+    try {
+      expect(stored.state.status).toBe("simulated");
+      expect(stored.preparedCall).toMatchObject({
+        from: testState.address,
+        to: testState.prepared.to,
+        chainId: 84532,
+        value: "0",
+      });
+    } finally {
+      await act(async () => {
+        returnHash(testState.hash);
+        await execution;
+      });
+    }
+  });
+
+  it.each(["canonical", "orphan-after-refresh"] as const)(
+    "recovers a lost wallet hash only while its receipt remains %s",
+    async (evidence) => {
+      testState.pathname = "/fleet/1639";
+      await act(async () =>
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>,
+        ),
+      );
+      let returnHash: (hash: string) => void = () => {};
+      testState.sendTransaction.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            returnHash = resolve;
+          }),
+      );
+      let execution: ReturnType<ProtocolClient["execute"]> | undefined;
+      await act(async () => {
+        execution = currentProtocol.execute(
+          { type: "commit-collectible", identityId: 1639 },
+          "Launch #1639",
+        );
+        await vi.waitFor(() =>
+          expect(testState.sendTransaction).toHaveBeenCalledOnce(),
+        );
+      });
+      await act(async () => root.unmount());
+      root = createRoot(container);
+      await act(async () =>
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>,
+        ),
+      );
+      expect(currentProtocol.transaction.status).toBe("submission-unknown");
+      expect(currentProtocol.transactionMetadata?.canRecoverHash).toBe(true);
+      testState.transactionClient.getTransaction.mockResolvedValue({
+        hash: testState.hash,
+        from: testState.address,
+        to: testState.prepared.to,
+        input: encodeFunctionData(testState.prepared),
+        value: 0n,
+        blockNumber: 102n,
+        blockHash: testState.hash,
+      });
+      testState.transactionClient.getBlock.mockResolvedValue({
+        hash: testState.hash as `0x${string}`,
+        number: 102n,
+        timestamp: BigInt(Math.floor(Date.now() / 1000)),
+      });
+      testState.transactionClient.waitForTransactionReceipt.mockResolvedValue({
+        blockNumber: 102n,
+        status: "success",
+        transactionHash: testState.hash,
+        blockHash: testState.hash,
+      } as Awaited<
+        ReturnType<typeof testState.transactionClient.waitForTransactionReceipt>
+      >);
+      if (evidence === "orphan-after-refresh") {
+        const canonical = {
+          hash: testState.hash as `0x${string}`,
+          number: 102n,
+          timestamp: BigInt(Math.floor(Date.now() / 1000)),
+        };
+        testState.transactionClient.getBlock
+          .mockResolvedValue({ ...canonical, hash: "0x99" })
+          .mockResolvedValueOnce(canonical)
+          .mockResolvedValueOnce(canonical);
+      }
+      try {
+        await act(async () => {
+          await currentProtocol.recoverTransactionHash?.(testState.hash);
+        });
+        expect(currentProtocol.transaction).toMatchObject({
+          status: evidence === "canonical" ? "confirmed" : "outcome-unknown",
+          hash: testState.hash,
+        });
+        expect(testState.sendTransaction).toHaveBeenCalledOnce();
+      } finally {
+        await act(async () => {
+          returnHash(testState.hash);
+          await execution;
+        });
+      }
+    },
+  );
 
   it("allows only one wallet submission while an operation is pending", async () => {
     const action = {

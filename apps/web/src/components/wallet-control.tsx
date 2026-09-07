@@ -1,18 +1,20 @@
 "use client";
 
-import { modal } from "@reown/appkit/react";
 import { LogOut } from "lucide-react";
 import { type ReactNode, useId } from "react";
-import { useConnection, useDisconnect, useSwitchChain } from "wagmi";
+import { useConnection, useSwitchChain } from "wagmi";
 
 import { DisabledReason, StateFeedback } from "@/components/state-feedback";
 import { Button } from "@/components/ui/button";
 import { WalletConnectionAction } from "@/components/wallet-connection-action";
-import { useReownConnectionFeedback } from "@/components/use-reown-connection-feedback";
 import { useOptionalAdminSession } from "@/components/admin/admin-session-boundary";
 import { deploymentEnvironment } from "@/lib/deployment";
 import { applicationCopy } from "@/lib/identity";
-import { isReownConfigured, protocolChain } from "@/lib/wagmi";
+import { isWalletConfigured, protocolChain } from "@/lib/wagmi";
+import {
+  useWalletSession,
+  type WalletSession,
+} from "@/providers/wallet-session";
 
 const compactAddress = (address: string) =>
   `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -207,7 +209,7 @@ function ConnectedWalletControl({
 }: {
   readonly adminSession: AdminSession;
   readonly address: string;
-  readonly disconnectStatus: ReturnType<typeof useDisconnect>["status"];
+  readonly disconnectStatus: WalletSession["disconnectStatus"];
   readonly onDisconnect: () => void;
   readonly surface: FeedbackSurface;
 }) {
@@ -287,30 +289,29 @@ export function WalletControl({
   const networkReasonId = `wallet-network-reason-${controlId}`;
   const adminSession = useOptionalAdminSession();
   const connection = useConnection();
-  const disconnect = useDisconnect();
+  const session = useWalletSession();
   const switchChain = useSwitchChain();
-  const connectionFeedback = useReownConnectionFeedback();
+  const status =
+    connection.status === "disconnected" &&
+    (!session.ready || session.connecting)
+      ? "connecting"
+      : connection.status;
 
   const disconnectWallet = async () => {
     await adminSession?.endSession();
-    disconnect.mutate();
+    session.disconnect();
   };
 
   if (connection.status !== "connected") {
     return (
       <ConnectionWalletControl
         adminSession={adminSession}
-        configured={isReownConfigured}
+        configured={isWalletConfigured}
         notices={notices}
-        onConnect={() => {
-          connectionFeedback.beginConnection();
-          void Promise.resolve()
-            .then(() => modal?.open({ view: "Connect" }))
-            .catch(() => connectionFeedback.failConnection());
-        }}
+        onConnect={session.connect}
         reasonId={connectionReasonId}
-        rejected={connectionFeedback.rejected}
-        status={connection.status}
+        rejected={session.rejected}
+        status={status}
         surface={surface}
       />
     );
@@ -334,7 +335,7 @@ export function WalletControl({
     <ConnectedWalletControl
       adminSession={adminSession}
       address={connection.address}
-      disconnectStatus={disconnect.status}
+      disconnectStatus={session.disconnectStatus}
       onDisconnect={() => void disconnectWallet()}
       surface={surface}
     />

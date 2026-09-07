@@ -1,0 +1,14 @@
+diff --git a/dist/util/checkCrossOriginOpenerPolicy.js b/dist/util/checkCrossOriginOpenerPolicy.js
+index c7d0b5742ab94443e198bd41b5423fea86e5bce2..7ea99f9dc03a4aeec10229ed82b620f53fa9c3b2 100644
+--- a/dist/util/checkCrossOriginOpenerPolicy.js
++++ b/dist/util/checkCrossOriginOpenerPolicy.js
+@@ -36,7 +36,8 @@ const createCoopChecker = () => {
+                 const response = await fetch(url, {
+                     method: 'HEAD',
+                 });
+-                if (!response.ok) {
++                // A missing document still carries the origin's actual COOP header.
++                if (!response.ok && response.status !== 404) {
+                     throw new Error(`HTTP error! status: ${response.status}`);
+                 }
+                 const result = response.headers.get('Cross-Origin-Opener-Policy');

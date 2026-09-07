@@ -2,6 +2,7 @@ import { pathToFileURL } from "node:url";
 
 import { Cause, Effect, Exit, Option } from "effect";
 
+import { openGraphAnalyticsRuntime } from "./graph-analytics.js";
 import { openAdminAuthRuntime } from "./admin-auth-runtime.js";
 import { resolvePublicApiConfiguration } from "./configuration.js";
 import { acquirePublicApiServer } from "./http-server.js";
@@ -21,7 +22,15 @@ const program = Effect.scoped(
       }),
       (runtime) => Effect.sync(runtime.close),
     );
+    const graph = yield* Effect.acquireRelease(
+      Effect.try({
+        try: () => openGraphAnalyticsRuntime(resolved),
+        catch: () => new Error("Graph analytics configuration is invalid"),
+      }),
+      (runtime) => Effect.sync(runtime.close),
+    );
     const server = yield* acquirePublicApiServer({
+      ...(graph.service === undefined ? {} : { rewardFunding: graph.service }),
       adminAuth: adminAuth.service,
       configuration: resolved,
     });

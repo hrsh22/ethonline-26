@@ -1,0 +1,9 @@
+export const POOL =
+  "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d";
+export const MANAGER = "0x05e73354cfdd6745c338b50bcfdfa3aa6fa03408";
+export const PROTOCOL = "0xb901845c33ce3345f49d686fb91bf05b2a2231d9";
+export const FUEL = "0x3ded7308789f311d435f013de681d0f08c961081";
+export const WETH = "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1";
+export const ROUTER = "0x8ae640725f1e6d5932b034a0c5f28e281d76c54d";
+export const GENESIS_VAULT = "0x766a8a55f2943ada722d0e9e5f848c471c7b04a6";
+export const LIQUIDITY_VAULT = "0x187ee0795b8dfd8110707a1843aaad62c2722535";

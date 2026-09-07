@@ -29,10 +29,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => shellState.pathname,
 }));
 
-vi.mock("@reown/appkit/react", () => ({ modal: { open: vi.fn() } }));
-
 vi.mock("@/lib/wagmi", () => ({
-  get isReownConfigured() {
+  get isWalletConfigured() {
     return shellState.configured;
   },
   protocolChain: { id: 84_532 },

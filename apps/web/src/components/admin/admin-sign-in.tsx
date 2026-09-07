@@ -1,6 +1,5 @@
 "use client";
 
-import { modal } from "@reown/appkit/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -15,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { PageFrame, PageHeading } from "@/components/ui/page";
 import { Panel } from "@/components/ui/panel";
-import { useReownConnectionFeedback } from "@/components/use-reown-connection-feedback";
 import {
   AdminClientError,
   logoutAdminSession,
@@ -33,7 +31,8 @@ import {
   protocolDeploymentFingerprint,
 } from "@/lib/deployment";
 import { applicationCopy } from "@/lib/identity";
-import { currentWalletConnection, isReownConfigured } from "@/lib/wagmi";
+import { currentWalletConnection, isWalletConfigured } from "@/lib/wagmi";
+import { useWalletSession } from "@/providers/wallet-session";
 
 const compactAddress = (address: string): string =>
   `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -187,7 +186,7 @@ function DisconnectedAdminWalletControl({
   const connectionReason =
     pendingCopy !== undefined
       ? pendingCopy.reason
-      : !isReownConfigured
+      : !isWalletConfigured
         ? "Wallet connection is not configured for this deployment."
         : undefined;
   return (
@@ -459,7 +458,7 @@ export function AdminSignIn({ next }: { readonly next: AdminReturnPath }) {
   const router = useRouter();
   const signMessage = useSignMessage();
   const switchChain = useSwitchChain();
-  const connectionFeedback = useReownConnectionFeedback();
+  const walletSession = useWalletSession();
   const [signInState, setSignInState] = useState<AdminSignInState>("idle");
   const [signInError, setSignInError] = useState<string>();
   const mounted = useRef(false);
@@ -532,16 +531,11 @@ export function AdminSignIn({ next }: { readonly next: AdminReturnPath }) {
     }
   };
 
-  const connectWallet = () => {
-    connectionFeedback.beginConnection();
-    void Promise.resolve(modal?.open({ view: "Connect" })).catch(() =>
-      connectionFeedback.failConnection(),
-    );
-  };
+  const connectWallet = walletSession.connect;
 
   const walletState = adminWalletState({
     chainId: connection.chainId,
-    connectionRejected: connectionFeedback.rejected,
+    connectionRejected: walletSession.rejected,
     status: connection.status,
     switchRejected: switchChain.isError,
     switching: switchChain.isPending,
@@ -633,7 +627,7 @@ export function AdminSignIn({ next }: { readonly next: AdminReturnPath }) {
                   <AdminWalletControl
                     address={connection.address}
                     chainId={connection.chainId}
-                    connectionRejected={connectionFeedback.rejected}
+                    connectionRejected={walletSession.rejected}
                     onConnect={connectWallet}
                     onSignIn={() => void signIn()}
                     onSwitch={() =>

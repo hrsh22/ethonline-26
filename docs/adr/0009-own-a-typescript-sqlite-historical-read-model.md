@@ -212,3 +212,29 @@ ranges. Coverage remains partial until replay catches up. Opening a current stor
 does not replay it again. Cursor generations rotate as before; old continuations
 cannot cross this migration. This authorized derived-history migration makes no
 contract change and does not manually reset a running service's database.
+
+### 8 September 2026: managed Graph funding analytics
+
+The Rewards page may query a second, read-only analytics projection deployed to
+free Subgraph Studio. This narrows the earlier rejection of a project-owned
+subgraph: managed Studio removes the self-hosting burden for this bounded
+explanatory view, but does not replace the Historical Read Model.
+
+`subgraphs/orbit-market` extends the Messari DEX AMM standard with exact hook fee
+splits and pooled Reward conversion events. The API exposes one fixed bounded
+query through `/v1/analytics/reward-funding`, including the index checkpoint and
+indexing errors. A persistent daily request budget and shared two-minute cache
+keep the free service bounded. The browser requests it only after an explicit
+user action; account restoration and the claim workflow do not wait for it.
+
+The projection explains where shared reward funding came from. It cannot prove
+that a particular swap funded a particular claim, and it never reports a missing
+summary as a zero reward balance. Test-asset USD values are zero, not a market
+valuation. Standard pool swap amounts describe pool deltas before the separate
+WETH-side hook fee. Unsupported pool inventory changes invalidate the inventory
+projection rather than borrowing the singleton PoolManager's total balances.
+
+All existing manifest binding, canonicality, coverage, cursor, operator journal,
+and receipt recovery requirements above continue to apply to the Historical
+Read Model. Current holdings, eligibility, balances, and quotes remain pinned
+onchain reads. Graph downtime affects only the explanatory disclosure.

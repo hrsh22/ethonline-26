@@ -1,0 +1,20 @@
+{
+  "transactionHash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
+  "blockNumber": "46526067",
+  "blockHash": "0xa34a75233e08d63a868c8305a95d8ab24c25f2541a93cd2788b5403fb29449aa",
+  "status": "success",
+  "feeEvents": [
+    {
+      "logIndex": 165,
+      "eventName": "FeeAccrued",
+      "args": {
+        "trader": "0xD86DF743ee66906981e34BeECfd5F7AfD89cAAc9",
+        "wethVolume": "7000000000000000",
+        "totalFee": "210000000000000",
+        "rewardAmount": "140000000000000",
+        "liquidityAmount": "59500000000000",
+        "creatorAmount": "10500000000000"
+      }
+    }
+  ]
+}

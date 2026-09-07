@@ -1,103 +1,96 @@
 "use client";
 
+import { PrivyProvider, type PrivyClientConfig } from "@privy-io/react-auth";
+import { WagmiProvider as PrivyWagmiProvider } from "@privy-io/wagmi";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { createAppKit } from "@reown/appkit/react";
 import { useState, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
 
+import { AdminSessionLifecycle } from "@/components/admin/admin-session-lifecycle";
 import { applicationUrl } from "@/lib/deployment";
 import { identity } from "@/lib/identity";
-import { createWebQueryClient } from "@/lib/query-client";
 import { publishedMetadataUrls } from "@/lib/published-metadata";
-import { AdminSessionLifecycle } from "@/components/admin/admin-session-lifecycle";
-import {
-  appKitNetworks,
-  isReownConfigured,
-  protocolChain,
-  reownProjectId,
-  wagmiAdapter,
-  wagmiConfig,
-} from "@/lib/wagmi";
+import { createWebQueryClient } from "@/lib/query-client";
+import { privyAppId, protocolChain, wagmiConfig } from "@/lib/wagmi";
+import { PrivyWalletSession } from "@/providers/privy-wallet-session";
 import { ProtocolClientProvider } from "@/providers/protocol-client-provider";
 import { WalletRestorationBoundary } from "@/providers/wallet-restoration";
+import { useWalletSession } from "@/providers/wallet-session";
 
-/**
- * Absolute URLs for the generated app icons. Relative paths are dropped
- * rather than sent, because a wallet cannot resolve them.
- */
-const walletApplicationIcons = (): string[] => {
-  const publicAssets = publishedMetadataUrls(applicationUrl);
-  return publicAssets === undefined
-    ? []
-    : [publicAssets.icon, publicAssets.appleIcon];
+const metadata = publishedMetadataUrls(applicationUrl);
+const privyChain = {
+  id: protocolChain.id,
+  name: protocolChain.name,
+  nativeCurrency: protocolChain.nativeCurrency,
+  rpcUrls: protocolChain.rpcUrls,
+  ...(protocolChain.blockExplorers === undefined
+    ? {}
+    : {
+        blockExplorers: {
+          default: {
+            name: protocolChain.blockExplorers.default.name,
+            url: protocolChain.blockExplorers.default.url,
+          },
+        },
+      }),
+};
+const privyConfig: PrivyClientConfig = {
+  appearance: {
+    theme: "#0e0f12",
+    accentColor: "#ff6a1f",
+    landingHeader: `Connect to ${identity.brand}`,
+    loginMessage:
+      "Use your wallet or create one with email. Base Sepolia test assets only.",
+    ...(metadata === undefined ? {} : { logo: metadata.icon }),
+    showWalletLoginFirst: true,
+    walletChainType: "ethereum-only",
+    walletList: [
+      "detected_ethereum_wallets",
+      "metamask",
+      "coinbase_wallet",
+      "wallet_connect",
+    ],
+  },
+  loginMethods: ["wallet", "email"],
+  defaultChain: privyChain,
+  supportedChains: [privyChain],
+  embeddedWallets: {
+    ethereum: { createOnLogin: "users-without-wallets" },
+    showWalletUIs: true,
+    priceDisplay: { primary: "native-token", secondary: null },
+  },
 };
 
-/* createAppKit registers the wallet modal singleton as a side effect; the
- * returned instance is not needed once the theme is pinned to dark. */
-(() => {
-  if (!(isReownConfigured && reownProjectId && wagmiAdapter)) return;
-  type AppKitAdapter = NonNullable<
-    Parameters<typeof createAppKit>[0]["adapters"]
-  >[number];
-
-  createAppKit({
-    // Reown 1.8.23 leaves the inherited namespace optional on WagmiAdapter,
-    // while createAppKit's public ChainAdapter type marks it as required.
-    adapters: [wagmiAdapter as AppKitAdapter],
-    allWallets: "SHOW",
-    // Keep the familiar browser-wallet path first. WalletConnect remains
-    // available for mobile and the full directory stays behind "All wallets".
-    featuredWalletIds: [
-      "c57ca95e09a9d53d97618988a70b7f7aeb64a77500d26cb7297fb82960a8a3e6",
-    ],
-    defaultNetwork: protocolChain,
-    enableBaseAccount: false,
-    enableCoinbase: false,
-    enableNetworkSwitch: false,
-    features: {
-      analytics: false,
-      email: false,
-      emailShowWallets: false,
-      history: false,
-      onramp: false,
-      socials: false,
-      swaps: false,
-    },
-    metadata: {
-      name: identity.brand,
-      description: identity.copy.metadataDescription,
-      // The wallet modal and any connected-dApp listing need absolute icon
-      // URLs. An empty list left the application unbranded in the wallet.
-      icons: walletApplicationIcons(),
-      url: applicationUrl ?? "http://localhost:3000",
-    },
-    networks: appKitNetworks,
-    projectId: reownProjectId,
-    // The collector ships a single dark theme, so the wallet modal is pinned
-    // to dark rather than following the OS preference. The accent and radius
-    // mirror the Graphite tokens; Reown cannot read custom properties.
-    themeMode: "dark",
-    themeVariables: {
-      "--w3m-accent": "#ff6a1f",
-      "--w3m-color-mix": "#0e0f12",
-      "--w3m-color-mix-strength": 30,
-      "--w3m-border-radius-master": "1px",
-      "--w3m-font-family": "var(--font-jetbrains), monospace",
-    },
-  });
-})();
+function CollectorProviders({ children }: { readonly children: ReactNode }) {
+  const session = useWalletSession();
+  return (
+    <WalletRestorationBoundary sdkReady={session.ready}>
+      <AdminSessionLifecycle />
+      <ProtocolClientProvider>{children}</ProtocolClientProvider>
+    </WalletRestorationBoundary>
+  );
+}
 
 export function WalletProvider({ children }: { readonly children: ReactNode }) {
   const [queryClient] = useState(createWebQueryClient);
-
-  return (
-    <WagmiProvider config={wagmiConfig}>
+  if (!privyAppId) {
+    return (
       <QueryClientProvider client={queryClient}>
-        <WalletRestorationBoundary>
-          <AdminSessionLifecycle />
-          <ProtocolClientProvider>{children}</ProtocolClientProvider>
-        </WalletRestorationBoundary>
+        <WagmiProvider config={wagmiConfig}>
+          <CollectorProviders>{children}</CollectorProviders>
+        </WagmiProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    );
+  }
+  return (
+    <PrivyProvider appId={privyAppId} config={privyConfig}>
+      <QueryClientProvider client={queryClient}>
+        <PrivyWagmiProvider config={wagmiConfig}>
+          <PrivyWalletSession>
+            <CollectorProviders>{children}</CollectorProviders>
+          </PrivyWalletSession>
+        </PrivyWagmiProvider>
+      </QueryClientProvider>
+    </PrivyProvider>
   );
 }

@@ -128,6 +128,13 @@ export const STATE_CASES: readonly StateCase[] = [
   },
   {
     data: "stubbed",
+    label: "wallet-reload-disconnect",
+    path: "/faucet",
+    heading: "Connect a wallet to check eligibility",
+    wallet: "ordinary",
+  },
+  {
+    data: "stubbed",
     label: "wrong-network",
     path: "/faucet",
     heading: "Switch to Base Sepolia",

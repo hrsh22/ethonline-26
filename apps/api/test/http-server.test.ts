@@ -2610,3 +2610,53 @@ describe("VM-owned public API", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+it("serves optional funding analytics through a fixed GET with CORS and no arbitrary query", async () => {
+  const read = vi.fn(async () => ({
+    state: "unavailable" as const,
+    reason: "budget-exhausted" as const,
+    observedAt: 100,
+  }));
+  await withServer(
+    { configuration: configuration(), rewardFunding: { read } },
+    async (url) => {
+      const response = await fetch(
+        `${url}${PUBLIC_API_PATHS.analytics.rewardFunding}`,
+        { headers: { origin: allowedOrigin } },
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("access-control-allow-origin")).toBe(
+        allowedOrigin,
+      );
+      expect(await response.json()).toEqual({
+        state: "unavailable",
+        reason: "budget-exhausted",
+        observedAt: 100,
+      });
+      expect(
+        (
+          await fetch(
+            `${url}${PUBLIC_API_PATHS.analytics.rewardFunding}?query=anything`,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await fetch(`${url}${PUBLIC_API_PATHS.analytics.rewardFunding}`, {
+            method: "POST",
+          })
+        ).status,
+      ).toBe(405);
+      expect(read).toHaveBeenCalledTimes(1);
+    },
+  );
+  await withServer({ configuration: configuration() }, async (url) => {
+    const response = await fetch(
+      `${url}${PUBLIC_API_PATHS.analytics.rewardFunding}`,
+    );
+    expect(await response.json()).toMatchObject({
+      state: "unavailable",
+      reason: "not-configured",
+    });
+  });
+});

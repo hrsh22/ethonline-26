@@ -1,0 +1,129 @@
+{
+  "state": "available",
+  "observedAt": 1788820729534,
+  "data": {
+    "_meta": {
+      "block": {
+        "number": 46526219,
+        "hash": "0xb675fb73a9d1f93dc2b52e0a3eea2e24258d8a6d2c43b0de20059ea0b1bee57c",
+        "timestamp": 1788820726
+      },
+      "hasIndexingErrors": false,
+      "deployment": "QmXBGqF3KLdY1P9osp4xVZ8e3eaAQNKHGuEmfE2MhtvnbC"
+    },
+    "rewardFundingSummary": {
+      "id": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d",
+      "totalFeesWeth": "74728207546066959",
+      "totalRewardsWeth": "49818805030711304",
+      "totalLiquidityWeth": "21172992138052302",
+      "totalCreatorWeth": "3736410377303353",
+      "totalConvertedWeth": "49678805030711304",
+      "feeEventCount": 18,
+      "conversionCount": 4,
+      "lastEventBlock": "46526067",
+      "lastEventTimestamp": "1788820422",
+      "pool": {
+        "id": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d",
+        "inputTokens": [
+          {
+            "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+            "symbol": "FUEL",
+            "decimals": 18
+          },
+          {
+            "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+            "symbol": "MOCK-WETH-TEST",
+            "decimals": 18
+          }
+        ],
+        "swaps": [
+          {
+            "id": "swap-0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928-166",
+            "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
+            "timestamp": "1788820422",
+            "amountIn": "6790000000000000",
+            "amountOut": "1171360501692246067",
+            "tokenIn": {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST",
+              "decimals": 18
+            },
+            "tokenOut": {
+              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+              "symbol": "FUEL",
+              "decimals": 18
+            }
+          },
+          {
+            "id": "swap-0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a-29",
+            "hash": "0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a",
+            "timestamp": "1788782420",
+            "amountIn": "49650902897932807501",
+            "amountOut": "290999999999999999",
+            "tokenIn": {
+              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+              "symbol": "FUEL",
+              "decimals": 18
+            },
+            "tokenOut": {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST",
+              "decimals": 18
+            }
+          },
+          {
+            "id": "swap-0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662-232",
+            "hash": "0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662",
+            "timestamp": "1788782412",
+            "amountIn": "291000000000000000",
+            "amountOut": "49650902897932807501",
+            "tokenIn": {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST",
+              "decimals": 18
+            },
+            "tokenOut": {
+              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+              "symbol": "FUEL",
+              "decimals": 18
+            }
+          },
+          {
+            "id": "swap-0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01-220",
+            "hash": "0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01",
+            "timestamp": "1788782402",
+            "amountIn": "49650902897932807501",
+            "amountOut": "290999999999999999",
+            "tokenIn": {
+              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+              "symbol": "FUEL",
+              "decimals": 18
+            },
+            "tokenOut": {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST",
+              "decimals": 18
+            }
+          },
+          {
+            "id": "swap-0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1-193",
+            "hash": "0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1",
+            "timestamp": "1788782394",
+            "amountIn": "291000000000000000",
+            "amountOut": "49650902897932807501",
+            "tokenIn": {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST",
+              "decimals": 18
+            },
+            "tokenOut": {
+              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+              "symbol": "FUEL",
+              "decimals": 18
+            }
+          }
+        ]
+      }
+    }
+  }
+}

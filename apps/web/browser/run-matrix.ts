@@ -86,11 +86,7 @@ export const awaitHydration = async (page: Page): Promise<void> => {
   const connect = page
     .getByRole("button", { name: "Connect wallet", exact: true })
     .first();
-  const dialog = page
-    .getByRole("button", { name: "Continue with a wallet", exact: true })
-    .or(page.getByText("Browser Matrix Wallet", { exact: true }))
-    .or(page.getByText("Connect Wallet", { exact: true }))
-    .first();
+  const dialog = page.getByRole("dialog").getByRole("heading").first();
   const deadline = Date.now() + 15_000;
   while (!(await dialog.isVisible())) {
     // A click before hydration is discarded by the browser. Retry the user
@@ -104,7 +100,7 @@ export const awaitHydration = async (page: Page): Promise<void> => {
         if (Date.now() >= deadline) throw error;
       });
   }
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "close modal", exact: true }).click();
   await dialog.waitFor({ state: "hidden" });
 };
 
@@ -156,12 +152,29 @@ const connectWallet = async (
     .first()
     .waitFor({ state: "visible", timeout: 15_000 });
   if (wallet === "connecting") {
-    await page.getByRole("button", { name: "Close", exact: true }).click();
     await page
-      .locator('[data-wallet-state="connecting"]')
+      .getByRole("button", { name: "close modal", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("heading")
+      .first()
+      .waitFor({ state: "hidden" });
+    // Closing an unfinished Privy connection must release the pending state.
+    await page
+      .locator('[data-wallet-state="disconnected"]')
+      .first()
+      .waitFor({ state: "visible" });
+    await page
+      .getByRole("button", { name: "Connect wallet", exact: true })
       .first()
       .waitFor({ state: "visible" });
   } else {
+    await page
+      .getByRole("dialog")
+      .getByRole("heading")
+      .first()
+      .waitFor({ state: "hidden", timeout: 15_000 });
     const chainId = await page.evaluate(async () => {
       const ethereum = (
         window as unknown as {
@@ -503,6 +516,29 @@ const visit = async (
       await awaitHydration(page);
     }
     await connectWallet(page, input.wallet);
+    if (input.label.startsWith("state:wallet-reload-disconnect/")) {
+      await page.reload();
+      await page.locator('[data-wallet-state="connected"]').first().waitFor();
+      await page
+        .getByRole("button", { name: "Disconnect", exact: true })
+        .first()
+        .click();
+      await page
+        .getByRole("button", { name: "Connect wallet", exact: true })
+        .first()
+        .waitFor();
+      await page.reload();
+      await page
+        .getByRole("button", { name: "Connect wallet", exact: true })
+        .first()
+        .waitFor();
+      // An extension can retain its grant: the application must honor the user's
+      // disconnect across reload despite those still-authorized accounts.
+      await page
+        .locator('[data-wallet-state="disconnected"]')
+        .first()
+        .waitFor();
+    }
     if (collector !== undefined) {
       if (input.label.endsWith("partial-rewards"))
         await checkPartialRewardsJourney(page, collector);

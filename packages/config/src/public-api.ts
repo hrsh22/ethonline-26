@@ -7,6 +7,7 @@ import {
 import { getAddress, zeroAddress, type Address } from "viem";
 
 export const PUBLIC_API_PATHS = {
+  analytics: { rewardFunding: "/v1/analytics/reward-funding" },
   delivery: { status: "/v1/delivery/status" },
   funding: {
     challenge: "/v1/funding/challenge",
@@ -145,3 +146,74 @@ export const DeliveryStatusSchema = Schema.Struct({
 export type DeliveryStatus = typeof DeliveryStatusSchema.Type;
 export const decodeDeliveryStatus =
   Schema.decodeUnknownSync(DeliveryStatusSchema);
+
+const GraphUnits = Schema.String.pipe(
+  Schema.pattern(/^(0|[1-9][0-9]{0,77})$/u),
+);
+const GraphHash = Schema.String.pipe(Schema.pattern(/^0x[0-9a-fA-F]{64}$/u));
+const GraphToken = Schema.Struct({
+  id: Schema.String.pipe(Schema.pattern(/^0x[0-9a-fA-F]{40}$/u)),
+  symbol: Schema.String.pipe(Schema.maxLength(32)),
+  decimals: Schema.Number.pipe(Schema.int(), Schema.between(0, 36)),
+});
+export const RewardFundingDataSchema = Schema.Struct({
+  _meta: Schema.Struct({
+    block: Schema.Struct({
+      number: Milliseconds,
+      hash: Schema.NullOr(GraphHash),
+      timestamp: Schema.NullOr(Milliseconds),
+    }),
+    hasIndexingErrors: Schema.Boolean,
+    deployment: Schema.String.pipe(Schema.minLength(1), Schema.maxLength(128)),
+  }),
+  rewardFundingSummary: Schema.NullOr(
+    Schema.Struct({
+      id: GraphHash,
+      totalFeesWeth: GraphUnits,
+      totalRewardsWeth: GraphUnits,
+      totalLiquidityWeth: GraphUnits,
+      totalCreatorWeth: GraphUnits,
+      totalConvertedWeth: GraphUnits,
+      feeEventCount: Milliseconds,
+      conversionCount: Milliseconds,
+      lastEventBlock: GraphUnits,
+      lastEventTimestamp: GraphUnits,
+      pool: Schema.Struct({
+        id: GraphHash,
+        inputTokens: Schema.Array(GraphToken).pipe(Schema.itemsCount(2)),
+        swaps: Schema.Array(
+          Schema.Struct({
+            id: Schema.String,
+            hash: GraphHash,
+            timestamp: GraphUnits,
+            amountIn: GraphUnits,
+            amountOut: GraphUnits,
+            tokenIn: GraphToken,
+            tokenOut: GraphToken,
+          }),
+        ).pipe(Schema.maxItems(5)),
+      }),
+    }),
+  ),
+});
+export const RewardFundingResponseSchema = Schema.Union(
+  Schema.Struct({
+    state: Schema.Literal("available"),
+    observedAt: Milliseconds,
+    data: RewardFundingDataSchema,
+  }),
+  Schema.Struct({
+    state: Schema.Literal("unavailable"),
+    observedAt: Milliseconds,
+    reason: Schema.Literal(
+      "not-configured",
+      "budget-exhausted",
+      "provider-error",
+      "indexing-error",
+    ),
+  }),
+);
+export type RewardFundingResponse = typeof RewardFundingResponseSchema.Type;
+export const decodeRewardFundingResponse = Schema.decodeUnknownSync(
+  RewardFundingResponseSchema,
+);

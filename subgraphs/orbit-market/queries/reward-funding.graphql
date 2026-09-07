@@ -1,0 +1,74 @@
+query RewardFunding($poolId: ID!) {
+  _meta {
+    block {
+      number
+      hash
+      timestamp
+    }
+    hasIndexingErrors
+    deployment
+  }
+  rewardFundingSummary(id: $poolId) {
+    id
+    totalFeesWeth
+    totalRewardsWeth
+    totalLiquidityWeth
+    totalCreatorWeth
+    totalConvertedWeth
+    feeEventCount
+    conversionCount
+    lastEventBlock
+    lastEventTimestamp
+    pool {
+      id
+      inventoryComplete
+      inputTokenBalances
+      inputTokens {
+        id
+        symbol
+        decimals
+      }
+      swaps(first: 5, orderBy: timestamp, orderDirection: desc) {
+        id
+        hash
+        timestamp
+        amountIn
+        amountOut
+        tokenIn {
+          id
+          symbol
+          decimals
+        }
+        tokenOut {
+          id
+          symbol
+          decimals
+        }
+      }
+    }
+  }
+  hookFeeAccruals(first: 10, orderBy: timestamp, orderDirection: desc) {
+    id
+    hash
+    logIndex
+    blockNumber
+    timestamp
+    trader
+    wethVolume
+    feesWeth
+    rewardsWeth
+    liquidityWeth
+    creatorWeth
+  }
+  rewardConversions(first: 10, orderBy: timestamp, orderDirection: desc) {
+    id
+    hash
+    logIndex
+    blockNumber
+    timestamp
+    track
+    wethSpent
+    stockReceived
+    deferredWeth
+  }
+}

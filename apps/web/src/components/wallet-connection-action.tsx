@@ -1,14 +1,14 @@
 "use client";
 
-import { modal } from "@reown/appkit/react";
 import { useEffect, useRef } from "react";
 
 import { CircleHelp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { identity } from "@/lib/identity";
+import { useWalletSession } from "@/providers/wallet-session";
 
-// Reown has one chooser shared by header and in-page connection controls.
+// The header and in-page controls share one Privy chooser.
 let latestConnectionTrigger: HTMLButtonElement | null = null;
 
 export function WalletConnectionAction({
@@ -27,29 +27,26 @@ export function WalletConnectionAction({
   readonly size?: "default" | "sm";
 }) {
   const trigger = useRef<HTMLButtonElement>(null);
+  const { modalOpen } = useWalletSession();
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const closed = wasOpen.current && !modalOpen;
+    wasOpen.current = modalOpen;
+    if (!closed || latestConnectionTrigger !== trigger.current) return;
+    const frame = requestAnimationFrame(() => {
+      const button = trigger.current;
+      if (latestConnectionTrigger !== button) return;
+      latestConnectionTrigger = null;
+      if (button?.isConnected && document.activeElement === document.body) {
+        button.focus({ preventScroll: true });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [modalOpen]);
   useEffect(() => {
     const button = trigger.current;
-    let frame: number | undefined;
-    const unsubscribe = modal?.subscribeEvents?.(({ data }) => {
-      if (data.event !== "MODAL_CLOSE" || latestConnectionTrigger !== button)
-        return;
-      // Let Reown remove its focus trap and React apply connection state first.
-      frame = requestAnimationFrame(() => {
-        if (latestConnectionTrigger !== button) return;
-        latestConnectionTrigger = null;
-        const active = document.activeElement;
-        if (
-          trigger.current?.isConnected &&
-          (active === document.body || active?.tagName === "W3M-MODAL")
-        ) {
-          trigger.current.focus({ preventScroll: true });
-        }
-      });
-    });
     return () => {
-      unsubscribe?.();
       if (latestConnectionTrigger === button) latestConnectionTrigger = null;
-      if (frame !== undefined) cancelAnimationFrame(frame);
     };
   }, []);
   return (

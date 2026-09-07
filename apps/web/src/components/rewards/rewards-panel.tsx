@@ -1,5 +1,6 @@
 "use client";
 
+import { RewardFundingPanel } from "./reward-funding-panel";
 import { CollectorHelp } from "@/components/collector-help";
 import { useState } from "react";
 
@@ -616,6 +617,7 @@ export function RewardsPanel() {
         </div>
       </Panel>
 
+      <RewardFundingPanel />
       <CollectorHelp topic="rewards" />
       <Panel title="How rewards reach your wallet">
         <p className="text-body-sm text-ink-soft">

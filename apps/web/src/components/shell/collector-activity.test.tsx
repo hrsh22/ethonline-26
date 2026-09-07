@@ -49,3 +49,45 @@ it("requires a new wallet-activity acknowledgement after wallet or operation cha
   );
   await act(async () => root.unmount());
 });
+
+it("verifies a supplied hash without clearing the attempt and keeps errors visible", async () => {
+  const { RecoverKnownTransaction } = await import("./collector-activity");
+  const recover = vi
+    .fn<(hash: string) => Promise<void>>()
+    .mockRejectedValue(
+      new Error(
+        "This transaction does not match the exact call saved for this attempt.",
+      ),
+    );
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(<RecoverKnownTransaction onRecover={recover} />),
+    );
+    const input = container.querySelector("input")!;
+    const hash = `0x${"12".repeat(32)}`;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )!.set!.call(input, hash);
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await act(async () =>
+      container
+        .querySelector("form")!
+        .dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        ),
+    );
+    expect(recover).toHaveBeenCalledWith(hash);
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
+      "does not match the exact call",
+    );
+    expect(container.textContent).toContain("never sends another transaction");
+    expect(input.value).toBe(hash);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});

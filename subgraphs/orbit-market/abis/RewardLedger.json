@@ -1,0 +1,209 @@
+[
+  {
+    "type": "event",
+    "name": "EpochConverterSealed",
+    "inputs": [
+      {
+        "name": "converter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "IdentityActivated",
+    "inputs": [
+      {
+        "name": "identityId",
+        "type": "uint16",
+        "indexed": true,
+        "internalType": "uint16"
+      },
+      {
+        "name": "track",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum AttributeRegistry.RewardTrack"
+      },
+      {
+        "name": "weight",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "unclaimedPotCredit",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "IdentityCheckpointed",
+    "inputs": [
+      {
+        "name": "identityId",
+        "type": "uint16",
+        "indexed": true,
+        "internalType": "uint16"
+      },
+      {
+        "name": "accruedReward",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferAccepted",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferCancelled",
+    "inputs": [
+      {
+        "name": "currentOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "cancelledOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
+      {
+        "name": "currentOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "pendingOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RewardClaimed",
+    "inputs": [
+      {
+        "name": "currentOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "identityId",
+        "type": "uint16",
+        "indexed": true,
+        "internalType": "uint16"
+      },
+      {
+        "name": "track",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum AttributeRegistry.RewardTrack"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RewardNotificationsPausedSet",
+    "inputs": [
+      {
+        "name": "paused",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RewardNotified",
+    "inputs": [
+      {
+        "name": "track",
+        "type": "uint8",
+        "indexed": true,
+        "internalType": "enum AttributeRegistry.RewardTrack"
+      },
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "ordinaryAllocation",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "basketRelicAllocation",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "indicatorRelicAllocation",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  }
+]
