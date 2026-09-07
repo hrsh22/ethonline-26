@@ -68,7 +68,7 @@ describe("wallet control", () => {
         ?.groups?.id;
     expect(reasonId).toBeDefined();
     expect(html).toContain(`id="${reasonId}"`);
-    expect(html).toMatch(/<button[^>]*\sdisabled(?:=|>)/);
+    expect(html).toMatch(/<button[^>]*aria-disabled="true"/);
   });
 
   it("uses inverse semantics for disabled reasons on a dark surface", () => {

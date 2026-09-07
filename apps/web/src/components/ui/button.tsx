@@ -15,18 +15,18 @@ import { cn } from "@/lib/utils";
  * web buttons.
  */
 const buttonVariants = cva(
-  "group/button inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-clip-padding px-4 font-mono text-body-sm font-semibold tracking-[0.06em] uppercase transition-[background-color,border-color,color,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 motion-reduce:transition-none motion-reduce:active:scale-100",
+  "group/button inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-clip-padding px-4 font-mono text-body-sm font-semibold tracking-[0.06em] uppercase transition-[background-color,border-color,color,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none data-disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 motion-reduce:transition-none motion-reduce:active:scale-100",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:brightness-110 disabled:border-[var(--border-subtle)] disabled:bg-[var(--surface-3)] disabled:text-[var(--text-tertiary)]",
+          "bg-primary text-primary-foreground hover:brightness-110 disabled:border-[var(--border-subtle)] data-disabled:border-[var(--border-subtle)] disabled:bg-[var(--surface-3)] data-disabled:bg-[var(--surface-3)] disabled:text-[var(--text-tertiary)] data-disabled:text-[var(--text-tertiary)]",
         outline:
-          "border-[var(--border-strong)] bg-transparent text-ink hover:bg-surface-3 aria-expanded:bg-surface-3 disabled:text-ink-faint",
+          "border-[var(--border-strong)] bg-transparent text-ink hover:bg-surface-3 aria-expanded:bg-surface-3 disabled:text-ink-faint data-disabled:text-ink-faint",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] aria-expanded:bg-secondary disabled:text-ink-faint",
+          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] aria-expanded:bg-secondary disabled:text-ink-faint data-disabled:text-ink-faint",
         ghost:
-          "text-ink-soft hover:bg-surface-3 hover:text-ink aria-expanded:bg-surface-3 aria-expanded:text-ink disabled:text-ink-faint",
+          "text-ink-soft hover:bg-surface-3 hover:text-ink aria-expanded:bg-surface-3 aria-expanded:text-ink disabled:text-ink-faint data-disabled:text-ink-faint",
         destructive:
           "border-[var(--status-danger-text)] text-destructive hover:bg-danger-surface focus-visible:border-destructive",
         link: "min-w-0 px-0 normal-case tracking-normal text-[var(--accent-text)] underline-offset-4 hover:underline",

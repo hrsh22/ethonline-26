@@ -356,10 +356,15 @@ export const focusFailure = async (
       };
     });
   let focused = await readFocus();
-  // A restored final control legitimately tabs through browser chrome before
-  // the document wraps to its skip link. Permit that one boundary traversal.
-  if (focused === undefined && startedOnControl) {
-    await page.keyboard.press("Tab");
+  // A final control can tab into browser chrome. Its forward tab-cycle length
+  // varies by platform; reverse that one traversal only when focus really left
+  // the document. BODY focus loss inside the page remains a failure.
+  if (
+    focused === undefined &&
+    startedOnControl &&
+    !(await page.evaluate(() => document.hasFocus()))
+  ) {
+    await page.keyboard.press("Shift+Tab");
     focused = await readFocus();
   }
   if (focused === undefined) {

@@ -27,6 +27,7 @@ export function WalletConnectionAction({
         aria-haspopup="dialog"
         className={className}
         disabled={disabled}
+        focusableWhenDisabled
         onClick={onContinue}
         size={size}
       >

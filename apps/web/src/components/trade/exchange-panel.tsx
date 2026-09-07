@@ -456,6 +456,7 @@ function ExchangeActions({
           }
           className="w-full"
           disabled={!canSubmit}
+          focusableWhenDisabled
           onClick={onSubmit}
           size="lg"
           type="button"

@@ -7,6 +7,20 @@ const classTokens = (html: string) =>
   new Set(/class="([^"]*)"/u.exec(html)?.[1]?.split(" "));
 
 describe("shared action sizing", () => {
+  it("retains disabled appearance when the action remains keyboard focusable", () => {
+    const html = renderToStaticMarkup(
+      <Button disabled focusableWhenDisabled>
+        Submit
+      </Button>,
+    );
+    expect(html).toContain('aria-disabled="true"');
+    expect(html).toContain('data-disabled=""');
+    const tokens = classTokens(html);
+    expect(tokens).toContain("data-disabled:bg-[var(--surface-3)]");
+    expect(tokens).toContain("data-disabled:text-[var(--text-tertiary)]");
+    expect(tokens).toContain("disabled:bg-[var(--surface-3)]");
+  });
+
   it.each(["default", "xs", "sm", "lg"] as const)(
     "lets %s text actions wrap within their container without losing their touch target",
     (size) => {
