@@ -356,9 +356,9 @@ function CollectionGrid({
     );
   }
   return (
-    <ul className="grid gap-3 compact:grid-cols-2 laptop:grid-cols-3 nav:grid-cols-4">
+    <ul className="grid min-w-0 grid-cols-1 gap-3 compact:grid-cols-2 laptop:grid-cols-3 nav:grid-cols-4">
       {craft.map((entry) => (
-        <li className="flex" key={entry.identityId}>
+        <li className="flex min-w-0" key={entry.identityId}>
           <FleetCraftCard craft={entry} />
         </li>
       ))}

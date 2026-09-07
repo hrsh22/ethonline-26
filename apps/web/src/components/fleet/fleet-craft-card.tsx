@@ -94,13 +94,13 @@ const consequence = (craft: FleetCraft): string => {
 export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
   return (
     <article
-      className="group flex w-full flex-col rounded-[var(--radius-surface)] border border-line bg-surface-1 transition-colors duration-[var(--motion-fast)] hover:border-line-strong motion-reduce:transition-none"
+      className="group flex min-w-0 w-full flex-col rounded-[var(--radius-surface)] border border-line bg-surface-1 transition-colors duration-[var(--motion-fast)] hover:border-line-strong motion-reduce:transition-none"
       // A stable hook: permanence is an onchain fact worth asserting.
       data-permanent={craft.permanent || undefined}
     >
       <div className="flex items-center justify-center border-b border-line bg-canvas p-4">
         <CraftArt
-          className="size-40"
+          className="h-auto w-40 max-w-full"
           decorative
           identityId={craft.identityId}
           kind={
@@ -121,7 +121,11 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
           <h2 className="font-mono text-title font-semibold tabular-nums">
             #{String(craft.identityId).padStart(4, "0")}
           </h2>
-          <Badge dot tone={craft.permanent ? "live" : "neutral"}>
+          <Badge
+            className="max-w-full whitespace-normal"
+            dot
+            tone={craft.permanent ? "live" : "neutral"}
+          >
             {craft.stateLabel}
           </Badge>
         </div>
