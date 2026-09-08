@@ -1729,7 +1729,10 @@ export function ProtocolClientProvider({
       walletRecordScope === undefined
         ? undefined
         : readCollectorTransaction(walletRecordScope);
-    const state = saved?.state ?? createTransactionState();
+    const state =
+      saved?.state.status === "confirmed"
+        ? createTransactionState()
+        : (saved?.state ?? createTransactionState());
     submittedTransactionPhase.current = saved?.phase;
     transactionMetadataRef.current = saved;
     transactionPersistRef.current = saved !== undefined;
@@ -1751,11 +1754,14 @@ export function ProtocolClientProvider({
   const transactionScopeStateRef = useRef(transactionScope);
   useEffect(() => {
     if (transactionScopeStateRef.current === transactionScope) return;
+    const previousScope = transactionScopeStateRef.current;
     transactionScopeStateRef.current = transactionScope;
     const current = transactionRef.current;
     if (
-      transactionScope.pathname.startsWith("/admin") &&
-      !isTransactionInFlight(current)
+      (transactionScope.pathname.startsWith("/admin") &&
+        !isTransactionInFlight(current)) ||
+      (previousScope.pathname !== transactionScope.pathname &&
+        current.status === "confirmed")
     ) {
       updateTransaction(createTransactionState());
     }

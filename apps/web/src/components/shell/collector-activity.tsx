@@ -218,7 +218,9 @@ function WalletTransactionActivity({
         onRetry={() => void retry()}
       />
       <LaunchCompletion protocol={protocol} />
-      <CollectorHelp topic="transaction" />
+      {transaction.status === "confirmed" ? null : (
+        <CollectorHelp topic="transaction" />
+      )}
       {transactionPersistenceAvailable === false ? (
         <p className="mt-2 text-body text-warning">
           Browser storage is unavailable. Keep this tab open and save the

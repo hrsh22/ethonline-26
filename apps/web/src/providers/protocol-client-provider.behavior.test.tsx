@@ -483,6 +483,58 @@ describe("protocol client transaction coordination", () => {
     expect(currentProtocol.transaction).toMatchObject({ hash: testState.hash });
   });
 
+  it("bounds confirmed collector activity to its completion route while retaining completed history", async () => {
+    testState.pathname = "/fleet/1639";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+
+    await act(async () => {
+      await currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch Grounded Craft #1639",
+      );
+    });
+    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(currentProtocol.completedTransactions).toHaveLength(1);
+
+    await act(async () => root.unmount());
+    root = createRoot(container);
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("idle");
+    expect(currentProtocol.completedTransactions).toHaveLength(1);
+
+    await act(async () => {
+      await currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1640 },
+        "Launch Grounded Craft #1640",
+      );
+    });
+    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(currentProtocol.completedTransactions).toHaveLength(2);
+
+    testState.pathname = "/fleet";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("idle");
+    expect(currentProtocol.completedTransactions).toHaveLength(2);
+  });
+
   it("persists the prepared call before a wallet can mine without returning its hash", async () => {
     testState.pathname = "/fleet/1639";
     await act(async () =>

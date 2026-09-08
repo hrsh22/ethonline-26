@@ -37,6 +37,18 @@ export async function checkLaunchJourney(
   await page
     .getByRole("heading", { name: "Orbiter #42", exact: true })
     .waitFor({ timeout: 20_000 });
+  await page
+    .getByRole("link", { name: "View Orbiter #42", exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", {
+        name: "Help with this wallet action",
+        exact: true,
+      })
+      .count(),
+    0,
+  );
   await page.getByRole("link", { name: "Back to Fleet", exact: true }).click();
   await page
     .getByRole("link", { name: /Inspect/ })
@@ -45,13 +57,15 @@ export async function checkLaunchJourney(
   assert.ok((await page.locator("main").innerText()).includes("42"));
   await assertMobileCollectionText(page, true);
   assert.equal(fixture.submissions.length, 1);
-  await page
-    .getByRole("link", { name: "View Orbiter #42", exact: true })
-    .waitFor();
-  await page
-    .getByRole("button", { name: "Dismiss completed activity", exact: true })
-    .click();
+  assert.equal(await page.locator('[data-status="confirmed"]').count(), 0);
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Dismiss completed activity", exact: true })
+      .count(),
+    0,
+  );
   await page.reload();
+  assert.equal(await page.locator('[data-status="confirmed"]').count(), 0);
   const completed = page.locator("details").filter({
     has: page.locator("summary", { hasText: "Recent completed activity" }),
   });

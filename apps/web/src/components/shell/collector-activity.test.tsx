@@ -1,13 +1,25 @@
 /** @vitest-environment jsdom */
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { expect, it, vi } from "vitest";
-const state = vi.hoisted(() => ({ address: "0xabc", operationId: "first" }));
+import { beforeEach, expect, it, vi } from "vitest";
+import type { TransactionState } from "@/lib/transaction-state";
+const state = vi.hoisted(() => ({
+  address: "0xabc",
+  operationId: "first",
+  transaction: { status: "submission-unknown" } as TransactionState,
+}));
+beforeEach(() => {
+  state.transaction = {
+    status: "submission-unknown",
+    label: "Claim rewards",
+    message: "Check the wallet for this attempt.",
+  };
+});
 vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => ({
     address: state.address,
     chainId: 84532,
-    transaction: { status: "submission-unknown" },
+    transaction: state.transaction,
     transactionMetadata: { operationId: state.operationId },
     walletRead: { status: "unavailable" },
     clearTransaction: vi.fn(),
@@ -20,7 +32,9 @@ vi.mock("@/hooks/use-discovery-history", () => ({
 vi.mock("@/hooks/use-discovery-reference", () => ({
   useDiscoveryReference: () => undefined,
 }));
-vi.mock("@/components/collector-help", () => ({ CollectorHelp: () => null }));
+vi.mock("@/components/collector-help", () => ({
+  CollectorHelp: () => <div>Help with this wallet action</div>,
+}));
 vi.mock("@/components/transaction-status", () => ({
   TransactionStatus: () => null,
 }));
@@ -87,6 +101,35 @@ it("verifies a supplied hash without clearing the attempt and keeps errors visib
     );
     expect(container.textContent).toContain("never sends another transaction");
     expect(input.value).toBe(hash);
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("keeps successful confirmation visible without presenting recovery support", async () => {
+  state.transaction = {
+    status: "confirmed",
+    label: "Claim eligible rewards",
+    hash: `0x${"12".repeat(32)}`,
+  };
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<CollectorActivity />));
+    expect(container.textContent).not.toContain("Help with this wallet action");
+    expect(container.textContent).toContain("Dismiss completed activity");
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("keeps recovery support visible for unresolved wallet activity", async () => {
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<CollectorActivity />));
+    expect(container.textContent).toContain("Help with this wallet action");
+    expect(container.textContent).toContain("I checked my wallet activity");
   } finally {
     await act(async () => root.unmount());
   }
