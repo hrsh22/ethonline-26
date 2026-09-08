@@ -632,34 +632,6 @@
         font-size: 11px;
         color: var(--muted);
       }
-      .steps {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0;
-        border-top: 1px solid var(--line);
-        padding-top: 24px;
-        margin-top: -24px;
-        position: relative;
-        z-index: 3;
-      }
-      .step {
-        padding: 0 26px;
-        border-right: 1px solid var(--line);
-      }
-      .step:first-child {
-        padding-left: 0;
-      }
-      .step:last-child {
-        border: 0;
-      }
-      .step strong {
-        font: 13px var(--mono);
-        color: var(--orange-2);
-      }
-      .step p {
-        margin-top: 8px;
-        max-width: 340px;
-      }
       /* trade */
       .trade-layout {
         display: grid;
@@ -959,15 +931,6 @@
           height: 460px;
           border-left: 0;
         }
-        .steps {
-          grid-template-columns: 1fr;
-          margin-top: 20px;
-        }
-        .step {
-          padding: 18px 0;
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
-        }
         .variant-a .collection-grid {
           grid-template-columns: 1fr 1fr;
         }
@@ -1183,9 +1146,6 @@
         }
         .hero-art:after {
           background: linear-gradient(0deg, var(--space), transparent 45%);
-        }
-        .steps {
-          margin-top: 45px;
         }
         .page-head .utility {
           width: 100%;

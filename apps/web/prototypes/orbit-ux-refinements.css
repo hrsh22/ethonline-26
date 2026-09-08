@@ -278,9 +278,6 @@ main {
 .home-copy h1 {
   font-size: clamp(3.5rem, 5.7vw, 5.7rem);
 }
-.steps {
-  margin-top: 38px;
-}
 .concept-footer {
   display: flex;
   align-items: center;
@@ -639,9 +636,6 @@ dialog {
   }
   .home-copy p {
     font-size: 1rem;
-  }
-  .steps {
-    margin-top: 20px;
   }
   .concept-footer {
     margin-top: 40px;

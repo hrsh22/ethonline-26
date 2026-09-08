@@ -238,28 +238,12 @@ function collection() {
   if (!connected) return access();
   const all = ownCrafts();
   if (!all.length && !pending) {
-    const fraction = fuel > 0;
     return (
-      '<section class="empty"><h2>' +
-      (fraction
-        ? "Your FUEL is in your wallet."
-        : "Your collection starts here.") +
-      "</h2><p>" +
-      (fraction
-        ? "You hold " +
-          amount(fuel) +
-          " FUEL. Another " +
-          amount(Math.ceil((Math.floor(fuel) + 1 - fuel) * 1e6) / 1e6) +
-          " FUEL reaches the next whole-unit boundary for a random discovery."
-        : (weth
-            ? "Buy FUEL to start collecting."
-            : "Get test funds, then buy FUEL.") +
-          " Crossing a whole-unit balance starts a random discovery.") +
-      '</p><button class="btn primary" data-action="' +
-      (weth ? "buy" : "fund") +
-      '">' +
-      (weth ? "Buy FUEL" : "Get test funds") +
-      "</button></section>"
+      '<section class="empty"><h2>No craft in your fleet.</h2><p>Your collected craft appear here.</p><div class="button-row"><a class="btn primary" href="' +
+      url("/explore") +
+      '">Explore craft</a><a class="btn" href="' +
+      url("/exchange") +
+      '">Trade FUEL</a></div></section>'
     );
   }
   const shown = all.filter((c) => filter === "all" || c.state === filter);
@@ -389,11 +373,11 @@ function fleet() {
 }
 function home() {
   return shell(
-    '<section class="home-hero"><div class="home-copy"><span class="eyebrow">An ORBIT collection of 4,444 craft</span><h1 tabindex="-1">Find the craft worth keeping.</h1><p>Buy FUEL. Discover a random craft. Choose whether to keep it liquid or Launch it permanently.</p><div class="button-row"><a class="btn primary" href="' +
+    '<section class="home-hero"><div class="home-copy"><span class="eyebrow">An ORBIT collection of 4,444 craft</span><h1 tabindex="-1">Find the craft worth keeping.</h1><p>A collection of liquid craft and permanent Orbiters, powered by FUEL.</p><div class="button-row"><a class="btn primary" href="' +
       url("/exchange") +
-      '">Start collecting</a><a class="link" href="' +
+      '">Trade FUEL</a><a class="link" href="' +
       url("/explore") +
-      '">Explore craft</a></div></div><figure class="hero-art"><img src="/prototype-art/grounded-craft-hangar.png" alt="Spacecraft resting in an open hangar above clouds"><figcaption class="hero-caption">Editorial artwork</figcaption></figure></section><section class="steps"><div class="step"><strong>Buy FUEL</strong><p>Each new whole-unit balance starts a random discovery.</p></div><div class="step"><strong>Meet your craft</strong><p>A Grounded Craft stays paired with one liquid FUEL.</p></div><div class="step"><strong>Choose when to Launch</strong><p>Optional and irreversible: burn 1 FUEL to make that craft permanent and reward-eligible.</p></div></section>',
+      '">Explore craft</a></div></div><figure class="hero-art"><img src="/prototype-art/grounded-craft-hangar.png" alt="Spacecraft resting in an open hangar above clouds"><figcaption class="hero-caption">Editorial artwork</figcaption></figure></section>',
   );
 }
 function chart() {
