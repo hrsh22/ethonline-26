@@ -233,6 +233,80 @@
   --radius-card: var(--radius-surface);
 }
 
+/* Hangar typography is collector-scoped: the operator console keeps its
+ * established mono density, while collector prose and headings use Barlow.
+ * Explicit `font-mono` values remain JetBrains Mono in both applications. */
+[data-shell="collector"] {
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow);
+
+  font-family: var(--font-sans), "Arial Narrow", Arial, sans-serif;
+  font-size: 1rem;
+}
+
+[data-shell="collector"] :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-display), "Arial Narrow", Arial, sans-serif;
+}
+
+[data-shell="collector"] :is([data-slot="button"], [data-slot="button-link"]) {
+  font-family: var(--font-sans), "Arial Narrow", Arial, sans-serif;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* WalletControl also serves the vertical admin rail. In the collector top bar
+ * it stays horizontal; exceptional explanations float below the bar instead
+ * of turning routine chrome into a second row. */
+[data-shell="collector"] [data-collector-wallet-actions] .wallet-control-state {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+}
+
+[data-shell="collector"]
+  [data-collector-wallet-actions]
+  .wallet-control-state
+  > :is(.disabled-reason, .state-feedback) {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 1.5rem);
+  right: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  margin: 0;
+}
+
+[data-shell="collector"]
+  [data-collector-wallet-actions]
+  .wallet-control-state
+  > .disabled-reason {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-overlay);
+}
+
+/* The shared connection explainer opens above the desktop rail wallet. This
+ * collector-only override places it below the sticky top header. */
+[data-shell="collector"] [data-collector-wallet-actions] details > p {
+  position-anchor: --collector-wallet-help;
+  position: fixed;
+  top: calc(anchor(bottom, 4.75rem) + 0.5rem);
+  right: 0.75rem;
+  bottom: auto;
+  left: 0.75rem;
+  width: auto;
+  max-width: 20rem;
+  margin-top: 0;
+  margin-left: auto;
+  margin-bottom: 0;
+}
+
+[data-shell="collector"] [data-collector-wallet-actions] details {
+  anchor-name: --collector-wallet-help;
+}
+
 /* Element defaults live in `base` so component utilities can override them.
  *
  * Unlayered, these would outrank every `@layer` — including Tailwind's

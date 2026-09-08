@@ -85,13 +85,10 @@ describe("identity configuration", () => {
       navigation: {
         admin: "Admin",
       },
-      onboarding: {
-        title: "Get your first Orbiter",
-      },
       home: {
         eyebrow: "BASE SEPOLIA / ORBIT 4444",
-        title: "Collect. Launch. Stay in orbit.",
-        primaryAction: "Start collecting",
+        title: "Find the craft worth keeping.",
+        primaryAction: "Trade $FUEL",
         secondaryAction: "Trade $FUEL",
       },
       launch: {
@@ -105,14 +102,7 @@ describe("identity configuration", () => {
       /ORBIT|\$FUEL|Grounded Craft|Orbiter|Discovery|Fleet|Reward Stocks|Stations|Observatory/,
     );
     expect(neutralCopy.market.eyebrow).toBe("PUBLIC PRIMARY MARKET");
-    expect(neutralCopy.onboarding.discoveryDisclosure).toContain(
-      "whole-unit Assignment",
-    );
-    expect(neutralCopy.onboarding.discoveryDisclosure).toContain(
-      "verified randomness arrives and the delivery service completes the onchain result",
-    );
-    expect(neutralCopy.onboarding.discoveryDisclosure).not.toMatch(
-      /immediate|block-derived/iu,
-    );
+    expect(orbitCopy).not.toHaveProperty("onboarding");
+    expect(orbitCopy.home).not.toHaveProperty("steps");
   });
 });

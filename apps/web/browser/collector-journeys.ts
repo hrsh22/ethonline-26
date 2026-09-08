@@ -173,8 +173,11 @@ export async function checkQuoteRecoveryJourney(
     `Expected <=4 quote HTTP requests, observed ${fixture.quoteRequests}`,
   );
   assert.equal(fixture.submissions.length, 0);
-  await page.getByRole("link", { name: "Fleet", exact: true }).first().click();
-  await page.getByRole("heading", { name: "Fleet", exact: true }).waitFor();
+  await page
+    .getByRole("link", { name: "My Fleet", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole("heading", { name: "My Fleet", exact: true }).waitFor();
 }
 
 export async function checkFundingDiscoveryJourney(
@@ -225,7 +228,10 @@ export async function checkFundingDiscoveryJourney(
   await page
     .getByText("Confirmed on Base Sepolia", { exact: true })
     .waitFor({ timeout: 20_000 });
-  await page.getByRole("link", { name: "Fleet", exact: true }).first().click();
+  await page
+    .getByRole("link", { name: "My Fleet", exact: true })
+    .filter({ visible: true })
+    .click();
   await page
     .getByText(/Randomness is taking longer than expected/i)
     .first()
@@ -253,6 +259,8 @@ export async function checkTradeStagesJourney(
   page: Page,
   fixture: CollectorFixture,
 ) {
+  // A fresh Trade entry must load indexed history without visiting Market first.
+  await page.getByRole("group", { name: "Chart range", exact: true }).waitFor();
   fixture.receiptAvailable = true;
   const input = page.getByLabel("You pay", { exact: true });
   const submit = (label: string) =>

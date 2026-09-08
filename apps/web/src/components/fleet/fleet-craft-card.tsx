@@ -91,16 +91,23 @@ const consequence = (craft: FleetCraft): string => {
  * An Orbiter is the lit one — the only orange on the card is the art and its
  * state token, because Launch is the one thing that has happened to it.
  */
-export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
+export function FleetCraftCard({
+  craft,
+  returnTo = "/fleet",
+}: {
+  readonly craft: FleetCraft;
+  readonly returnTo?: string;
+}) {
   return (
     <article
-      className="group flex min-w-0 w-full flex-col rounded-[var(--radius-surface)] border border-line bg-surface-1 transition-colors duration-[var(--motion-fast)] hover:border-line-strong motion-reduce:transition-none"
+      className="group grid min-w-0 w-full overflow-hidden rounded-[var(--radius-surface)] border border-line bg-surface-1 laptop:min-h-[38rem] laptop:grid-cols-[minmax(18rem,1.25fr)_minmax(18rem,0.75fr)]"
       // A stable hook: permanence is an onchain fact worth asserting.
       data-permanent={craft.permanent || undefined}
+      data-featured-craft
     >
-      <div className="flex items-center justify-center border-b border-line bg-canvas p-4">
+      <div className="flex min-h-72 items-center justify-center border-b border-line bg-[radial-gradient(circle_at_50%_45%,var(--surface-3),var(--canvas)_68%)] p-6 laptop:min-h-[38rem] laptop:border-r laptop:border-b-0">
         <CraftArt
-          className="h-auto w-40 max-w-full"
+          className="h-auto w-full max-w-[27rem]"
           decorative
           identityId={craft.identityId}
           kind={
@@ -114,11 +121,11 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
           track={trackIndexFor(craft.rewardTrack)}
         />
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex min-w-0 flex-col gap-5 p-5 tablet:p-7">
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* A collectible is a top-level item on the collection page, so it
               is an h2 under the page heading. */}
-          <h2 className="font-mono text-title font-semibold tabular-nums">
+          <h2 className="font-mono text-heading font-semibold tabular-nums">
             #{String(craft.identityId).padStart(4, "0")}
           </h2>
           <Badge
@@ -152,7 +159,9 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
             />
           </DataList>
         </Disclosure>
-        <p className="text-body-sm text-ink-soft">{consequence(craft)}</p>
+        <p className="max-w-[48ch] text-body text-ink-soft">
+          {consequence(craft)}
+        </p>
         <p className="mt-auto font-mono text-caption text-ink-faint">
           {applicationCopy.craft.lastConfirmed}{" "}
           {craft.observedAt === undefined ? (
@@ -165,7 +174,7 @@ export function FleetCraftCard({ craft }: { readonly craft: FleetCraft }) {
         </p>
         <Link
           className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
-          href={`/fleet/${craft.identityId}`}
+          href={`/fleet/${craft.identityId}?returnTo=${encodeURIComponent(returnTo)}`}
           aria-label={`Inspect ${craft.stateLabel} #${craft.identityId}`}
         >
           {applicationCopy.fleet.inspect(craft.stateLabel)}

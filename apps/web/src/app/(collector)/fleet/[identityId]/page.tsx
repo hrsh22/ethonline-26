@@ -6,6 +6,7 @@ import { identity } from "@/lib/identity";
 
 import { CraftDetailPanel } from "@/components/fleet/craft-detail-panel";
 import { applicationCopy } from "@/lib/identity";
+import { collectionReturnTarget } from "@/lib/collection-return-target";
 
 export async function generateMetadata({
   params,
@@ -23,13 +24,17 @@ export async function generateMetadata({
 
 export default async function CraftDetailPage({
   params,
+  searchParams,
 }: PageProps<"/fleet/[identityId]">) {
   const { identityId } = await params;
   const parsedIdentityId = parseCanonicalIdentityId(identityId);
   if (parsedIdentityId === undefined) notFound();
   return (
     <>
-      <CraftDetailPanel identityId={parsedIdentityId} />
+      <CraftDetailPanel
+        identityId={parsedIdentityId}
+        backHref={collectionReturnTarget((await searchParams) ?? {})}
+      />
       <CraftSharing identityId={parsedIdentityId} />
     </>
   );

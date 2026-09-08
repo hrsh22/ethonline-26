@@ -4,6 +4,10 @@ import type { Page } from "playwright";
 /** Public collector journey; uses the existing browser/HTTP boundary. */
 export async function checkPublicCollection(page: Page, origin: string) {
   assert.equal(new URL(page.url()).pathname, "/");
+  await page
+    .getByRole("link", { name: "Explore the collection", exact: true })
+    .click();
+  await page.waitForURL(`${origin}/explore`);
   const gallery = page.getByRole("region", { name: "Explore the collection" });
   assert.equal(await gallery.getByRole("link").count(), 8);
   await page.getByRole("textbox", { name: "Find an identity" }).fill("0042");
@@ -19,10 +23,13 @@ export async function checkPublicCollection(page: Page, origin: string) {
       "Enter a whole identity number from 1 to 4444, without leading zeros.",
     )
     .waitFor();
-  assert.equal(new URL(page.url()).pathname, "/");
+  assert.equal(new URL(page.url()).pathname, "/explore");
   await page.getByRole("textbox", { name: "Find an identity" }).fill("42");
   await page.getByRole("button", { name: "Open identity" }).click();
-  await page.waitForURL(`${origin}/fleet/42`);
+  await page.waitForURL(`${origin}/fleet/42?from=explore`);
+  await page
+    .getByRole("link", { name: "Back to Explore", exact: true })
+    .waitFor();
   await page.getByRole("button", { name: "Copy craft link" }).waitFor();
   const imageUrl = await page
     .locator('meta[property="og:image"]')

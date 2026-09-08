@@ -34,12 +34,12 @@ describe("protocol health route scope", () => {
     });
   });
 
-  it("loads indexed market history only on the dedicated public Market route", () => {
+  it("loads indexed market history for the chart on both Trade and Market", () => {
     expect([
       shouldLoadMarketHistory("/market"),
       shouldLoadMarketHistory("/exchange"),
       shouldLoadMarketHistory("/status"),
-    ]).toEqual([true, false, false]);
+    ]).toEqual([true, true, false]);
   });
 
   it("shares the sanitized status projection with public evidence routes", () => {

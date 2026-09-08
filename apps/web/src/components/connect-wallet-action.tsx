@@ -25,7 +25,9 @@ export function ConnectWalletAction() {
       onContinue={session.connect}
       size="sm"
     >
-      {applicationCopy.shell.connectWallet}
+      {!session.ready || session.connecting
+        ? "Connecting wallet"
+        : applicationCopy.shell.connectWallet}
     </WalletConnectionAction>
   );
 }

@@ -6,7 +6,7 @@ export interface ProtocolHealthReadScope {
 }
 
 export const shouldLoadMarketHistory = (pathname: string): boolean =>
-  pathname === "/market";
+  pathname === "/market" || pathname === "/exchange";
 
 export const shouldLoadPublicStatus = (pathname: string): boolean =>
   ["/", "/learn", "/admin/sign-in", "/status", "/market"].includes(pathname);

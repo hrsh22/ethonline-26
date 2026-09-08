@@ -38,17 +38,24 @@ export function PageFrame({
  */
 export function PageHeading({
   actions,
+  className,
   eyebrow,
   lede,
   title,
 }: {
   readonly actions?: React.ReactNode;
+  readonly className?: string;
   readonly eyebrow?: string | undefined;
   readonly lede?: string | undefined;
   readonly title: string;
 }) {
   return (
-    <header className="flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between">
+    <header
+      className={cn(
+        "flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between",
+        className,
+      )}
+    >
       <div className="min-w-0 max-w-[60ch]">
         {eyebrow === undefined ? null : (
           <p className="font-mono text-label font-semibold tracking-[0.14em] text-signal uppercase">

@@ -37,7 +37,14 @@ export interface RouteCase {
 /** Every public route, both craft-detail outcomes, and both 404 shapes. */
 export const ROUTE_CASES: readonly RouteCase[] = [
   { axe: true, label: "home", path: "/", screenshot: true },
-  { axe: true, label: "start", path: "/start", screenshot: true },
+  { axe: true, label: "explore", path: "/explore", screenshot: true },
+  {
+    axe: true,
+    label: "start",
+    path: "/start",
+    finalPath: "/fleet",
+    status: 307,
+  },
   { axe: true, label: "faucet", path: "/faucet", screenshot: true },
   { axe: true, label: "exchange", path: "/exchange", screenshot: true },
   { axe: true, label: "market", path: "/market", screenshot: true },
@@ -61,7 +68,19 @@ export const ROUTE_CASES: readonly RouteCase[] = [
     path: "/fleet/0042",
     status: 404,
   },
-  { axe: true, label: "rewards", path: "/rewards", screenshot: true },
+  {
+    axe: true,
+    label: "rewards",
+    path: "/fleet?view=rewards",
+    screenshot: true,
+  },
+  {
+    axe: true,
+    label: "rewards-legacy",
+    path: "/rewards",
+    finalPath: "/fleet?view=rewards",
+    status: 307,
+  },
   { axe: true, label: "relics", path: "/relics" },
   { axe: true, label: "status", path: "/status", screenshot: true },
   { axe: true, label: "learn", path: "/learn", screenshot: true },
@@ -172,7 +191,7 @@ export const STATE_CASES: readonly StateCase[] = [
     data: "funded",
     label: "funded",
     path: "/faucet",
-    heading: "Wallet funded for the test journey",
+    heading: "Test wallet funded",
     wallet: "ordinary",
   },
   {

@@ -292,9 +292,7 @@ describe("collector testnet faucet", () => {
     expect(
       container.querySelector("[data-funding-state='funded']"),
     ).not.toBeNull();
-    expect(container.textContent).toContain(
-      "Wallet funded for the test journey",
-    );
+    expect(container.textContent).toContain("Test wallet funded");
     expect(container.textContent).toContain("Buy $FUEL on Trade");
     expect(container.textContent).toContain("0.01 ETH");
     expect(container.textContent).toContain("0 ETH to reach target");
@@ -378,9 +376,7 @@ describe("collector testnet faucet", () => {
           method: "POST",
         }),
       );
-      expect(container.textContent).toContain(
-        "Wallet funded for the test journey",
-      );
+      expect(container.textContent).toContain("Test wallet funded");
       const eligibleAgain = [...container.querySelectorAll("dt")].find(
         (term) => term.textContent === "Eligible again",
       )?.nextElementSibling;

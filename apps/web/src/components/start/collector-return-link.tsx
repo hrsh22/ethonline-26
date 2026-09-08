@@ -8,8 +8,8 @@ function ReturnLink() {
   const destination = useSearchParams()?.get("returnTo");
   if (destination !== "/start" && destination !== "/fleet") return null;
   return (
-    <ButtonLink href={destination} size="sm" variant="outline">
-      {destination === "/start" ? "Return to Get Started" : "Return to Fleet"}
+    <ButtonLink href="/fleet" size="sm" variant="outline">
+      Return to Fleet
     </ButtonLink>
   );
 }

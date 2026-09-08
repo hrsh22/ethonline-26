@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { StatusPanel } from "@/components/status/status-panel";
+import { RewardFundingPanel } from "@/components/rewards/reward-funding-panel";
 import { PageFrame, PageHeading } from "@/components/ui/page";
 import { applicationCopy } from "@/lib/identity";
 
@@ -18,6 +19,7 @@ export default function StatusPage() {
         title={applicationCopy.publicStatus.title}
       />
       <StatusPanel />
+      <RewardFundingPanel />
     </PageFrame>
   );
 }

@@ -9,6 +9,7 @@ import {
   checkFundingDiscoveryJourney,
 } from "./collector-journeys.ts";
 import { checkPublicCollection } from "./public-collection.ts";
+import { checkHangarSelection } from "./hangar-selection.ts";
 import { checkMobileAccessibility } from "./mobile-accessibility.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -491,7 +492,11 @@ const visit = async (
   try {
     await installWalletFixture(page, input.wallet);
     await installDataFixture(page, input.data);
-    if (collector !== undefined && input.label.endsWith("partial-rewards")) {
+    if (
+      collector !== undefined &&
+      (input.label.endsWith("partial-rewards") ||
+        input.label.includes("hangar-selection"))
+    ) {
       collector.permanent = true;
       collector.indexed = true;
       collector.partialRewards = true;
@@ -540,7 +545,9 @@ const visit = async (
         .waitFor();
     }
     if (collector !== undefined) {
-      if (input.label.endsWith("partial-rewards"))
+      if (input.label.includes("hangar-selection"))
+        await checkHangarSelection(page, collector);
+      else if (input.label.endsWith("partial-rewards"))
         await checkPartialRewardsJourney(page, collector);
       else if (input.label.endsWith("receipt-recovery"))
         await checkReceiptRecoveryJourney(page, collector);
@@ -787,6 +794,16 @@ export const runBrowserMatrix = async (
     ...adminPlan(options),
     ...adminInputPlan(options),
     ...idleTrafficPlan(options),
+    ...[RELEASE_VIEWPORTS[0]!, RELEASE_VIEWPORTS[3]!].map((viewport) => ({
+      axe: true,
+      data: "stubbed" as const,
+      label: `collector-journey:hangar-selection@${viewport.label}`,
+      options,
+      path: "/fleet",
+      viewport,
+      wallet: "transacting" as const,
+      screenshot: true,
+    })),
     {
       axe: true,
       data: "stubbed" as const,
@@ -858,7 +875,7 @@ export const runBrowserMatrix = async (
     {
       axe: true,
       data: "stubbed" as const,
-      expectFinalPath: "/fleet/42",
+      expectFinalPath: "/fleet/42?from=explore",
       label: "public-collection:explore-and-share",
       options,
       path: "/",
@@ -868,7 +885,7 @@ export const runBrowserMatrix = async (
     {
       axe: true,
       data: "stubbed" as const,
-      expectFinalPath: "/",
+      expectFinalPath: "/explore",
       label: "mobile-accessibility:back-text-motion",
       options,
       path: "/relics",

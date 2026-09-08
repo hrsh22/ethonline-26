@@ -138,9 +138,9 @@ describe("rewards transaction controls", () => {
       expect(html).toContain(
         hasOrbiter
           ? "Your Orbiter is eligible, but no rewards are currently available to claim"
-          : "Launch a Grounded Craft to make it permanent and reward-eligible",
+          : "This wallet holds no Orbiters",
       );
-      expect(html).toContain("Queued conversions are shared protocol funds");
+      expect(html).toContain('href="/learn#help-rewards"');
       expect(html).toContain("Valueless test tokens");
       for (const name of ["Apple", "Alphabet", "Meta", "NVIDIA"])
         expect(html).toContain(name);
@@ -163,14 +163,10 @@ describe("rewards transaction controls", () => {
        Asserting on the collection's own string keeps the guard honest if that
        copy is reworded again. */
     expect(html).toContain("Stock Reward");
-    for (const track of ["AAPLc", "GOOGLc", "METAc", "NVDAc"]) {
-      expect(html).toContain(track);
-    }
-    // The allocation rule is stated per track before any wallet is read.
-    expect(html).toContain("82.5%");
-    expect(html).toContain("12.5%");
-    expect(html).toContain("5.0%");
-    expect(html.match(/data-reward-track=/gu)).toHaveLength(4);
+    // Allocation education lives in Learn, not ahead of a wallet's claims.
+    expect(html).not.toContain("Reward allocation by track");
+    expect(html).not.toContain("data-reward-track=");
+    expect(html).toContain('href="/learn#help-rewards"');
     // No wallet has been observed, so no claimable figure may be shown --
     // not even a zero.
     expect(html).not.toContain(applicationCopy.rewards.claimable);

@@ -3,6 +3,7 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { collectionManifestArtifact } from "@orbit/config/collection-manifest";
 import { useState } from "react";
+import type { Route } from "next";
 import { getAddress, isAddress } from "viem";
 
 import { CollectorHelp } from "@/components/collector-help";
@@ -223,10 +224,10 @@ const launchDisabledReason = (
   return undefined;
 };
 
-function BackToCollection() {
+function BackToCollection({ href = "/fleet" }: { readonly href?: Route }) {
   return (
-    <ButtonLink href="/fleet" size="sm" variant="ghost">
-      {applicationCopy.craft.back}
+    <ButtonLink href={href} size="sm" variant="ghost">
+      {href === "/explore" ? "Back to Explore" : applicationCopy.craft.back}
     </ButtonLink>
   );
 }
@@ -326,12 +327,14 @@ function ManifestFactsPanel({ facts }: { readonly facts: ManifestFacts }) {
 }
 
 function MissingCraft({
+  backHref,
   directRead,
   identityId,
   onRetry,
   undiscovered,
   walletRead,
 }: {
+  readonly backHref: Route;
   readonly directRead: {
     readonly isError: boolean;
     readonly isPending: boolean;
@@ -345,7 +348,7 @@ function MissingCraft({
   return (
     <PageFrame>
       <PageHeading
-        actions={<BackToCollection />}
+        actions={<BackToCollection href={backHref} />}
         eyebrow={applicationCopy.craft.eyebrow}
         title={applicationCopy.craft.title(identityId)}
       />
@@ -936,8 +939,10 @@ function CraftPortrait({
 
 export function CraftDetailPanel({
   identityId,
+  backHref = "/fleet",
 }: {
   readonly identityId: number;
+  readonly backHref?: Route;
 }) {
   const protocol = useProtocolClient();
   const directRead = useCollectibleRead(identityId, protocol);
@@ -956,6 +961,7 @@ export function CraftDetailPanel({
   if (craft === undefined) {
     return (
       <MissingCraft
+        backHref={backHref}
         directRead={directRead}
         identityId={identityId}
         onRetry={() =>
@@ -975,7 +981,7 @@ export function CraftDetailPanel({
   return (
     <PageFrame>
       <PageHeading
-        actions={<BackToCollection />}
+        actions={<BackToCollection href={backHref} />}
         eyebrow={applicationCopy.craft.eyebrow}
         title={`${craft.stateLabel} #${identityId}`}
       />

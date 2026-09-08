@@ -249,9 +249,12 @@ export const collectorHeaderCollisionFailure = async (
     const header = navigation.closest("header") as HTMLElement;
     const toggle = header.querySelector<HTMLElement>(
       '[aria-controls="collector-navigation"]',
-    ) as HTMLElement;
+    );
     const brand = header.querySelector<HTMLElement>("a") as HTMLElement;
-    const actions = toggle.parentElement as HTMLElement;
+    const actions =
+      header.querySelector<HTMLElement>("[data-collector-wallet-actions]") ??
+      toggle?.parentElement;
+    if (actions === null || actions === undefined) return undefined;
     const box = (element: Element) => {
       const rect = element.getBoundingClientRect();
       return {

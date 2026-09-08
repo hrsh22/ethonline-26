@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
-import { FleetPanel } from "@/components/fleet/fleet-panel";
+import { FleetViews } from "@/components/fleet/fleet-views";
+import { ButtonLink } from "@/components/ui/button";
 import { PageFrame, PageHeading } from "@/components/ui/page";
 import { applicationCopy } from "@/lib/identity";
 
@@ -13,11 +14,15 @@ export default function FleetPage() {
   return (
     <PageFrame>
       <PageHeading
-        eyebrow={applicationCopy.fleet.eyebrow}
-        lede={applicationCopy.fleet.introduction}
+        className="flex-row flex-wrap items-center justify-between"
         title={applicationCopy.fleet.title}
+        actions={
+          <ButtonLink href="/exchange" variant="outline">
+            Trade
+          </ButtonLink>
+        }
       />
-      <FleetPanel />
+      <FleetViews />
     </PageFrame>
   );
 }

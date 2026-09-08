@@ -24,7 +24,7 @@ export function RewardFundingEvidence({
           ? "Funding analytics reached today's query allowance. Try again tomorrow."
           : result.reason === "indexing-error"
             ? "The funding index reported an indexing error. Funding totals are unavailable."
-            : "Funding analytics is unavailable. Your rewards and claims remain available above."}
+            : "Funding analytics is unavailable. Your rewards and claims remain available in My Fleet."}
       </p>
     );
   const { rewardFundingSummary: summary, _meta: meta } = result.data;

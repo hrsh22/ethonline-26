@@ -58,6 +58,11 @@ const filterButtons = (root: HTMLElement) => [
     '[aria-label="Filter collection"] button',
   ),
 ];
+const craftSelectorButtons = (root: HTMLElement) => [
+  ...root.querySelectorAll<HTMLButtonElement>(
+    '[aria-label="Choose a craft"] button[data-craft-id]',
+  ),
+];
 
 const craft = (identityId: number) => ({
   identityId,
@@ -156,6 +161,132 @@ describe("collection surfaces", () => {
       expect(link?.textContent).toContain("View onchain collection");
     });
 
+    it("uses a real-holdings selector to replace the featured craft", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: walletSnapshot([1], [2]),
+      });
+      await render(<FleetPanel />);
+
+      const selector = craftSelectorButtons(container);
+      expect(selector).toHaveLength(2);
+      expect(selector[0]?.getAttribute("aria-pressed")).toBe("true");
+      expect(
+        container.querySelector("[data-featured-craft]")?.textContent,
+      ).toContain("#0001");
+
+      await act(async () => selector[1]?.click());
+      expect(selector[1]?.getAttribute("aria-pressed")).toBe("true");
+      const featured = container.querySelector("[data-featured-craft]");
+      expect(featured?.textContent).toContain("#0002");
+      expect(featured?.getAttribute("data-permanent")).toBe("true");
+      expect(new URLSearchParams(window.location.search).get("selected")).toBe(
+        "2",
+      );
+      expect(featured?.querySelector("a")?.getAttribute("href")).toContain(
+        "selected%3D2",
+      );
+
+      await act(async () => {
+        window.history.replaceState(null, "", "/fleet?selected=1");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      expect(
+        container.querySelector("[data-featured-craft]")?.textContent,
+      ).toContain("#0001");
+      await act(async () => {
+        window.history.replaceState(null, "", "/fleet?selected=2");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      expect(
+        container.querySelector("[data-featured-craft]")?.textContent,
+      ).toContain("#0002");
+    });
+
+    it("carries active Fleet filters into the selected craft return target", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: walletSnapshot([1], [2]),
+      });
+      await render(<FleetPanel />);
+      await act(async () => {
+        window.history.replaceState(null, "", "/fleet?state=permanent&page=2");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+
+      expect(
+        container
+          .querySelector("[data-featured-craft] a")
+          ?.getAttribute("href"),
+      ).toBe("/fleet/2?returnTo=%2Ffleet%3Fstate%3Dpermanent%26page%3D2");
+    });
+
+    it("summarizes claimable rewards by token without merging their units", async () => {
+      const snapshot = walletSnapshot([], [2, 3]);
+      const rewarded = snapshot.collectibles.permanent.map((entry, index) => ({
+        ...entry,
+        claimEligible: true,
+        rewardTrack: index === 0 ? "AAPLc" : "NVDAc",
+        pendingRewards: [
+          {
+            track: index === 0 ? "AAPLc" : "NVDAc",
+            rawTokenUnits: BigInt(index + 1) * 10n ** 18n,
+          },
+        ],
+      }));
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: {
+          ...snapshot,
+          collectibles: { ...snapshot.collectibles, permanent: rewarded },
+        },
+      });
+      await render(<FleetPanel />);
+
+      const shortcut = container.querySelector(
+        '[aria-labelledby="fleet-rewards-shortcut"]',
+      );
+      expect(shortcut?.textContent).toContain("1AAPLc");
+      expect(shortcut?.textContent).toContain("2NVDAc");
+      expect(shortcut?.textContent).not.toContain("3AAPLc");
+      expect(shortcut?.querySelector("a")?.getAttribute("href")).toBe(
+        "/fleet?view=rewards",
+      );
+      await act(async () => {
+        window.history.replaceState(
+          null,
+          "",
+          "/fleet?state=permanent&page=2&selected=3",
+        );
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      });
+      const href = container
+        .querySelector('[aria-labelledby="fleet-rewards-shortcut"] a')
+        ?.getAttribute("href");
+      const preserved = new URL(href!, "https://orbit.test").searchParams;
+      expect(Object.fromEntries(preserved)).toEqual({
+        state: "permanent",
+        page: "2",
+        selected: "3",
+        view: "rewards",
+      });
+    });
+
+    it("keeps the Fleet summary to balances and current holding counts", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: walletSnapshot([1], [2]),
+      });
+      await render(<FleetPanel />);
+
+      const summary = container.querySelector(
+        '[aria-label="Collection summary"]',
+      );
+      expect(summary?.querySelectorAll("dt")).toHaveLength(4);
+      expect(summary?.textContent).not.toContain("Next Discovery");
+      expect(summary?.textContent).not.toContain("remaining");
+    });
+
     it("puts holdings ahead of the metric summary", async () => {
       testState.protocol = protocol({
         status: "loaded",
@@ -163,17 +294,13 @@ describe("collection surfaces", () => {
       });
       await render(<FleetPanel />);
 
-      // Selected by role rather than by class name: the holdings list and
-      // the summary description list are stable, generated class names are
-      // not — which is what broke these assertions when the surface was
-      // rebuilt.
-      const grid = container.querySelector("ul:has(article)");
+      const hangar = container.querySelector("[data-fleet-hangar]");
       const metrics = container.querySelector(
         '[aria-label="Collection summary"]',
       );
-      expect(grid).not.toBeNull();
+      expect(hangar).not.toBeNull();
       expect(metrics).not.toBeNull();
-      expect(grid?.compareDocumentPosition(metrics as Node) ?? 0).toBe(
+      expect(hangar?.compareDocumentPosition(metrics as Node) ?? 0).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
     });
@@ -213,22 +340,22 @@ describe("collection surfaces", () => {
         });
         await render(<FleetPanel />);
 
-        const cards = [...container.querySelectorAll("article")];
-        expect(cards[0]?.textContent).toContain("Launch burns 1 $FUEL forever");
-        expect(cards[0]?.textContent).toContain(
+        const featured = container.querySelector("[data-featured-craft]");
+        expect(featured?.textContent).toContain("Launch burns 1 $FUEL forever");
+        expect(featured?.textContent).toContain(
           "Reward claims begin after Launch",
         );
-        expect(cards[1]?.textContent).toContain(message);
+        await act(async () => craftSelectorButtons(container)[1]?.click());
+        const permanent = container.querySelector("[data-featured-craft]");
+        expect(permanent?.textContent).toContain(message);
         if (pendingRewardsStatus === "unavailable") {
-          expect(cards[1]?.textContent).not.toContain("None attached");
-          expect(cards[1]?.textContent).not.toContain("No rewards ready");
-          expect(cards[1]?.textContent).not.toContain(
+          expect(permanent?.textContent).not.toContain("None attached");
+          expect(permanent?.textContent).not.toContain("No rewards ready");
+          expect(permanent?.textContent).not.toContain(
             "Attached rewards are ready",
           );
         }
-        for (const card of cards) {
-          expect(card.textContent).toContain("Last confirmed");
-        }
+        expect(permanent?.textContent).toContain("Last confirmed");
       },
     );
 
@@ -240,12 +367,12 @@ describe("collection surfaces", () => {
       const current = protocol({ status: "loaded", snapshot });
       testState.protocol = current;
       await render(<FleetPanel />);
-      expect(container.querySelectorAll("article")).toHaveLength(24);
+      expect(craftSelectorButtons(container)).toHaveLength(24);
       const more = [...container.querySelectorAll("button")].find(
         (button) => button.textContent === "Show more collectibles",
       );
       await act(async () => more?.click());
-      expect(container.querySelectorAll("article")).toHaveLength(48);
+      expect(craftSelectorButtons(container)).toHaveLength(48);
       const input = container.querySelector<HTMLInputElement>(
         'input[aria-label="Find a held identity"]',
       );
@@ -257,7 +384,7 @@ describe("collection surfaces", () => {
         )?.set?.call(input, "42");
         input?.dispatchEvent(new Event("input", { bubbles: true }));
       });
-      expect(container.querySelectorAll("article")).toHaveLength(1);
+      expect(craftSelectorButtons(container)).toHaveLength(1);
       expect(container.querySelector("article")?.textContent).toContain(
         "#0042",
       );
@@ -378,11 +505,13 @@ describe("collection surfaces", () => {
       });
       await render(<FleetPanel />);
 
-      expect(container.querySelector("a[href='/exchange']")).toBeNull();
-      expect(
-        container.querySelector("a[href='/faucet?returnTo=/fleet']")
-          ?.textContent,
-      ).toContain("Faucet");
+      expect(container.querySelector("a[href='/exchange']")?.textContent).toBe(
+        "Trade FUEL",
+      );
+      expect(container.querySelector("a[href='/explore']")?.textContent).toBe(
+        "Explore craft",
+      );
+      expect(container.querySelector("a[href^='/faucet']")).toBeNull();
     });
 
     it.each([
@@ -522,9 +651,10 @@ describe("collection surfaces", () => {
       // grid, a wallet holding sixteen craft pushed it about ten thousand
       // pixels down a phone viewport.
       const notice = container.querySelector("[data-state='stale']");
-      const grid = container.querySelector("ul:has(article)");
+      const hangar = container.querySelector("[data-fleet-hangar]");
       expect(notice).not.toBeNull();
-      expect(notice?.compareDocumentPosition(grid as Node)).toBe(
+      expect(hangar).not.toBeNull();
+      expect(notice?.compareDocumentPosition(hangar as Node)).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
     });
@@ -536,19 +666,19 @@ describe("collection surfaces", () => {
       });
       await render(<FleetPanel />);
 
-      expect(container.querySelectorAll("article")).toHaveLength(3);
+      expect(craftSelectorButtons(container)).toHaveLength(3);
       const buttons = filterButtons(container);
       expect(buttons.map((button) => button.textContent)).toEqual([
         "All (3)",
-        "Grounded Craft (2)",
+        "Grounded (2)",
         "Orbiter (1)",
       ]);
 
       await act(async () => filterButtons(container)[1]?.click());
-      expect(container.querySelectorAll("article")).toHaveLength(2);
+      expect(craftSelectorButtons(container)).toHaveLength(2);
 
       await act(async () => filterButtons(container)[2]?.click());
-      expect(container.querySelectorAll("article")).toHaveLength(1);
+      expect(craftSelectorButtons(container)).toHaveLength(1);
     });
 
     it("marks permanent holdings distinctly from transient ones", async () => {
@@ -558,9 +688,9 @@ describe("collection surfaces", () => {
       });
       await render(<FleetPanel />);
 
-      expect(
-        container.querySelectorAll("article[data-permanent]"),
-      ).toHaveLength(1);
+      expect(container.querySelector("article[data-permanent]")).toBeNull();
+      await act(async () => craftSelectorButtons(container)[1]?.click());
+      expect(container.querySelector("article[data-permanent]")).not.toBeNull();
     });
 
     it("draws each holding its own generated identity mark", async () => {
@@ -572,7 +702,7 @@ describe("collection surfaces", () => {
 
       const marks = [
         ...container.querySelectorAll<SVGElement>(
-          "article > div:first-child svg[aria-hidden]",
+          '[aria-label="Choose a craft"] svg[aria-hidden]',
         ),
       ];
       expect(marks).toHaveLength(2);
@@ -855,12 +985,9 @@ describe("heading structure", () => {
     });
     await render(<FleetPanel />);
 
-    const cards = [...container.querySelectorAll("article")];
-    expect(cards).toHaveLength(2);
-    for (const card of cards) {
-      expect(card.querySelector("h2")).not.toBeNull();
-      expect(card.querySelector("h3")).toBeNull();
-    }
+    const card = container.querySelector("article[data-featured-craft]");
+    expect(card?.querySelector("h2")).not.toBeNull();
+    expect(card?.querySelector("h3")).toBeNull();
   });
 
   it("keeps relic cards at one level below the page heading", async () => {

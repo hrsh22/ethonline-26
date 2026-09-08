@@ -88,6 +88,8 @@ const createProtocol = () => ({
   },
   healthPending: false,
   healthError: null,
+  marketHistory: { status: "loading" as const },
+  refreshMarketHistory: vi.fn(),
   nativeBalanceRead: {
     status: "loaded" as const,
     balance: {
@@ -346,6 +348,22 @@ describe("Exchange panel", () => {
     expect(container.textContent).not.toContain(
       "quotes become available after the sealed Base Sepolia deployment is recorded",
     );
+  });
+
+  it("places the live market before the order form in the responsive reading order", async () => {
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+
+    const panels = [...container.querySelectorAll<HTMLElement>("[data-panel]")];
+    expect(panels[0]?.textContent).toContain("Loading indexed market history");
+    expect(panels[0]?.parentElement?.className).toContain("laptop:col-span-7");
+    expect(panels[1]?.querySelector("#exchange-amount")).not.toBeNull();
+    expect(panels[1]?.className).toContain("laptop:col-span-5");
   });
 
   it("labels and disables the action while a transaction is pending", async () => {
@@ -623,7 +641,9 @@ describe("Exchange panel", () => {
     expect(balanceCell("$FUEL").value).toBe("\u2014");
     expect(container.textContent).not.toContain("0 WETH");
     expect(
-      container.querySelectorAll("[role='alert'], [role='status']"),
+      [...container.querySelectorAll("[role='alert'], [role='status']")].filter(
+        (message) => message.textContent?.includes("wallet balance"),
+      ),
     ).toHaveLength(1);
   });
 
@@ -643,7 +663,9 @@ describe("Exchange panel", () => {
 
     expect(container.textContent).toContain("Reading the wallet balance");
     expect(
-      container.querySelectorAll("[role='alert'], [role='status']"),
+      [...container.querySelectorAll("[role='alert'], [role='status']")].filter(
+        (message) => message.textContent?.includes("wallet balance"),
+      ),
     ).toHaveLength(1);
   });
 

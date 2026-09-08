@@ -3,30 +3,39 @@ import { describe, expect, it } from "vitest";
 import { createShellNavigation } from "./navigation";
 
 describe("collector navigation", () => {
-  it("lists the collecting loop before the public evidence", () => {
+  it("exposes the three collector destinations and secondary utilities", () => {
     const navigation = createShellNavigation("collector", "/exchange");
 
     expect(navigation.primary.map((entry) => entry.href)).toEqual([
-      "/start",
+      "/explore",
       "/exchange",
       "/fleet",
-      "/relics",
-      "/rewards",
+    ]);
+    expect(navigation.primary.map((entry) => entry.label)).toEqual([
+      "Explore",
+      "Trade",
+      "My Fleet",
     ]);
     expect(navigation.utility.map((entry) => entry.href)).toEqual([
-      "/market",
-      "/status",
       "/learn",
+      "/status",
       "/faucet",
+    ]);
+    expect(navigation.utility.map((entry) => entry.label)).toEqual([
+      "Learn",
+      "Protocol status",
+      "Faucet",
     ]);
   });
 
   it("marks exactly one destination active, including on a detail page", () => {
     for (const [pathname, expected] of [
+      ["/explore", "/explore"],
       ["/exchange", "/exchange"],
+      ["/market", "/exchange"],
+      ["/relics", "/explore"],
       ["/fleet", "/fleet"],
       ["/fleet/1204", "/fleet"],
-      ["/relics", "/relics"],
       ["/faucet", "/faucet"],
     ] as const) {
       const navigation = createShellNavigation("collector", pathname);

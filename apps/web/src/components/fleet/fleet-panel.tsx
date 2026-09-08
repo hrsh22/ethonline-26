@@ -1,35 +1,23 @@
 "use client";
 
-import {
-  COLLECTION_SIZE,
-  ORDINARY_IDENTITY_COUNT,
-  tierWeights,
-} from "@orbit/config/collection-manifest";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { DiscoveryOutcomes } from "@/components/fleet/discovery-outcomes";
 import { DiscoveryProgress } from "@/components/fleet/discovery-progress";
-import { CollectorNextAction } from "@/components/start/collector-next-action";
-import { createCollectorJourneyView } from "@/lib/collector-journey";
-
 import { blockedAccessMessage } from "@/components/access-notice";
 import { ConnectWalletAction } from "@/components/connect-wallet-action";
 import { CollectibleExplorerLinks } from "@/components/fleet/collectible-explorer-links";
-import {
-  FleetCraftCard,
-  type FleetCraft,
-} from "@/components/fleet/fleet-craft-card";
+import type { FleetCraft } from "@/components/fleet/fleet-craft-card";
+import { FleetHangar } from "@/components/fleet/fleet-hangar";
 import { StateFeedback } from "@/components/state-feedback";
-import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { CraftArt, type CraftKind } from "@/components/ui/craft-art";
 import { Metric, MetricGroup } from "@/components/ui/metric";
-import { Panel } from "@/components/ui/panel";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Amount, Count, Unavailable } from "@/components/ui/value";
 import { applicationCopy, identity } from "@/lib/identity";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
+import { useWalletSession } from "@/providers/wallet-session";
 
 type ProtocolClient = ReturnType<typeof useProtocolClient>;
 type WalletRead = ProtocolClient["walletRead"];
@@ -42,6 +30,7 @@ interface FleetFilters {
   readonly track: string;
   readonly rewards: "all" | "claimable" | "updating";
   readonly page: number;
+  readonly selected: string;
 }
 const DEFAULT_FILTERS: FleetFilters = {
   state: "all",
@@ -49,6 +38,7 @@ const DEFAULT_FILTERS: FleetFilters = {
   track: "all",
   rewards: "all",
   page: 1,
+  selected: "",
 };
 const filterId = (id: string): string =>
   /^\d{1,4}$/.test(id) && Number(id) >= 1 && Number(id) <= 4444 ? id : "";
@@ -67,12 +57,13 @@ const readFilters = (params: Pick<URLSearchParams, "get">): FleetFilters => {
     track: identity.rewardTrackLabels.includes(track) ? track : "all",
     id: filterId(id),
     page: filterPage(page),
+    selected: filterId(params.get("selected") ?? ""),
   };
 };
 
 const filterLabels: Record<CollectionFilter, string> = {
   all: applicationCopy.fleet.filterAll,
-  transient: applicationCopy.fleet.grounded,
+  transient: applicationCopy.fleet.filterGrounded,
   permanent: applicationCopy.fleet.permanent,
 };
 
@@ -100,8 +91,8 @@ const countValue = (
  * The connected summary.
  *
  * Only rendered for a loaded read, so the one value that can still be
- * unreadable is the permanent count when enumeration fell over. Every amount
- * is typeset from base units; the remaining requirement rounds upward.
+ * unreadable is the permanent count when enumeration fell over. The summary
+ * states balances and holdings only; it does not manufacture a next goal.
  */
 function CollectionSummary({
   walletRead,
@@ -111,28 +102,11 @@ function CollectionSummary({
   const { collectibles, liquidToken } = walletRead.snapshot;
   const notObserved = applicationCopy.common.notObserved;
   return (
-    <MetricGroup columns={6} label={applicationCopy.fleet.summaryLabel}>
+    <MetricGroup columns={4} label={applicationCopy.fleet.summaryLabel}>
       <Metric
         label={applicationCopy.fleet.tokenBalance}
         tone="live"
         value={amountValue(liquidToken.rawWei, notObserved)}
-      />
-      <Metric
-        label={applicationCopy.fleet.nextThreshold}
-        value={amountValue(
-          liquidToken.nextDiscoveryDraw.thresholdWei,
-          notObserved,
-        )}
-      />
-      <Metric
-        label={applicationCopy.fleet.remaining}
-        value={
-          <Amount
-            minimumFractionDigits={4}
-            rounding="ceil"
-            value={liquidToken.nextDiscoveryDraw.remainingWei}
-          />
-        }
       />
       <Metric
         label={applicationCopy.fleet.grounded}
@@ -186,6 +160,20 @@ function UnloadedCollection({
   readonly onRetry: () => Promise<void>;
   readonly walletRead: Exclude<WalletRead, { readonly status: "loaded" }>;
 }) {
+  const session = useWalletSession();
+  if (
+    walletRead.status === "blocked" &&
+    walletRead.accessState === "disconnected" &&
+    (!session.ready || session.connecting)
+  ) {
+    return (
+      <StateFeedback
+        title="Connecting wallet"
+        description="Waiting for the wallet connection to finish."
+        tone="loading"
+      />
+    );
+  }
   if (walletRead.status === "loading") {
     return (
       <StateFeedback
@@ -214,8 +202,8 @@ function UnloadedCollection({
         blocked.connectable ? (
           <>
             <ConnectWalletAction />
-            <ButtonLink href="/start" size="sm" variant="outline">
-              {applicationCopy.fleet.connectAction}
+            <ButtonLink href="/explore" size="sm" variant="outline">
+              Explore craft
             </ButtonLink>
           </>
         ) : undefined
@@ -226,92 +214,6 @@ function UnloadedCollection({
       title={blocked.title}
       tone={blocked.tone}
     />
-  );
-}
-
-const sampleCraft: readonly {
-  readonly detail: string;
-  readonly identityId: number;
-  readonly kind: CraftKind;
-  readonly label: string;
-  readonly track: number;
-}[] = [
-  {
-    detail: applicationCopy.fleet.sampleTransient,
-    identityId: 1204,
-    kind: "transient",
-    label: identity.terms.transientCollectible,
-    track: 2,
-  },
-  {
-    detail: applicationCopy.fleet.samplePermanent,
-    identityId: 3340,
-    kind: "permanent",
-    label: identity.terms.permanentCollectible,
-    track: 4,
-  },
-  {
-    detail: applicationCopy.fleet.sampleRelic,
-    identityId: 4442,
-    kind: "relic",
-    label: identity.terms.basketRelic,
-    track: 1,
-  },
-];
-
-/**
- * What the collection is, for a reader with no wallet: the public model as
- * a board, and one of each thing a collector can hold. Nothing here needs a
- * read, so nothing here can be a dash.
- */
-function CollectionModel() {
-  return (
-    <>
-      <MetricGroup columns={4} label={applicationCopy.fleet.modelLabel}>
-        <Metric
-          label={applicationCopy.fleet.modelIdentities}
-          value={<Count value={COLLECTION_SIZE} />}
-        />
-        <Metric
-          hint={identity.rewardTrackLabels.slice(1).join(" · ")}
-          label={applicationCopy.fleet.modelTracks}
-          value={<Count value={identity.rewardTrackLabels.length - 1} />}
-        />
-        <Metric
-          hint={applicationCopy.fleet.modelRelicsHint}
-          label={applicationCopy.fleet.modelRelics}
-          value={<Count value={COLLECTION_SIZE - ORDINARY_IDENTITY_COUNT} />}
-        />
-        <Metric
-          hint={applicationCopy.fleet.modelWeightsHint}
-          label={applicationCopy.fleet.modelWeights}
-          value={tierWeights.join(" / ")}
-        />
-      </MetricGroup>
-      <Panel title={applicationCopy.fleet.sampleTitle}>
-        <ul className="grid gap-3 compact:grid-cols-3">
-          {sampleCraft.map((sample) => (
-            <li
-              className="flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-control)] border border-line bg-canvas p-3 text-center"
-              data-public-fleet-mark
-              key={sample.identityId}
-            >
-              <CraftArt
-                className="size-24 tablet:size-28"
-                identityId={sample.identityId}
-                kind={sample.kind}
-                label={`${sample.label} example`}
-                track={sample.track}
-              />
-              <Badge tone={sample.kind === "permanent" ? "live" : "neutral"}>
-                {sample.label}
-              </Badge>
-              <p className="text-caption text-ink-soft">{sample.detail}</p>
-            </li>
-          ))}
-        </ul>
-      </Panel>
-    </>
   );
 }
 
@@ -331,19 +233,35 @@ function EmptyCollection({
   }
   return (
     <StateFeedback
-      description={applicationCopy.fleet.empty}
+      action={
+        <>
+          <ButtonLink href="/explore" size="sm" variant="outline">
+            Explore craft
+          </ButtonLink>
+          <ButtonLink href="/exchange" size="sm">
+            Trade FUEL
+          </ButtonLink>
+        </>
+      }
+      description="This wallet does not hold any confirmed craft. Browse the public collection or trade FUEL when you are ready."
       title="No collectibles yet"
       tone="empty"
     />
   );
 }
 
-function CollectionGrid({
+function CollectionHangar({
   craft,
   filter,
+  returnTo,
+  selectedId,
+  onSelect,
 }: {
   readonly craft: readonly FleetCraft[];
   readonly filter: CollectionFilter;
+  readonly returnTo: string;
+  readonly selectedId: string;
+  readonly onSelect: (identityId: number) => void;
 }) {
   if (craft.length === 0) {
     return (
@@ -356,13 +274,12 @@ function CollectionGrid({
     );
   }
   return (
-    <ul className="grid min-w-0 grid-cols-1 gap-3 compact:grid-cols-2 laptop:grid-cols-3 nav:grid-cols-4">
-      {craft.map((entry) => (
-        <li className="flex min-w-0" key={entry.identityId}>
-          <FleetCraftCard craft={entry} />
-        </li>
-      ))}
-    </ul>
+    <FleetHangar
+      craft={craft}
+      returnTo={returnTo}
+      selectedId={selectedId}
+      onSelect={onSelect}
+    />
   );
 }
 
@@ -385,6 +302,98 @@ const matchesTrack = (craft: FleetCraft, track: string) =>
   craft.rewardTrack === track ||
   craft.specialKindCode === "basket" ||
   craft.specialKindCode === "indicator";
+
+const claimableRewards = (craft: readonly FleetCraft[]) => {
+  const claimable = new Map<string, bigint>();
+  for (const entry of craft) {
+    if (rewardsUpdating(entry)) continue;
+    if (!entry.permanent || !entry.claimEligible) continue;
+    for (const reward of entry.pendingRewards) {
+      if (reward.rawTokenUnits <= 0n) continue;
+      claimable.set(
+        reward.track,
+        (claimable.get(reward.track) ?? 0n) + reward.rawTokenUnits,
+      );
+    }
+  }
+  return { claimable, updating: craft.some(rewardsUpdating) };
+};
+
+function ClaimableAmounts({
+  claimable,
+  updating,
+}: {
+  readonly claimable: ReadonlyMap<string, bigint>;
+  readonly updating: boolean;
+}) {
+  if (claimable.size === 0) {
+    return (
+      <p className="mt-1 text-body-sm text-ink-soft">
+        Claimable amounts are not shown until the required reads complete.
+      </p>
+    );
+  }
+  return (
+    <>
+      <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 font-mono text-body-sm text-ink">
+        {[...claimable].map(([track, rawTokenUnits]) => (
+          <Amount key={track} unit={track} value={rawTokenUnits} />
+        ))}
+      </div>
+      {updating ? (
+        <p className="mt-1 text-caption text-ink-soft">
+          Additional craft rewards are still updating.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function ClaimShortcut({
+  craft,
+  returnTo,
+}: {
+  readonly craft: readonly FleetCraft[];
+  readonly returnTo: string;
+}) {
+  const { claimable, updating } = claimableRewards(craft);
+  if (claimable.size === 0 && !updating) return null;
+  const rewardParams = new URLSearchParams(returnTo.split("?")[1]);
+  rewardParams.set("view", "rewards");
+  return (
+    <section
+      aria-labelledby="fleet-rewards-shortcut"
+      className="flex min-w-0 flex-col justify-between gap-3 border-y border-line py-3 tablet:flex-row tablet:items-center"
+    >
+      <div className="min-w-0">
+        <h2 className="text-body font-semibold" id="fleet-rewards-shortcut">
+          {claimable.size === 0 ? "Rewards are updating" : "Rewards available"}
+        </h2>
+        <ClaimableAmounts claimable={claimable} updating={updating} />
+      </div>
+      <ButtonLink href={`/fleet?${rewardParams}`} size="sm" variant="outline">
+        Review claims
+      </ButtonLink>
+    </section>
+  );
+}
+
+const collectionReturnTo = (filters: FleetFilters): string => {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== DEFAULT_FILTERS[key as keyof FleetFilters]) {
+      params.set(key, String(value));
+    }
+  }
+  const search = params.toString();
+  return search === "" ? "/fleet" : `/fleet?${search}`;
+};
+
+const hasAdvancedFilters = (filters: FleetFilters) =>
+  filters.id !== "" ||
+  filters.track !== "all" ||
+  filters.rewards !== "all" ||
+  undefined;
 
 function LoadedCollection({
   allCraft,
@@ -433,51 +442,58 @@ function LoadedCollection({
         }))}
         value={filters.state}
       />
-      <div className="grid min-w-0 grid-cols-1 gap-3 tablet:grid-cols-3">
-        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
-          Identity number
-          <input
-            aria-label="Find a held identity"
-            className={controlClass}
-            inputMode="numeric"
-            maxLength={4}
-            placeholder="e.g. 1639"
-            value={filters.id}
-            onChange={(event) => change({ id: event.target.value })}
-          />
-        </label>
-        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
-          Reward Track
-          <select
-            aria-label="Filter Reward Track"
-            className={controlClass}
-            value={filters.track}
-            onChange={(event) => change({ track: event.target.value })}
-          >
-            <option value="all">All tracks</option>
-            {identity.rewardTrackLabels.slice(1).map((track) => (
-              <option key={track} value={track}>
-                {track}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
-          Rewards
-          <select
-            aria-label="Filter rewards"
-            className={controlClass}
-            value={filters.rewards}
-            onChange={(event) =>
-              change({ rewards: event.target.value as FleetFilters["rewards"] })
-            }
-          >
-            <option value="all">All rewards</option>
-            <option value="claimable">Claimable</option>
-            <option value="updating">Still updating</option>
-          </select>
-        </label>
-      </div>
+      <details open={hasAdvancedFilters(filters)}>
+        <summary className="min-h-11 cursor-pointer list-inside py-3 text-body text-ink-soft">
+          Filter and search
+        </summary>
+        <div className="grid min-w-0 grid-cols-1 gap-3 pb-3 tablet:grid-cols-3">
+          <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+            Identity number
+            <input
+              aria-label="Find a held identity"
+              className={controlClass}
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="e.g. 1639"
+              value={filters.id}
+              onChange={(event) => change({ id: event.target.value })}
+            />
+          </label>
+          <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+            Reward Track
+            <select
+              aria-label="Filter Reward Track"
+              className={controlClass}
+              value={filters.track}
+              onChange={(event) => change({ track: event.target.value })}
+            >
+              <option value="all">All tracks</option>
+              {identity.rewardTrackLabels.slice(1).map((track) => (
+                <option key={track} value={track}>
+                  {track}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+            Rewards
+            <select
+              aria-label="Filter rewards"
+              className={controlClass}
+              value={filters.rewards}
+              onChange={(event) =>
+                change({
+                  rewards: event.target.value as FleetFilters["rewards"],
+                })
+              }
+            >
+              <option value="all">All rewards</option>
+              <option value="claimable">Claimable</option>
+              <option value="updating">Still updating</option>
+            </select>
+          </label>
+        </div>
+      </details>
       {filters.rewards === "claimable" && allCraft.some(rewardsUpdating) ? (
         <p className="text-body-sm text-ink-soft">
           Some rewards are still updating and are excluded from this filter.
@@ -488,7 +504,16 @@ function LoadedCollection({
         Showing {Math.min(limit, matching.length)} of {matching.length} matching
         confirmed collectibles.
       </p>
-      <CollectionGrid craft={matching.slice(0, limit)} filter={filters.state} />
+      <CollectionHangar
+        craft={matching.slice(0, limit)}
+        filter={filters.state}
+        returnTo={collectionReturnTo(filters)}
+        selectedId={filters.selected}
+        onSelect={(identityId) =>
+          onFilters({ ...filters, selected: String(identityId) })
+        }
+      />
+      <ClaimShortcut craft={allCraft} returnTo={collectionReturnTo(filters)} />
       {limit < matching.length ? (
         <Button
           variant="outline"
@@ -534,12 +559,7 @@ function FleetReadContent({
   readonly walletRead: WalletRead;
 }) {
   if (walletRead.status !== "loaded") {
-    return (
-      <>
-        {walletRead.status === "blocked" ? <CollectionModel /> : null}
-        <UnloadedCollection onRetry={onRetry} walletRead={walletRead} />
-      </>
-    );
+    return <UnloadedCollection onRetry={onRetry} walletRead={walletRead} />;
   }
   const { collectibles, observedAt } = walletRead.snapshot;
   const allCraft: readonly FleetCraft[] = [
@@ -570,7 +590,7 @@ function FleetReadContent({
  * The collection route.
  *
  * Holdings are the point of the route, so the cards come first and the
- * six-value summary follows them as a compact board.
+ * compact balance-and-holdings summary follows them as a quiet fact board.
  *
  * A pending Discovery leads so its progress stays visible above the cards.
  */
@@ -623,19 +643,6 @@ function FleetContent() {
         />
       ) : null}
       <div className="grid min-h-[32rem] min-w-0 grid-cols-1 content-start gap-3">
-        {walletRead.status === "loaded" ? (
-          <CollectorNextAction
-            journey={createCollectorJourneyView({
-              accessState: protocol.accessState,
-              walletRead,
-              nativeBalanceWei:
-                protocol.nativeBalanceRead?.status === "loaded"
-                  ? protocol.nativeBalanceRead.balance.rawWei
-                  : undefined,
-            })}
-            returnTo="/fleet"
-          />
-        ) : null}
         <FleetReadContent
           filters={filters}
           onFilters={onFilters}
