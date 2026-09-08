@@ -63,8 +63,8 @@ read custom properties, the literals are asserted against the token map by
 
 ## Typography
 
-- Barlow carries collector prose, headings, and actions. JetBrains Mono
-  carries identifiers and measured values. Collector headings and actions
+- Barlow carries collector prose, headings, and actions. IBM Plex Mono
+  carries Fleet identifiers and measured values; other collector surfaces retain JetBrains Mono. Collector headings and actions
   use sentence case, not instrument-style uppercase labels.
 - The operator retains JetBrains Mono for every role. Root font bindings
   stay mono; the collector scope changes only its own sans/display bindings.
@@ -83,6 +83,11 @@ value belongs in a `title` or a disclosure, never in a truncated display string.
 
 Collector screens use density level 4 of 10. My Fleet opens on one featured
 owned craft and a selector; a compact balance/reward summary supports it.
+Match the B prototype's composition: a wide left selector, a separate framed
+artwork stage, and an unboxed identity caption on the right. Use underline
+filters, balance beside the Collection/Rewards tabs, and a compact reward strip.
+Completed activity belongs in Notifications, not a permanent page-wide banner;
+pending and unresolved actions keep their recovery controls visible.
 An empty collection has fixed Explore and Trade links, independent of balances.
 Advanced filters and technical evidence are secondary. Trade keeps its live
 chart and form together: side by side on desktop, compact chart above the

@@ -3,7 +3,6 @@ import { toFunctionSelector } from "viem";
 import type { Page } from "playwright";
 import {
   CollectorFixture,
-  COLLECTOR_HASH,
   COLLECTOR_VRF_REQUEST,
 } from "./collector-fixture.ts";
 
@@ -37,6 +36,7 @@ export async function checkLaunchJourney(
   await page
     .getByRole("heading", { name: "Orbiter #42", exact: true })
     .waitFor({ timeout: 20_000 });
+  await page.getByRole("button", { name: /^Notifications/ }).click();
   await page
     .getByRole("link", { name: "View Orbiter #42", exact: true })
     .waitFor();
@@ -49,6 +49,9 @@ export async function checkLaunchJourney(
       .count(),
     0,
   );
+  const notifications = page.locator('[data-slot="popover-content"]');
+  await page.keyboard.press("Escape");
+  await notifications.waitFor({ state: "hidden" });
   await page.getByRole("link", { name: "Back to Fleet", exact: true }).click();
   await page
     .getByRole("link", { name: /Inspect/ })
@@ -66,24 +69,37 @@ export async function checkLaunchJourney(
   );
   await page.reload();
   assert.equal(await page.locator('[data-status="confirmed"]').count(), 0);
-  const completed = page.locator("details").filter({
-    has: page.locator("summary", { hasText: "Recent completed activity" }),
-  });
-  await completed.locator("summary").click();
-  await completed.getByText(/Launch.*#42.*confirmed/).waitFor();
+  assert.equal(await page.locator("#collector-activity").count(), 0);
+  await page.getByRole("button", { name: /^Notifications/ }).click();
   assert.equal(
-    await completed
-      .getByRole("link", { name: "View transaction", exact: true })
-      .getAttribute("href"),
-    `https://sepolia.basescan.org/tx/${COLLECTOR_HASH}`,
+    await page
+      .locator('[data-slot="popover-content"]')
+      .getByText("No new notifications.", { exact: true })
+      .count(),
+    1,
   );
   assert.equal(
-    await completed
-      .getByRole("link", { name: "View identity #42", exact: true })
-      .getAttribute("href"),
-    "/fleet/42",
+    await page
+      .locator('[data-slot="popover-content"]')
+      .getByRole("link", { name: "View transaction", exact: true })
+      .count(),
+    0,
   );
   assert.equal(fixture.submissions.length, 1);
+  await page.keyboard.press("Escape");
+  await page
+    .locator('[data-slot="popover-content"]')
+    .waitFor({ state: "hidden" });
+  await page.waitForFunction(
+    () =>
+      document.activeElement?.getAttribute("aria-label") === "Notifications",
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: /^Notifications/ })
+      .evaluate((button) => button === document.activeElement),
+    true,
+  );
 }
 
 export async function checkPartialRewardsJourney(

@@ -43,5 +43,27 @@ export async function checkHangarSelection(
     artwork && artwork.y < page.viewportSize()!.height - 64,
     "Featured craft should begin within the first viewport",
   );
+  if (page.viewportSize()!.width >= 1100) {
+    const selectorBox = await page.locator(".fleet-selector").boundingBox();
+    const stage = await page.locator(".fleet-art-stage").boundingBox();
+    const caption = await page.locator(".fleet-featured-info").boundingBox();
+    assert.ok(selectorBox && stage && caption);
+    assert.ok(
+      Math.abs(selectorBox.width - 266.4) < 2,
+      "B's selector should retain its 260px content width",
+    );
+    assert.ok(
+      selectorBox.x + selectorBox.width < stage.x,
+      "Selector belongs left of the featured stage",
+    );
+    assert.ok(
+      stage.x + stage.width < caption.x,
+      "Identity caption should remain separate from the framed artwork",
+    );
+    assert.ok(
+      Math.abs(stage.height - 490) < 2,
+      "Use B's compact 490px artwork stage",
+    );
+  }
   assert.equal(fixture.submissions.length, 0);
 }

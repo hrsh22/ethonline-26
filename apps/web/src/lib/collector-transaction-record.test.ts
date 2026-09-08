@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, it, vi } from "vitest";
 import {
+  clearCompletedCollectorTransactions,
   readCollectorTransaction,
   readCompletedCollectorTransactions,
   writeCollectorTransaction,
@@ -160,6 +161,23 @@ it("retains one completed entry after another operation and dismissal, scoped to
     state: { hash, label: "Launch #42" },
   });
   expect(readCompletedCollectorTransactions("other-wallet")).toEqual([]);
+});
+
+it("clears completed notifications after they are read without removing the receipt bookmark", () => {
+  writeCollectorTransaction(
+    "scope",
+    { status: "confirmed", label: "Launch #42", hash },
+    { kind: "action" },
+    metadata,
+    true,
+  );
+  expect(readCompletedCollectorTransactions("scope")).toHaveLength(1);
+  expect(clearCompletedCollectorTransactions("scope")).toBe(true);
+  expect(readCompletedCollectorTransactions("scope")).toEqual([]);
+  expect(readCollectorTransaction("scope")).toMatchObject({
+    operationId: "operation-1",
+    state: { status: "confirmed", hash },
+  });
 });
 
 it("saves the newly observed outcome when restored record metadata also contains its old envelope", () => {

@@ -195,43 +195,53 @@ const connectWallet = async (
 const runAxe = async (
   page: Page,
   label: string,
+  excludeBaseUiFocusGuards = false,
 ): Promise<readonly BrowserFailure[]> => {
   await page.addScriptTag({ content: axe.source });
-  const violations = await page.evaluate(async (options) => {
-    const runner = (
-      window as unknown as {
-        readonly axe: {
-          readonly run: (
-            context: Document,
-            options: unknown,
-          ) => Promise<{
-            readonly violations: readonly {
-              readonly help: string;
-              readonly id: string;
-              readonly impact: string | null;
-              readonly nodes: readonly unknown[];
-            }[];
-          }>;
-        };
-      }
-    ).axe;
-    const result = await runner.run(document, options);
-    return result.violations.map((violation) => ({
-      help: violation.help,
-      id: violation.id,
-      impact: violation.impact,
-      nodes: violation.nodes.length,
-      // The failing selector is what makes a violation actionable.
-      targets: violation.nodes
-        .slice(0, 3)
-        .map((node) =>
-          String(
-            (node as { readonly target?: readonly unknown[] }).target?.[0] ??
-              "unknown",
+  const violations = await page.evaluate(
+    async ({ options, excludeFocusGuards }) => {
+      const runner = (
+        window as unknown as {
+          readonly axe: {
+            readonly run: (
+              context: unknown,
+              options: unknown,
+            ) => Promise<{
+              readonly violations: readonly {
+                readonly help: string;
+                readonly id: string;
+                readonly impact: string | null;
+                readonly nodes: readonly unknown[];
+              }[];
+            }>;
+          };
+        }
+      ).axe;
+      // Base UI's portalled popovers use intentionally focusable, aria-hidden
+      // sentinels to preserve tab order. Test the application surface, excluding
+      // only those implementation-only focus guards from axe's aria-hidden rule.
+      const context = excludeFocusGuards
+        ? { exclude: [["[data-base-ui-focus-guard]"]] }
+        : document;
+      const result = await runner.run(context, options);
+      return result.violations.map((violation) => ({
+        help: violation.help,
+        id: violation.id,
+        impact: violation.impact,
+        nodes: violation.nodes.length,
+        // The failing selector is what makes a violation actionable.
+        targets: violation.nodes
+          .slice(0, 3)
+          .map((node) =>
+            String(
+              (node as { readonly target?: readonly unknown[] }).target?.[0] ??
+                "unknown",
+            ),
           ),
-        ),
-    }));
-  }, AXE_OPTIONS);
+      }));
+    },
+    { excludeFocusGuards: excludeBaseUiFocusGuards, options: AXE_OPTIONS },
+  );
   return violations.map((violation) => ({
     detail: `${label}: ${violation.id} (${violation.impact ?? "unknown"}) ${violation.help} on ${violation.nodes} node(s) at ${violation.targets.join(", ")}`,
     kind: "accessibility" as const,
@@ -245,7 +255,11 @@ const captureScreenshot = async (
 ): Promise<void> => {
   const target = join(directory, `${name}.png`);
   mkdirSync(dirname(target), { recursive: true });
-  await page.screenshot({ fullPage: false, path: target });
+  await page.screenshot({
+    animations: "disabled",
+    fullPage: false,
+    path: target,
+  });
 };
 
 interface VisitInput {
@@ -615,6 +629,29 @@ const visit = async (
       if (failure !== undefined) failures.push(failure);
     }
     failures.push(...(await inspectPage(page, input)));
+    if (input.label === "collector-journey:launch-reload") {
+      await page.getByRole("button", { name: /^Notifications/ }).click();
+      await page
+        .locator('[data-slot="popover-content"]')
+        .evaluate(async (element) =>
+          Promise.all(
+            element
+              .getAnimations()
+              .map((animation) => animation.finished.catch(() => undefined)),
+          ),
+        );
+      failures.push(
+        ...(await runAxe(page, "notifications:completed-history", true)),
+      );
+      if (input.options.screenshotDirectory !== undefined) {
+        await captureScreenshot(
+          page,
+          input.options.screenshotDirectory,
+          "notifications-completed-history",
+        );
+      }
+      await page.keyboard.press("Escape");
+    }
   } catch (error) {
     const visibleState = await page
       .locator("body")
@@ -794,16 +831,18 @@ export const runBrowserMatrix = async (
     ...adminPlan(options),
     ...adminInputPlan(options),
     ...idleTrafficPlan(options),
-    ...[RELEASE_VIEWPORTS[0]!, RELEASE_VIEWPORTS[3]!].map((viewport) => ({
-      axe: true,
-      data: "stubbed" as const,
-      label: `collector-journey:hangar-selection@${viewport.label}`,
-      options,
-      path: "/fleet",
-      viewport,
-      wallet: "transacting" as const,
-      screenshot: true,
-    })),
+    ...[...RELEASE_VIEWPORTS, { height: 800, label: "1280", width: 1280 }].map(
+      (viewport) => ({
+        axe: true,
+        data: "stubbed" as const,
+        label: `collector-journey:hangar-selection@${viewport.label}`,
+        options,
+        path: "/fleet",
+        viewport,
+        wallet: "transacting" as const,
+        screenshot: true,
+      }),
+    ),
     {
       axe: true,
       data: "stubbed" as const,

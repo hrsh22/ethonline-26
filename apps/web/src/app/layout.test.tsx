@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/font/google", () => ({
   Barlow: () => ({ variable: "font-barlow" }),
+  IBM_Plex_Mono: () => ({ variable: "font-plex-mono" }),
   JetBrains_Mono: () => ({ variable: "font-mono" }),
 }));
 

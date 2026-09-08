@@ -242,6 +242,47 @@
 
   font-family: var(--font-sans), "Arial Narrow", Arial, sans-serif;
   font-size: 1rem;
+  background:
+    radial-gradient(
+      circle at 72% 18%,
+      rgba(255, 106, 31, 0.055),
+      transparent 27rem
+    ),
+    var(--canvas);
+}
+
+.collector-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  white-space: nowrap;
+}
+.collector-orbit-mark {
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--text-primary);
+  border-radius: 50%;
+}
+.collector-orbit-mark::after {
+  content: "";
+  position: absolute;
+  top: 0.625rem;
+  left: -0.25rem;
+  width: 1.875rem;
+  border-top: 1px solid var(--accent-fill);
+  transform: rotate(-18deg);
+}
+@media (max-width: 560px) {
+  .collector-brand-link {
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
 }
 
 [data-shell="collector"] :is(h1, h2, h3, h4, h5, h6) {
@@ -305,6 +346,31 @@
 
 [data-shell="collector"] [data-collector-wallet-actions] details {
   anchor-name: --collector-wallet-help;
+}
+
+.collector-notifications,
+.collector-completion-toast {
+  font-family: var(--font-barlow), "Arial Narrow", Arial, sans-serif;
+}
+.collector-completion-toast {
+  position: fixed;
+  z-index: 45;
+  right: 1rem;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  width: min(24rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-surface);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-overlay);
+}
+@media (min-width: 768px) {
+  .collector-completion-toast {
+    bottom: 1rem;
+  }
 }
 
 /* Element defaults live in `base` so component utilities can override them.

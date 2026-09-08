@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { SlidersHorizontal } from "lucide-react";
 
 import { DiscoveryOutcomes } from "@/components/fleet/discovery-outcomes";
 import { DiscoveryProgress } from "@/components/fleet/discovery-progress";
@@ -13,7 +14,6 @@ import { FleetHangar } from "@/components/fleet/fleet-hangar";
 import { StateFeedback } from "@/components/state-feedback";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Metric, MetricGroup } from "@/components/ui/metric";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Amount, Count, Unavailable } from "@/components/ui/value";
 import { applicationCopy, identity } from "@/lib/identity";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
@@ -64,7 +64,7 @@ const readFilters = (params: Pick<URLSearchParams, "get">): FleetFilters => {
 const filterLabels: Record<CollectionFilter, string> = {
   all: applicationCopy.fleet.filterAll,
   transient: applicationCopy.fleet.filterGrounded,
-  permanent: applicationCopy.fleet.permanent,
+  permanent: "Orbiters",
 };
 
 const amountValue = (
@@ -196,21 +196,23 @@ function UnloadedCollection({
   // A wallet on the wrong chain is connected. Naming the block "not
   // connected" and offering a connect button left it with no way forward.
   const blocked = blockedAccessMessage(walletRead.accessState);
+  if (blocked.connectable) {
+    return (
+      <section
+        className="fleet-empty"
+        data-state={blocked.tone}
+        role="status"
+        aria-live="polite"
+      >
+        <h2 className="sr-only">{blocked.title}</h2>
+        <p>Connect a wallet to see your craft and rewards.</p>
+        <ConnectWalletAction />
+      </section>
+    );
+  }
   return (
     <StateFeedback
-      action={
-        blocked.connectable ? (
-          <>
-            <ConnectWalletAction />
-            <ButtonLink href="/explore" size="sm" variant="outline">
-              Explore craft
-            </ButtonLink>
-          </>
-        ) : undefined
-      }
-      description={
-        blocked.connectable ? applicationCopy.fleet.connect : blocked.body
-      }
+      description={blocked.body}
       title={blocked.title}
       tone={blocked.tone}
     />
@@ -232,21 +234,18 @@ function EmptyCollection({
     );
   }
   return (
-    <StateFeedback
-      action={
-        <>
-          <ButtonLink href="/explore" size="sm" variant="outline">
-            Explore craft
-          </ButtonLink>
-          <ButtonLink href="/exchange" size="sm">
-            Trade FUEL
-          </ButtonLink>
-        </>
-      }
-      description="This wallet does not hold any confirmed craft. Browse the public collection or trade FUEL when you are ready."
-      title="No collectibles yet"
-      tone="empty"
-    />
+    <section className="fleet-empty">
+      <h2>No craft in your fleet.</h2>
+      <p>Your collected craft appear here.</p>
+      <div className="flex flex-wrap gap-3">
+        <ButtonLink href="/explore" size="sm">
+          Explore craft
+        </ButtonLink>
+        <ButtonLink href="/exchange" size="sm" variant="outline">
+          Trade FUEL
+        </ButtonLink>
+      </div>
+    </section>
   );
 }
 
@@ -335,7 +334,7 @@ function ClaimableAmounts({
   }
   return (
     <>
-      <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 font-mono text-body-sm text-ink">
+      <div className="fleet-reward-values">
         {[...claimable].map(([track, rawTokenUnits]) => (
           <Amount key={track} unit={track} value={rawTokenUnits} />
         ))}
@@ -363,10 +362,10 @@ function ClaimShortcut({
   return (
     <section
       aria-labelledby="fleet-rewards-shortcut"
-      className="flex min-w-0 flex-col justify-between gap-3 border-y border-line py-3 tablet:flex-row tablet:items-center"
+      className="fleet-reward-strip"
     >
       <div className="min-w-0">
-        <h2 className="text-body font-semibold" id="fleet-rewards-shortcut">
+        <h2 className="fleet-reward-heading" id="fleet-rewards-shortcut">
           {claimable.size === 0 ? "Rewards are updating" : "Rewards available"}
         </h2>
         <ClaimableAmounts claimable={claimable} updating={updating} />
@@ -432,75 +431,92 @@ function LoadedCollection({
           tone="partial"
         />
       ) : null}
-      <SegmentedControl
-        className="max-w-[40rem]"
-        label={applicationCopy.fleet.filterLabel}
-        onValueChange={(state: CollectionFilter) => change({ state })}
-        options={(["all", "transient", "permanent"] as const).map((option) => ({
-          label: `${filterLabels[option]} (${countFor(option)})`,
-          value: option,
-        }))}
-        value={filters.state}
-      />
-      <details open={hasAdvancedFilters(filters)}>
-        <summary className="min-h-11 cursor-pointer list-inside py-3 text-body text-ink-soft">
-          Filter and search
-        </summary>
-        <div className="grid min-w-0 grid-cols-1 gap-3 pb-3 tablet:grid-cols-3">
-          <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
-            Identity number
-            <input
-              aria-label="Find a held identity"
-              className={controlClass}
-              inputMode="numeric"
-              maxLength={4}
-              placeholder="e.g. 1639"
-              value={filters.id}
-              onChange={(event) => change({ id: event.target.value })}
-            />
-          </label>
-          <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
-            Reward Track
-            <select
-              aria-label="Filter Reward Track"
-              className={controlClass}
-              value={filters.track}
-              onChange={(event) => change({ track: event.target.value })}
+      <ClaimShortcut craft={allCraft} returnTo={collectionReturnTo(filters)} />
+      <div className="fleet-toolbar">
+        <div
+          className="fleet-filters"
+          role="group"
+          aria-label={applicationCopy.fleet.filterLabel}
+        >
+          {(["all", "transient", "permanent"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="fleet-filter"
+              aria-pressed={filters.state === option}
+              onClick={() => change({ state: option })}
             >
-              <option value="all">All tracks</option>
-              {identity.rewardTrackLabels.slice(1).map((track) => (
-                <option key={track} value={track}>
-                  {track}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
-            Rewards
-            <select
-              aria-label="Filter rewards"
-              className={controlClass}
-              value={filters.rewards}
-              onChange={(event) =>
-                change({
-                  rewards: event.target.value as FleetFilters["rewards"],
-                })
-              }
-            >
-              <option value="all">All rewards</option>
-              <option value="claimable">Claimable</option>
-              <option value="updating">Still updating</option>
-            </select>
-          </label>
+              {filterLabels[option]} {countFor(option)}
+            </button>
+          ))}
         </div>
-      </details>
+        <details
+          className="fleet-advanced-filters"
+          open={hasAdvancedFilters(filters)}
+        >
+          <summary
+            aria-label="Filter and search"
+            className="flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-end gap-2 py-3 text-body-sm text-ink-soft"
+          >
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
+            <span className="hidden tablet:inline">Filter and search</span>
+          </summary>
+          <div className="grid min-w-0 grid-cols-1 gap-3 pb-3 tablet:grid-cols-3">
+            <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+              Identity number
+              <input
+                aria-label="Find a held identity"
+                className={controlClass}
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="e.g. 1639"
+                value={filters.id}
+                onChange={(event) => change({ id: event.target.value })}
+              />
+            </label>
+            <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+              Reward Track
+              <select
+                aria-label="Filter Reward Track"
+                className={controlClass}
+                value={filters.track}
+                onChange={(event) => change({ track: event.target.value })}
+              >
+                <option value="all">All tracks</option>
+                {identity.rewardTrackLabels.slice(1).map((track) => (
+                  <option key={track} value={track}>
+                    {track}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid min-w-0 grid-cols-1 gap-1 text-body-sm">
+              Rewards
+              <select
+                aria-label="Filter rewards"
+                className={controlClass}
+                value={filters.rewards}
+                onChange={(event) =>
+                  change({
+                    rewards: event.target.value as FleetFilters["rewards"],
+                  })
+                }
+              >
+                <option value="all">All rewards</option>
+                <option value="claimable">Claimable</option>
+                <option value="updating">Still updating</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </div>
       {filters.rewards === "claimable" && allCraft.some(rewardsUpdating) ? (
         <p className="text-body-sm text-ink-soft">
           Some rewards are still updating and are excluded from this filter.
           Choose Still updating to see those identities.
         </p>
       ) : null}
-      <p className="text-caption text-ink-soft" role="status">
+      <p className="sr-only" role="status">
         Showing {Math.min(limit, matching.length)} of {matching.length} matching
         confirmed collectibles.
       </p>
@@ -513,7 +529,6 @@ function LoadedCollection({
           onFilters({ ...filters, selected: String(identityId) })
         }
       />
-      <ClaimShortcut craft={allCraft} returnTo={collectionReturnTo(filters)} />
       {limit < matching.length ? (
         <Button
           variant="outline"
@@ -626,9 +641,6 @@ function FleetContent() {
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3">
-      <div id="discovery-outcomes">
-        <DiscoveryOutcomes />
-      </div>
       {walletRead.status === "loaded" && walletRead.stale === true ? (
         <StateFeedback
           title="Connection interrupted"
@@ -636,13 +648,7 @@ function FleetContent() {
           tone="stale"
         />
       ) : null}
-      {walletRead.status === "loaded" ? (
-        <DiscoveryProgress
-          observedAt={walletRead.snapshot.observedAt}
-          pending={walletRead.snapshot.collectibles.pendingDiscovery}
-        />
-      ) : null}
-      <div className="grid min-h-[32rem] min-w-0 grid-cols-1 content-start gap-3">
+      <div className="fleet-collection-content min-h-[32rem] min-w-0">
         <FleetReadContent
           filters={filters}
           onFilters={onFilters}
@@ -650,17 +656,31 @@ function FleetContent() {
           walletRead={walletRead}
         />
         {walletRead.status === "loaded" ? (
-          <CollectionSummary walletRead={walletRead} />
+          <DiscoveryProgress
+            observedAt={walletRead.snapshot.observedAt}
+            pending={walletRead.snapshot.collectibles.pendingDiscovery}
+          />
+        ) : null}
+        {walletRead.status === "loaded" ? (
+          <details className="mt-5">
+            <summary className="min-h-11 cursor-pointer py-3 text-body-sm text-ink-soft">
+              Collection details
+            </summary>
+            <CollectionSummary walletRead={walletRead} />
+            <CollectibleExplorerLinks />
+          </details>
         ) : null}
       </div>
-      <CollectibleExplorerLinks />
+      <div id="discovery-outcomes" className="empty:hidden">
+        <DiscoveryOutcomes />
+      </div>
     </div>
   );
 }
 
 export function FleetPanel() {
   return (
-    <div className="mt-4 min-h-[32rem]">
+    <div className="fleet-panel min-h-[32rem]">
       <Suspense
         fallback={
           <StateFeedback

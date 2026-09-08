@@ -36,6 +36,7 @@ import { PUBLIC_API_PATHS } from "@orbit/config/public-api";
 import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
 
 import {
+  clearCompletedCollectorTransactions,
   readCollectorTransaction,
   isObsoleteRecoveryCallback,
   readCompletedCollectorTransactions,
@@ -324,6 +325,7 @@ type ProtocolClientContextValue = {
   readonly transaction: TransactionState;
   readonly transactionPersistenceAvailable?: boolean;
   readonly completedTransactions?: readonly CompletedCollectorTransaction[];
+  readonly markCompletedTransactionsRead?: () => void;
   readonly transactionMetadata?:
     | {
         readonly operationId: string;
@@ -2646,6 +2648,13 @@ export function ProtocolClientProvider({
     updateTransaction(createTransactionState());
   }, [updateTransaction]);
 
+  const markCompletedTransactionsRead = useCallback(() => {
+    const scope = recordScopeRef.current;
+    if (scope === undefined) return;
+    clearCompletedCollectorTransactions(scope);
+    setCompletedTransactions([]);
+  }, []);
+
   const getActionState = useCallback(
     (action: ProtocolAction) => {
       if (accessState !== "ready") {
@@ -2741,6 +2750,7 @@ export function ProtocolClientProvider({
       transactionPersistenceAvailable,
       transactionMetadata,
       completedTransactions,
+      markCompletedTransactionsRead,
       clearTransaction,
       recoverTransactionHash,
       refresh,
@@ -2775,6 +2785,7 @@ export function ProtocolClientProvider({
       transactionPersistenceAvailable,
       transactionMetadata,
       completedTransactions,
+      markCompletedTransactionsRead,
       clearTransaction,
       recoverTransactionHash,
       walletSynchronizing,

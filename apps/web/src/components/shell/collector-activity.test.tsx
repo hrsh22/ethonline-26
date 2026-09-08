@@ -7,8 +7,12 @@ const state = vi.hoisted(() => ({
   address: "0xabc",
   operationId: "first",
   transaction: { status: "submission-unknown" } as TransactionState,
+  pending: undefined as number | undefined,
+  reference: undefined as string | undefined,
 }));
 beforeEach(() => {
+  state.pending = undefined;
+  state.reference = undefined;
   state.transaction = {
     status: "submission-unknown",
     label: "Claim rewards",
@@ -21,7 +25,16 @@ vi.mock("@/providers/protocol-client-provider", () => ({
     chainId: 84532,
     transaction: state.transaction,
     transactionMetadata: { operationId: state.operationId },
-    walletRead: { status: "unavailable" },
+    walletRead:
+      state.pending === undefined
+        ? { status: "unavailable" }
+        : {
+            status: "loaded",
+            snapshot: {
+              collectibles: { pendingDiscovery: { count: state.pending } },
+            },
+          },
+    completedTransactions: [{}],
     clearTransaction: vi.fn(),
     retry: vi.fn(),
   }),
@@ -30,7 +43,7 @@ vi.mock("@/hooks/use-discovery-history", () => ({
   useDiscoveryHistory: () => ({ data: undefined }),
 }));
 vi.mock("@/hooks/use-discovery-reference", () => ({
-  useDiscoveryReference: () => undefined,
+  useDiscoveryReference: () => state.reference,
 }));
 vi.mock("@/components/collector-help", () => ({
   CollectorHelp: () => <div>Help with this wallet action</div>,
@@ -106,7 +119,7 @@ it("verifies a supplied hash without clearing the attempt and keeps errors visib
   }
 });
 
-it("keeps successful confirmation visible without presenting recovery support", async () => {
+it("keeps completed transactions out of the page-level activity banner", async () => {
   state.transaction = {
     status: "confirmed",
     label: "Claim eligible rewards",
@@ -117,7 +130,8 @@ it("keeps successful confirmation visible without presenting recovery support", 
   try {
     await act(async () => root.render(<CollectorActivity />));
     expect(container.textContent).not.toContain("Help with this wallet action");
-    expect(container.textContent).toContain("Dismiss completed activity");
+    expect(container.querySelector("#collector-activity")).toBeNull();
+    expect(container.textContent).toBe("");
   } finally {
     await act(async () => root.unmount());
   }
@@ -130,6 +144,24 @@ it("keeps recovery support visible for unresolved wallet activity", async () => 
     await act(async () => root.render(<CollectorActivity />));
     expect(container.textContent).toContain("Help with this wallet action");
     expect(container.textContent).toContain("I checked my wallet activity");
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
+it("does not revive the banner for saved completions or a resolved discovery reference", async () => {
+  state.transaction = { status: "idle" };
+  state.pending = 0;
+  state.reference = "past-discovery";
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<CollectorActivity />));
+    expect(container.textContent).toBe("");
+    state.pending = 1;
+    await act(async () => root.render(<CollectorActivity />));
+    expect(container.textContent).toContain("1 pending Discovery");
+    expect(container.querySelector("#collector-activity")).not.toBeNull();
   } finally {
     await act(async () => root.unmount());
   }

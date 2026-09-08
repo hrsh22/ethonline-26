@@ -56,8 +56,8 @@ describe("application route shells", () => {
     expect(html).toContain("My Fleet");
     expect(html).toContain("Protocol status");
     expect(html).toContain("No-value test assets.");
-    expect(html).toContain("Base Sepolia");
-    expect(html).toContain("No value");
+    expect(html).toContain("BASE SEPOLIA");
+    expect(html).toContain("Testnet · no value");
     expect(html).toContain("data-collector-wallet-actions");
     expect(html).not.toContain('href="/start"');
     expect(html).not.toContain("Live at block");

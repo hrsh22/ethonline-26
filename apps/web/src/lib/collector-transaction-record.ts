@@ -247,6 +247,15 @@ export const readCompletedCollectorTransactions = (
   }
 };
 
+export const clearCompletedCollectorTransactions = (scope: string): boolean => {
+  try {
+    window.localStorage.removeItem(completedKeyFor(scope));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const rememberCompletedTransaction = (
   scope: string,
   record: CollectorTransactionRecord,

@@ -306,19 +306,14 @@ describe("collection surfaces", () => {
     });
 
     it.each([
-      [0n, "observed", true, "No rewards ready to claim."],
-      [1n, "observed", true, "Attached rewards are ready to claim."],
-      [
-        1n,
-        "observed",
-        false,
-        "Rewards are attached; claiming is not available yet.",
-      ],
-      [0n, "unavailable", true, "could not be loaded"],
-      [1n, "unavailable", true, "could not be loaded"],
+      [0n, "observed", true],
+      [1n, "observed", true],
+      [1n, "observed", false],
+      [0n, "unavailable", true],
+      [1n, "unavailable", true],
     ] as const)(
-      "explains rewards from %s units, %s evidence, and eligibility %s",
-      async (rawTokenUnits, pendingRewardsStatus, claimEligible, message) => {
+      "keeps the Hangar caption concise with %s units, %s evidence, and eligibility %s",
+      async (rawTokenUnits, pendingRewardsStatus, claimEligible) => {
         const snapshot = walletSnapshot([1], [2]);
         testState.protocol = protocol({
           status: "loaded",
@@ -340,22 +335,25 @@ describe("collection surfaces", () => {
         });
         await render(<FleetPanel />);
 
-        const featured = container.querySelector("[data-featured-craft]");
-        expect(featured?.textContent).toContain("Launch burns 1 $FUEL forever");
-        expect(featured?.textContent).toContain(
-          "Reward claims begin after Launch",
-        );
+        const featured = container.querySelector("[data-featured-craft]")!;
+        expect(featured.textContent).toContain("View craft");
+        expect(featured.textContent).not.toContain("Launch burns");
         await act(async () => craftSelectorButtons(container)[1]?.click());
-        const permanent = container.querySelector("[data-featured-craft]");
-        expect(permanent?.textContent).toContain(message);
+        const permanent = container.querySelector("[data-featured-craft]")!;
+        expect(permanent.textContent).toContain("Orbiter");
+        expect(permanent.textContent).toContain("Tier Common");
         if (pendingRewardsStatus === "unavailable") {
+          expect(permanent.textContent).toContain("could not be loaded");
           expect(permanent?.textContent).not.toContain("None attached");
           expect(permanent?.textContent).not.toContain("No rewards ready");
           expect(permanent?.textContent).not.toContain(
             "Attached rewards are ready",
           );
         }
-        expect(permanent?.textContent).toContain("Last confirmed");
+        expect(permanent?.textContent).not.toContain("Last confirmed");
+        expect(permanent?.querySelector("a")?.getAttribute("href")).toContain(
+          "/fleet/2?",
+        );
       },
     );
 
@@ -655,7 +653,7 @@ describe("collection surfaces", () => {
       expect(notice).not.toBeNull();
       expect(hangar).not.toBeNull();
       expect(notice?.compareDocumentPosition(hangar as Node)).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING,
+        Node.DOCUMENT_POSITION_PRECEDING,
       );
     });
 
@@ -669,9 +667,9 @@ describe("collection surfaces", () => {
       expect(craftSelectorButtons(container)).toHaveLength(3);
       const buttons = filterButtons(container);
       expect(buttons.map((button) => button.textContent)).toEqual([
-        "All (3)",
-        "Grounded (2)",
-        "Orbiter (1)",
+        "All 3",
+        "Grounded 2",
+        "Orbiters 1",
       ]);
 
       await act(async () => filterButtons(container)[1]?.click());

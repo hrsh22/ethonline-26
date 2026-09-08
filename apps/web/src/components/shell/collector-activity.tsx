@@ -1,7 +1,5 @@
 "use client";
 
-import { CompletedActivity } from "@/components/shell/completed-activity";
-import { useDiscoveryHistory } from "@/hooks/use-discovery-history";
 import { CollectorHelp } from "@/components/collector-help";
 import { useState } from "react";
 import Link from "next/link";
@@ -149,56 +147,38 @@ const hasActivity = (
   protocol: ReturnType<typeof useProtocolClient>,
   reference: string | undefined,
   pending: number | undefined,
-  historyCount = 0,
 ) =>
-  protocol.transaction.status !== "idle" ||
-  reference !== undefined ||
-  Boolean(pending) ||
-  historyCount > 0 ||
-  Boolean(protocol.completedTransactions?.length);
+  (protocol.transaction.status !== "idle" &&
+    protocol.transaction.status !== "confirmed") ||
+  (pending === undefined && reference !== undefined) ||
+  Boolean(pending);
 
 /** The shell owns this notice so navigation cannot hide a submitted action. */
 export function CollectorActivity() {
   const protocol = useProtocolClient();
   const discoveryReference = useDiscoveryReference(protocol);
-  const discoveryHistory = useDiscoveryHistory({ poll: true });
   const pending =
     protocol.walletRead.status === "loaded"
       ? protocol.walletRead.snapshot.collectibles.pendingDiscovery.count
       : undefined;
-  if (
-    !hasActivity(
-      protocol,
-      discoveryReference,
-      pending,
-      discoveryHistory.data?.requests.length,
-    )
-  )
-    return null;
+  if (!hasActivity(protocol, discoveryReference, pending)) return null;
   return (
     <section
       id="collector-activity"
       aria-label="Wallet activity"
       className="border-b border-line px-4 py-3 tablet:px-6"
     >
-      <WalletTransactionActivity protocol={protocol} />
-      <CompletedActivity records={protocol.completedTransactions ?? []} />
-      {discoveryHistory.data?.requests.some(
-        (request) => request.outcome !== "pending",
-      ) ? (
-        <Link
-          className="mt-2 inline-flex min-h-11 items-center underline"
-          href="/fleet#discovery-outcomes"
-        >
-          View recorded discovery outcomes
-        </Link>
-      ) : null}
-      <DiscoveryActivity reference={discoveryReference} pending={pending} />
+      {protocol.transaction.status === "confirmed" ? null : (
+        <WalletTransactionActivity protocol={protocol} />
+      )}
+      {pending === 0 ? null : (
+        <DiscoveryActivity reference={discoveryReference} pending={pending} />
+      )}
     </section>
   );
 }
 
-function WalletTransactionActivity({
+export function WalletTransactionActivity({
   protocol,
 }: {
   readonly protocol: ReturnType<typeof useProtocolClient>;

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 
-import { FleetViews } from "@/components/fleet/fleet-views";
-import { ButtonLink } from "@/components/ui/button";
-import { PageFrame, PageHeading } from "@/components/ui/page";
+import { FleetHeading, FleetViews } from "@/components/fleet/fleet-views";
+import { PageFrame } from "@/components/ui/page";
 import { applicationCopy } from "@/lib/identity";
 
 export const metadata = {
@@ -12,16 +11,8 @@ export const metadata = {
 
 export default function FleetPage() {
   return (
-    <PageFrame>
-      <PageHeading
-        className="flex-row flex-wrap items-center justify-between"
-        title={applicationCopy.fleet.title}
-        actions={
-          <ButtonLink href="/exchange" variant="outline">
-            Trade
-          </ButtonLink>
-        }
-      />
+    <PageFrame className="fleet-page">
+      <FleetHeading />
       <FleetViews />
     </PageFrame>
   );

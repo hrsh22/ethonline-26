@@ -2,10 +2,10 @@
 
 import {
   FleetCraftCard,
+  fleetStateLabel,
   type FleetCraft,
-  trackIndexFor,
 } from "@/components/fleet/fleet-craft-card";
-import { CraftArt } from "@/components/ui/craft-art";
+import { FleetCraftArt } from "@/components/fleet/fleet-craft-art";
 import { cn } from "@/lib/utils";
 
 const identityLabel = (craft: FleetCraft) =>
@@ -31,56 +31,41 @@ export function FleetHangar({
   return (
     <section
       aria-labelledby="fleet-hangar-heading"
-      className="grid min-w-0 gap-3 laptop:grid-cols-[minmax(9rem,12rem)_minmax(0,1fr)]"
+      className="fleet-hangar"
       data-fleet-hangar
     >
       <h2 className="sr-only" id="fleet-hangar-heading">
         Choose a craft to inspect
       </h2>
-      <ul
-        aria-label="Choose a craft"
-        className="flex min-w-0 snap-x gap-2 overflow-x-auto pb-1 laptop:max-h-[42rem] laptop:flex-col laptop:overflow-y-auto laptop:overflow-x-hidden laptop:pr-1"
-      >
+      <ul aria-label="Choose a craft" className="fleet-selector">
         {craft.map((entry) => {
           const active = entry.identityId === selected.identityId;
           return (
-            <li
-              className="min-w-36 snap-start laptop:min-w-0"
-              key={entry.identityId}
-            >
+            <li className="fleet-selector-item" key={entry.identityId}>
               <button
                 aria-label={identityLabel(entry)}
                 aria-pressed={active}
                 className={cn(
-                  "grid min-h-24 w-full min-w-0 grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-2 rounded-[var(--radius-control)] border bg-canvas p-2 text-left outline-none transition-colors duration-[var(--motion-fast)] hover:border-line-strong focus-visible:ring-3 focus-visible:ring-ring motion-reduce:transition-none laptop:grid-cols-1 laptop:justify-items-center laptop:text-center",
-                  active
-                    ? "border-[var(--accent-border)] bg-surface-2 text-ink"
-                    : "border-line text-ink-soft",
+                  "fleet-selector-button",
+                  active ? "is-selected" : undefined,
                 )}
                 data-craft-id={entry.identityId}
                 onClick={() => onSelect(entry.identityId)}
                 type="button"
               >
-                <CraftArt
-                  className="size-14"
+                <FleetCraftArt
+                  className="fleet-selector-art"
                   decorative
                   identityId={entry.identityId}
-                  kind={
-                    entry.identityId > 4440
-                      ? "relic"
-                      : entry.permanent
-                        ? "permanent"
-                        : "transient"
-                  }
-                  lit={entry.permanent}
-                  track={trackIndexFor(entry.rewardTrack)}
+                  permanent={entry.permanent}
+                  rewardTrack={entry.rewardTrack}
                 />
                 <span className="min-w-0">
-                  <span className="block font-mono text-body-sm font-semibold tabular-nums text-ink">
+                  <span className="fleet-selector-number">
                     #{String(entry.identityId).padStart(4, "0")}
                   </span>
-                  <span className="block truncate text-caption">
-                    {entry.stateLabel}
+                  <span className="fleet-selector-caption">
+                    {fleetStateLabel(entry)} · {entry.rewardTrack}
                   </span>
                 </span>
               </button>
@@ -88,7 +73,7 @@ export function FleetHangar({
           );
         })}
       </ul>
-      <div className="min-w-0 laptop:sticky laptop:top-24 laptop:self-start">
+      <div className="min-w-0">
         <FleetCraftCard craft={selected} returnTo={returnTo} />
       </div>
     </section>
