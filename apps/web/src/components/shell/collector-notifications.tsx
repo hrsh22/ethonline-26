@@ -38,7 +38,8 @@ function NotificationsMenu({ protocol }: { readonly protocol: Protocol }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [visibleRecords, setVisibleRecords] = useState(records);
-  const readTransactionHash = useRef<string | undefined>(undefined);
+  const [readTransactionHash, setReadTransactionHash] = useState<string>();
+  const readTransactionHashRef = useRef<string | undefined>(undefined);
   const confirmed = protocol.transaction.status === "confirmed";
   const currentHash = confirmedHash(protocol.transaction);
   const savedRecords = records.filter(
@@ -48,14 +49,15 @@ function NotificationsMenu({ protocol }: { readonly protocol: Protocol }) {
     open,
     savedRecords.length,
     currentHash,
-    readTransactionHash.current,
+    readTransactionHash,
   );
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setVisibleRecords(savedRecords);
-      readTransactionHash.current = currentHash;
+      setReadTransactionHash(currentHash);
+      readTransactionHashRef.current = currentHash;
       protocol.markCompletedTransactionsRead?.();
-    } else if (confirmed && currentHash === readTransactionHash.current) {
+    } else if (confirmed && currentHash === readTransactionHashRef.current) {
       protocol.clearTransaction?.();
     }
     setOpen(nextOpen);
