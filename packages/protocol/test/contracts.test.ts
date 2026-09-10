@@ -61,6 +61,8 @@ describe("manifest-bound contract clients", () => {
       permanentPositionRecipient:
         "PermanentPositionRecipient.sol/PermanentPositionRecipient.json",
       permit2: [
+        "IAllowanceTransfer.sol/IAllowanceTransfer.default.json",
+        "IAllowanceTransfer.sol/IAllowanceTransfer.cca_via_ir.json",
         "IAllowanceTransfer.sol/IAllowanceTransfer.json",
         "interfaces/IAllowanceTransfer.sol/IAllowanceTransfer.json",
       ],
