@@ -65,6 +65,11 @@ export function RecoveryDocument({
                     {applicationCopy.navigation.status}
                   </ButtonLink>
                 </li>
+                <li>
+                  <ButtonLink href="/faucet" size="sm" variant="ghost">
+                    Get test funds
+                  </ButtonLink>
+                </li>
               </ul>
             </nav>
           </header>

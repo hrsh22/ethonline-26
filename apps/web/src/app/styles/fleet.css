@@ -318,6 +318,16 @@
   .fleet-toolbar {
     margin-bottom: 0.75rem;
   }
+  .fleet-advanced-filters {
+    width: 100%;
+    margin-left: 0;
+  }
+  .fleet-advanced-filters > div {
+    width: 100%;
+  }
+  .fleet-advanced-filters summary {
+    margin-left: auto;
+  }
   .fleet-page
     :is(.fleet-reward-strip, .fleet-page-heading)
     [data-slot="button-link"] {

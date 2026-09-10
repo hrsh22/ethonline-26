@@ -116,6 +116,10 @@ export const awaitHydration = async (page: Page): Promise<void> => {
     });
     await dialog.waitFor({ state: "hidden", timeout: 1_000 }).catch((error) => {
       if (Date.now() >= closeDeadline) throw error;
+      // Some embedded-wallet builds retain focus through the first close
+      // click while replacing the dialog. Escape is the equivalent keyboard
+      // dismissal and keeps the hydration proof deterministic under load.
+      return page.keyboard.press("Escape");
     });
   }
 };

@@ -337,6 +337,14 @@ export const collectorFundingVisibilityFailure = async (
   page: Page,
   label: string,
 ): Promise<BrowserFailure | undefined> => {
+  const visibleLink = page.locator(
+    '[data-shell="collector"] header a[href="/faucet"]:visible',
+  );
+  if ((await visibleLink.count()) === 1) {
+    // Hydration opens and closes the real wallet chooser. Let its exit layer
+    // finish releasing pointer events before testing the header beneath it.
+    await visibleLink.click({ trial: true, timeout: 5_000 }).catch(() => {});
+  }
   const issue = await page.evaluate(() => {
     const header = document.querySelector<HTMLElement>(
       '[data-shell="collector"] header',

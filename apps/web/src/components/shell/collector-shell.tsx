@@ -142,7 +142,7 @@ export function CollectorShell({
       <ShellSkipLink />
       <header className="collector-topbar sticky top-0 z-40 border-b border-line bg-canvas/95 backdrop-blur-md">
         <div className="mx-auto w-full max-w-[85rem] px-4 min-[901px]:px-8">
-          <div className="flex min-h-[4.75rem] items-center gap-x-2 py-2 min-[901px]:grid min-[901px]:grid-cols-[minmax(8rem,1fr)_auto_minmax(8rem,1fr)] min-[901px]:gap-3 min-[901px]:py-0">
+          <div className="flex min-h-[4.75rem] flex-wrap items-center gap-x-2 py-2 min-[901px]:grid min-[901px]:grid-cols-[minmax(8rem,1fr)_auto_minmax(8rem,1fr)] min-[901px]:gap-3 min-[901px]:py-0">
             <div className="flex shrink-0 items-center" data-collector-brand>
               <Link
                 aria-label={`${identity.brand}: ${applicationCopy.shell.home}`}
@@ -150,7 +150,9 @@ export function CollectorShell({
                 href="/"
               >
                 <span aria-hidden="true" className="collector-orbit-mark" />
-                <span data-brand-mark>{identity.brand}</span>
+                <span className="max-[400px]:hidden" data-brand-mark>
+                  {identity.brand}
+                </span>
               </Link>
             </div>
             <PrimaryNavigation destinations={navigation.primary} />
@@ -168,10 +170,10 @@ export function CollectorShell({
             </div>
           </div>
           <div
-            className="flex min-h-11 items-center justify-between gap-3 border-t border-line py-1 min-[1280px]:hidden"
+            className="flex min-h-11 flex-wrap items-center justify-between gap-3 border-t border-line py-1 min-[1280px]:hidden"
             data-collector-funding-row
           >
-            <span className="font-mono text-label text-ink-faint">
+            <span className="font-mono text-label text-ink-faint max-[400px]:hidden">
               Base Sepolia · no value
             </span>
             <TestFundsLink
