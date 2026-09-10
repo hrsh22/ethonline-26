@@ -39,7 +39,6 @@ function NotificationsMenu({ protocol }: { readonly protocol: Protocol }) {
   const [open, setOpen] = useState(false);
   const [visibleRecords, setVisibleRecords] = useState(records);
   const [readTransactionHash, setReadTransactionHash] = useState<string>();
-  const readTransactionHashRef = useRef<string | undefined>(undefined);
   const confirmed = protocol.transaction.status === "confirmed";
   const currentHash = confirmedHash(protocol.transaction);
   const savedRecords = records.filter(
@@ -55,9 +54,11 @@ function NotificationsMenu({ protocol }: { readonly protocol: Protocol }) {
     if (nextOpen) {
       setVisibleRecords(savedRecords);
       setReadTransactionHash(currentHash);
-      readTransactionHashRef.current = currentHash;
       protocol.markCompletedTransactionsRead?.();
-    } else if (confirmed && currentHash === readTransactionHashRef.current) {
+    } else if (confirmed) {
+      // A confirmation can arrive after opening and is shown in the panel.
+      setReadTransactionHash(currentHash);
+      protocol.markCompletedTransactionsRead?.();
       protocol.clearTransaction?.();
     }
     setOpen(nextOpen);

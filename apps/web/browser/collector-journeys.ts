@@ -32,12 +32,21 @@ export async function checkLaunchJourney(
   await submitLaunch(page);
   assert.equal(fixture.submissions.length, 1);
   await page.reload();
+  await page
+    .getByRole("link", { name: "View transaction", exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: /^Notifications/ }).click();
+  const notifications = page.locator('[data-slot="popover-content"]');
+  await notifications
+    .getByText("No new notifications.", { exact: true })
+    .waitFor();
+  // Confirmation must arrive while the panel is open so closing it proves
+  // that newly displayed activity is marked read, including across reload.
   fixture.confirm();
   await page
     .getByRole("heading", { name: "Orbiter #42", exact: true })
     .waitFor({ timeout: 20_000 });
-  await page.getByRole("button", { name: /^Notifications/ }).click();
-  await page
+  await notifications
     .getByRole("link", { name: "View Orbiter #42", exact: true })
     .waitFor();
   assert.equal(
@@ -49,7 +58,6 @@ export async function checkLaunchJourney(
       .count(),
     0,
   );
-  const notifications = page.locator('[data-slot="popover-content"]');
   await page.keyboard.press("Escape");
   await notifications.waitFor({ state: "hidden" });
   await page.getByRole("link", { name: "Back to Fleet", exact: true }).click();
@@ -68,6 +76,10 @@ export async function checkLaunchJourney(
     0,
   );
   await page.reload();
+  await page
+    .getByRole("link", { name: /Inspect/ })
+    .first()
+    .waitFor({ timeout: 20_000 });
   assert.equal(await page.locator('[data-status="confirmed"]').count(), 0);
   assert.equal(await page.locator("#collector-activity").count(), 0);
   await page.getByRole("button", { name: /^Notifications/ }).click();

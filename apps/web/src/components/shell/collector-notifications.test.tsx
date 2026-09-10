@@ -138,3 +138,40 @@ it("shows a confirmation toast with approval consequences and deduplicates the s
   expect(document.body.textContent).toContain("Current confirmation details");
   expect(document.querySelector('[aria-label="New notifications"]')).toBeNull();
 });
+
+it("clears a confirmation that arrives while the notifications panel is open", async () => {
+  state.records = [];
+  state.transaction = {
+    status: "outcome-unknown",
+    label: completed.state.label,
+    hash: completed.state.hash,
+    message: "Checking the submitted transaction automatically.",
+  };
+  state.markRead.mockImplementation(() => {
+    state.records = [];
+  });
+  state.clear.mockImplementation(() => {
+    state.transaction = { status: "idle" };
+  });
+  await render();
+  await open();
+  expect(document.body.textContent).toContain("No new notifications");
+
+  state.transaction = completed.state;
+  state.records = [completed];
+  await render();
+  expect(document.body.textContent).toContain("Current confirmation details");
+  await open();
+  expect(state.clear).toHaveBeenCalledTimes(1);
+  expect(state.records).toEqual([]);
+
+  // A new menu instance must not recover the confirmation after closing it.
+  state.pathname = "/exchange";
+  await render();
+  await open();
+  expect(document.body.textContent).toContain("No new notifications");
+  expect(document.body.textContent).not.toContain(
+    "Current confirmation details",
+  );
+  expect(document.querySelector('[aria-label="New notifications"]')).toBeNull();
+});
