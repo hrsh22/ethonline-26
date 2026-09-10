@@ -373,6 +373,7 @@ function ContractsPanel() {
 
 function HistoryPanel() {
   const launch = protocolDeploymentManifest?.launch;
+  const awaitingCcaSettlement = protocolDeploymentManifest?.schemaVersion === 3;
   return (
     <Panel
       footer={
@@ -390,8 +391,12 @@ function HistoryPanel() {
     >
       <DataList>
         <DataRow
-          label="Base Sepolia launch"
-          note="staging proof"
+          label={
+            awaitingCcaSettlement
+              ? "Base Sepolia CCA setup"
+              : "Base Sepolia launch"
+          }
+          note={awaitingCcaSettlement ? "auction pending" : "staging proof"}
           value={
             launch ? (
               <a

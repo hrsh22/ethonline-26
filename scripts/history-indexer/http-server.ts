@@ -96,6 +96,25 @@ const routeEvents: Readonly<Record<string, readonly HistoryEventName[]>> = {
     "reward-claimed",
     "protocol-liquidity-added",
   ],
+  "/v1/auction/bids": ["auction-bid-submitted", "auction-bid-exited"],
+  "/v1/auction/token-claims": ["auction-tokens-claimed"],
+  "/v1/auction/escrow-withdrawals": ["cca-escrow-withdrawal"],
+  "/v1/auction/lifecycle": [
+    "auction-bid-submitted",
+    "auction-bid-exited",
+    "auction-tokens-claimed",
+    "cca-migration-succeeded",
+    "cca-migration-failed",
+    "cca-funds-recovered",
+    "cca-activated",
+    "cca-escrow-withdrawal",
+  ],
+  "/v1/protocol/cca-migrations": [
+    "cca-migration-succeeded",
+    "cca-migration-failed",
+    "cca-funds-recovered",
+  ],
+  "/v1/protocol/cca-activations": ["cca-activated"],
 };
 
 const publicAvailabilityMessages: Readonly<Record<string, string>> = {
@@ -210,7 +229,7 @@ const queryFrom = (
   const cursor = url.searchParams.get("cursor") ?? undefined;
   const account = url.searchParams.get("account");
   if (account !== null && !/^0x[0-9a-fA-F]{40}$/.test(account))
-    throw new RangeError("Invalid discovery account");
+    throw new RangeError("Invalid history account");
   return {
     eventNames,
     ...(account === null ? {} : { account }),
@@ -230,6 +249,7 @@ const manifestIdentity = (configuration: HistoryIndexConfiguration) => ({
   launchBlock: configuration.launchBlock,
   canonicalPool: configuration.canonicalPool,
   sources: configuration.sources,
+  ...(configuration.cca === undefined ? {} : { cca: configuration.cca }),
 });
 
 type JsonRecord = Readonly<Record<string, unknown>>;

@@ -27,5 +27,6 @@ overrides:
   use-sync-external-store: 1.6.0
 patchedDependencies:
   "@coinbase/wallet-sdk@4.3.2": patches/@coinbase__wallet-sdk@4.3.2.patch
+  '@privy-io/react-auth@3.40.0': patches/@privy-io__react-auth@3.40.0.patch
   "@tradecanvas/chart@1.1.0": patches/@tradecanvas__chart@1.1.0.patch
   "@tradecanvas/core@1.1.0": patches/@tradecanvas__core@1.1.0.patch

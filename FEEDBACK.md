@@ -1,4 +1,4 @@
-# Uniswap v4 integration feedback
+# Uniswap v4 and CCA integration feedback
 
 ORBIT 4444 uses the Base Sepolia v4 PoolManager for its canonical FUEL/WETH
 market. A custom hook charges 3% on the WETH side and allocates the exact
@@ -19,6 +19,13 @@ The relevant implementation is
 The deployment addresses and canonical PoolId are in
 [`deployments/84532.json`](deployments/84532.json).
 
+The fresh launch implementation also composes Continuous Clearing Auction
+v2.1.0 with Liquidity Launcher v3.0.0 and its v3.1.0 LBP strategy. Predicting
+the auction before funding made it possible to freeze FUEL custody exemptions
+and validate every bid owner. The LBP strategy's custom-hook path successfully
+seeded the dynamic-fee FUEL/WETH PoolKey through our initializer-compatible
+hook in both local lifecycle tests and an official-address Base Sepolia fork.
+
 ## Where examples would help
 
 1. A complete four-case example for exact input/output in both directions,
@@ -35,6 +42,17 @@ The deployment addresses and canonical PoolId are in
    ERC-20 reserve address, and the PoolManager's token balance includes other
    pools. Our adapter explicitly marks inventory incomplete after unsupported
    liquidity changes or donations.
+4. A deployment record that publishes the CCA factory alongside each
+   Liquidity Launcher and LBP strategy entry. At implementation time the
+   official deployment feed supplied the Base Sepolia launcher and strategy,
+   while the official SDK supplied the CCA factory. We had to reconcile the
+   two sources and verify runtime code plus `initializerFactory()` on a fork.
+5. An end-to-end CCA example using an ERC-20 settlement currency, a validation
+   hook, a custom v4 hook, and the complete claim/refund lifecycle. In
+   particular, `submitBid` separates payer and owner, token claims are not
+   partially bounded, and LBP migration is one-shot. A reference that follows
+   those facts through bidder custody, failed-auction refunds, pool migration,
+   and terminal migration recovery would prevent several unsafe integrations.
 
 ## Verification and reproduction
 

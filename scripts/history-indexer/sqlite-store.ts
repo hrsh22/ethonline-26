@@ -756,7 +756,17 @@ const readQueryRows = (
         WHERE event_name IN (${placeholders})
           AND block_number >= ?
           AND block_number <= ?
-          AND (? IS NULL OR lower(json_extract(payload, '$.account')) = ?)
+          AND (
+            ? IS NULL OR ? IN (
+              lower(json_extract(payload, '$.account')),
+              lower(json_extract(payload, '$.owner')),
+              lower(json_extract(payload, '$.currentOwner')),
+              lower(json_extract(payload, '$.beneficiary')),
+              lower(json_extract(payload, '$.initializer')),
+              lower(json_extract(payload, '$.recipient')),
+              lower(json_extract(payload, '$.governanceOwner'))
+            )
+          )
           ${predicate.sql}
         ORDER BY block_number ${order}, transaction_index ${order},
           log_index ${order}, block_hash ${order}

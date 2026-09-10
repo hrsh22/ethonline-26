@@ -1,18 +1,47 @@
 import { describe, expect, it } from "vitest";
 
-import { createShellNavigation } from "./navigation";
+import {
+  collectorReturnDestination,
+  createShellNavigation,
+} from "./navigation";
+
+describe("collector return destinations", () => {
+  it("allows only known collector origins and keeps legacy Fleet returns", () => {
+    expect(collectorReturnDestination("/auction")).toEqual({
+      href: "/auction",
+      label: "Auction",
+    });
+    expect(collectorReturnDestination("/exchange")).toEqual({
+      href: "/exchange",
+      label: "Trade",
+    });
+    expect(collectorReturnDestination("/start")).toEqual({
+      href: "/fleet",
+      label: "Fleet",
+    });
+    expect(collectorReturnDestination("/fleet")).toEqual({
+      href: "/fleet",
+      label: "Fleet",
+    });
+    expect(collectorReturnDestination("https://example.com")).toBeUndefined();
+    expect(collectorReturnDestination("//example.com")).toBeUndefined();
+    expect(collectorReturnDestination("/auction/other")).toBeUndefined();
+  });
+});
 
 describe("collector navigation", () => {
-  it("exposes the three collector destinations and secondary utilities", () => {
+  it("exposes the collector destinations and secondary utilities", () => {
     const navigation = createShellNavigation("collector", "/exchange");
 
     expect(navigation.primary.map((entry) => entry.href)).toEqual([
       "/explore",
+      "/auction",
       "/exchange",
       "/fleet",
     ]);
     expect(navigation.primary.map((entry) => entry.label)).toEqual([
       "Explore",
+      "Auction",
       "Trade",
       "My Fleet",
     ]);
@@ -31,6 +60,7 @@ describe("collector navigation", () => {
   it("marks exactly one destination active, including on a detail page", () => {
     for (const [pathname, expected] of [
       ["/explore", "/explore"],
+      ["/auction", "/auction"],
       ["/exchange", "/exchange"],
       ["/market", "/exchange"],
       ["/relics", "/explore"],

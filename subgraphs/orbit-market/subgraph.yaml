@@ -126,3 +126,21 @@ dataSources:
         - event: ProtocolLiquidityAdded(indexed uint256,indexed bytes32,uint256,uint256,uint256,uint256,int24,int24,uint128)
           handler: handleLiquidity
       file: ./src/mapping.ts
+templates:
+  - kind: ethereum/contract
+    name: CcaBidEscrow
+    network: base-sepolia
+    source:
+      abi: CcaBidEscrow
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [CcaEscrow, CcaEscrowWithdrawal]
+      abis:
+        - name: CcaBidEscrow
+          file: ./abis/CcaBidEscrow.json
+      eventHandlers:
+        - event: Withdrawal(indexed address,indexed address,uint256)
+          handler: handleEscrowWithdrawal
+      file: ./src/escrow-mapping.ts

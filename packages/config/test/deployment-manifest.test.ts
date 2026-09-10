@@ -19,6 +19,74 @@ const Ajv2020 = Ajv2020Module.default;
 const address = (suffix: string) => `0x${suffix.padStart(40, "0")}`;
 const hash = (suffix: string) => `0x${suffix.padStart(64, "0")}`;
 
+const ccaManifest = (): Record<string, unknown> => {
+  const legacy = JSON.parse(
+    readFileSync("../../deployments/31337.json", "utf8"),
+  ) as Record<string, unknown>;
+  const contracts = structuredClone(
+    legacy.contracts as Record<string, unknown>,
+  );
+  delete contracts.genesisLiquidityVault;
+  Object.assign(contracts, {
+    ccaBidEscrowFactory: address("a001"),
+    ccaBidValidationHook: address("a002"),
+    ccaCanonicalLaunchReadiness: address("a003"),
+    ccaCreate2Deployer: address("a00c"),
+    ccaLaunchFunding: address("a00d"),
+    ccaLaunchCoordinator: address("a004"),
+    ccaRecoverySeeder: address("a005"),
+    ccaStrategy: address("a006"),
+    continuousClearingAuction: address("a007"),
+    continuousClearingAuctionFactory: address("a008"),
+    liquidityLauncher: address("a00e"),
+    permanentPositionRecipient: address("a009"),
+    permit2: address("a00a"),
+    uniswapV4PositionManager: address("a00b"),
+  });
+  const canonicalPool = structuredClone(
+    legacy.canonicalPool as Record<string, unknown>,
+  );
+  canonicalPool.seedSqrtPriceX96 = "0";
+  canonicalPool.activeLiquidity = "0";
+  return {
+    ...legacy,
+    schemaVersion: 3,
+    phase: "cca",
+    contracts,
+    canonicalPool,
+    cca: {
+      provenance: {
+        continuousClearingAuction: {
+          commit: "a56d42231e7bf048136d9d88fa61e8518c10c5ff",
+          version: "v2.1.0",
+        },
+        liquidityLauncher: {
+          commit: "873cbb23c5019a795193c5ad561edff2f78ba5a3",
+          version: "v3.0.0",
+        },
+        lbpStrategy: {
+          commit: "873cbb23c5019a795193c5ad561edff2f78ba5a3",
+          version: "v3.1.0",
+        },
+      },
+      economics: {
+        totalFuelSupply: "4444000000000000000000",
+        auctionSupply: "3000000000000000000000",
+        liquidityReserve: "1444000000000000000000",
+        minimumRaise: "1000000000000000000",
+        floorPriceQ96: "9903520314283042199192993792",
+        tickSpacingQ96: "618970019642690137449562112",
+      },
+      lifecycle: {
+        startBlock: "100",
+        endBlock: "110",
+        claimBlock: "111",
+        migrationBlock: "111",
+      },
+    },
+  };
+};
+
 const nonCanonicalCaseVariants = (canonicalHash: string): readonly string[] => [
   `0x${canonicalHash.slice(2).toUpperCase()}`,
   `0x${canonicalHash
@@ -233,6 +301,17 @@ const deploymentManifestFixtures = (): ReadonlyArray<{
       readFileSync("../../deployments/84532.json", "utf8"),
     ) as Record<string, unknown>,
   },
+  { name: "v3 Anvil CCA protocol", manifest: ccaManifest() },
+  {
+    name: "v3 Base Sepolia CCA protocol",
+    manifest: (() => {
+      const manifest = ccaManifest();
+      manifest.chainId = 84_532;
+      manifest.network = "base-sepolia";
+      delete (manifest.contracts as Record<string, unknown>).ccaCreate2Deployer;
+      return manifest;
+    })(),
+  },
 ];
 
 describe("governance record coherence", () => {
@@ -280,6 +359,90 @@ describe("governance record coherence", () => {
 });
 
 describe("Base Sepolia deployment manifest", () => {
+  it("decodes a fresh CCA v3 manifest while retaining historical v2 decoding", () => {
+    const fresh = decodeProtocolDeploymentManifest(ccaManifest());
+    const historical = decodeProtocolDeploymentManifest(
+      JSON.parse(
+        readFileSync("../../deployments/31337.json", "utf8"),
+      ) as unknown,
+    );
+
+    expect(fresh.schemaVersion).toBe(3);
+    if (fresh.schemaVersion !== 3) throw new Error("expected CCA manifest");
+    expect(fresh.phase).toBe("cca");
+    expect(fresh.contracts.continuousClearingAuction).toBe(address("a007"));
+    expect(fresh.contracts.liquidityLauncher).toBe(address("a00e"));
+    if (!("ccaCreate2Deployer" in fresh.contracts)) {
+      throw new Error("expected local CREATE2 deployer");
+    }
+    expect(fresh.contracts.ccaCreate2Deployer).toBe(address("a00c"));
+    expect(fresh.contracts.ccaLaunchFunding).toBe(address("a00d"));
+    expect(fresh.canonicalPool.seedSqrtPriceX96).toBe("0");
+    expect(fresh.canonicalPool.activeLiquidity).toBe("0");
+    expect(fresh.cca.economics.auctionSupply).toBe("3000000000000000000000");
+    expect(fresh.cca.provenance.continuousClearingAuction.version).toBe(
+      "v2.1.0",
+    );
+    expect(fresh.cca.provenance.lbpStrategy.version).toBe("v3.1.0");
+    expect(historical.schemaVersion).toBe(2);
+    if (historical.schemaVersion !== 2) throw new Error("expected v2 manifest");
+    expect(historical.contracts.genesisLiquidityVault).toBeDefined();
+  });
+
+  it("rejects incoherent CCA economics and lifecycle evidence", () => {
+    expect(() =>
+      decodeProtocolDeploymentManifest(
+        setPath(ccaManifest(), ["cca", "economics", "auctionSupply"], "1"),
+      ),
+    ).toThrow(/cca\.economics\.auctionSupply/u);
+    expect(() =>
+      decodeProtocolDeploymentManifest(
+        setPath(ccaManifest(), ["cca", "lifecycle", "claimBlock"], "110"),
+      ),
+    ).toThrow(/cca\.lifecycle\.claimBlock/u);
+    expect(() =>
+      decodeProtocolDeploymentManifest(
+        setPath(ccaManifest(), ["canonicalPool", "activeLiquidity"], "1"),
+      ),
+    ).toThrow(/canonicalPool\.activeLiquidity/u);
+    expect(() =>
+      decodeProtocolDeploymentManifest(
+        setPath(
+          ccaManifest(),
+          ["cca", "provenance", "lbpStrategy", "commit"],
+          "1111111111111111111111111111111111111111",
+        ),
+      ),
+    ).toThrow(/cca\.provenance\.lbpStrategy\.commit/u);
+  });
+
+  it("allows Base Sepolia to omit the local-only CREATE2 deployer", () => {
+    const base = ccaManifest();
+    base.chainId = 84_532;
+    base.network = "base-sepolia";
+    delete (base.contracts as Record<string, unknown>).ccaCreate2Deployer;
+
+    const decoded = decodeProtocolDeploymentManifest(base);
+    expect(decoded.schemaVersion).toBe(3);
+    if (decoded.schemaVersion !== 3) throw new Error("expected CCA manifest");
+    expect("ccaCreate2Deployer" in decoded.contracts).toBe(false);
+
+    const anvil = ccaManifest();
+    delete (anvil.contracts as Record<string, unknown>).ccaCreate2Deployer;
+    expect(() => decodeProtocolDeploymentManifest(anvil)).toThrow(
+      /ccaCreate2Deployer/u,
+    );
+  });
+
+  it("keeps legacy genesis custody out of the exact CCA contract inventory", () => {
+    const fresh = ccaManifest();
+    const contracts = fresh.contracts as Record<string, unknown>;
+    contracts.genesisLiquidityVault = address("afff");
+    expect(() => decodeProtocolDeploymentManifest(fresh)).toThrow(
+      /genesisLiquidityVault/u,
+    );
+  });
+
   it("has a stable full-deployment fingerprint distinct from the collection commitment", () => {
     const manifest = decodeDeploymentManifest(
       JSON.parse(

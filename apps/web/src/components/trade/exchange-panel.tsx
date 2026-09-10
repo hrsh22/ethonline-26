@@ -3,11 +3,11 @@
 import { runPublicRead } from "@orbit/protocol/read-lifetime";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 
 import { CollectorReturnLink } from "@/components/start/collector-return-link";
+import { TestFundsLink } from "@/components/shell/test-funds-link";
 import { AccessNotice } from "@/components/access-notice";
 import { DisabledReason } from "@/components/state-feedback";
 import {
@@ -511,11 +511,14 @@ function InsufficientBalanceFeedback({
         )}
       </p>
       {intent.recovery === "faucet" ? (
-        <Link className={recoveryLinkClassName} href="/faucet">
+        <TestFundsLink
+          className={recoveryLinkClassName}
+          href="/faucet?returnTo=/exchange"
+        >
           {intent.asset === "native"
             ? applicationCopy.exchange.nativeFaucetRecovery
             : applicationCopy.exchange.faucetRecovery}
-        </Link>
+        </TestFundsLink>
       ) : intent.recovery === "buy" ? (
         <button
           className={recoveryLinkClassName}
@@ -752,6 +755,10 @@ export function ExchangePanel() {
             intent={intent}
             onBuyRecovery={() => setDirection("buy")}
           />
+          <p className="text-body-sm text-ink-soft">
+            Trade with test ETH or WETH. ETH also covers network fees.{" "}
+            <TestFundsLink href="/faucet?returnTo=/exchange" />
+          </p>
         </div>
         <p className="text-body-sm text-ink-soft">
           {direction === "buy" && settlementMode === "native"

@@ -51,7 +51,7 @@ describe("collector shell navigation", () => {
       ),
     );
 
-  it("offers the same three destinations in the header and mobile bar", async () => {
+  it("offers the same destinations in the header and mobile bar", async () => {
     await renderShell();
 
     for (const label of [
@@ -66,6 +66,7 @@ describe("collector shell navigation", () => {
         ]),
       ).toEqual([
         ["Explore", "/explore"],
+        ["Auction", "/auction"],
         ["Trade", "/exchange"],
         ["My Fleet", "/fleet"],
       ]);
@@ -110,11 +111,11 @@ describe("collector shell navigation", () => {
   it("keeps the home link, navigation, and wallet in header order", async () => {
     await renderShell();
 
-    const header = container.querySelector("header");
-    const headerHtml = header?.innerHTML ?? "";
-    const brand = header?.querySelector("[data-collector-brand]");
-    const headerLayout = header?.firstElementChild;
-    const walletActions = header?.querySelector(
+    const header = container.querySelector("header")!;
+    const headerHtml = header.innerHTML;
+    const brand = header.querySelector("[data-collector-brand]");
+    const headerLayout = header.firstElementChild?.firstElementChild;
+    const walletActions = header.querySelector(
       "[data-collector-wallet-actions]",
     );
     expect(headerHtml.indexOf('href="/"')).toBeLessThan(
@@ -124,10 +125,40 @@ describe("collector shell navigation", () => {
       headerHtml.indexOf("Test wallet"),
     );
     expect(brand?.classList.contains("shrink-0")).toBe(true);
-    expect(headerLayout?.classList.contains("flex-wrap")).toBe(true);
+    expect(headerLayout?.classList.contains("items-center")).toBe(true);
     expect(walletActions?.classList.contains("ml-auto")).toBe(true);
     expect(walletActions?.classList.contains("max-w-full")).toBe(true);
+    expect(
+      walletActions?.classList.contains("min-[1280px]:whitespace-nowrap"),
+    ).toBe(true);
     expect(headerHtml).not.toContain("No-value test assets.");
+  });
+
+  it("keeps one responsive funding link visible in each sticky-header layout", async () => {
+    await renderShell();
+
+    const header = container.querySelector("header");
+    const fundingLinks = [
+      ...(header?.querySelectorAll<HTMLAnchorElement>('a[href="/faucet"]') ??
+        []),
+    ];
+    expect(fundingLinks).toHaveLength(2);
+    expect(
+      fundingLinks.filter((link) =>
+        link.classList.contains("min-[1280px]:inline-flex"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      header?.querySelector("[data-collector-funding-row]")?.textContent,
+    ).toContain("Base Sepolia · no value");
+    expect(
+      fundingLinks.every((link) => link.classList.contains("min-h-11")),
+    ).toBe(true);
+    expect(
+      fundingLinks.every((link) =>
+        link.classList.contains("whitespace-nowrap"),
+      ),
+    ).toBe(true);
   });
 
   it("keeps recoverable activity before the current route", async () => {

@@ -44,7 +44,8 @@
     "verify:sources:base-sepolia": "node scripts/verify-base-sepolia-sources.ts",
     "typecheck": "pnpm build:packages && pnpm typecheck:scripts && pnpm -r --if-present typecheck",
     "typecheck:scripts": "tsc -p tsconfig.scripts.json",
-    "wallet:smoke": "node scripts/walletconnect-smoke-wallet.ts"
+    "wallet:smoke": "node scripts/walletconnect-smoke-wallet.ts",
+    "deploy:cca-protocol": "pnpm --filter @orbit/config build && node scripts/deploy-cca-protocol.ts"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

@@ -11,6 +11,15 @@ if (!key)
 const version = process.argv[2] ?? "0.1.0";
 if (!/^\d+\.\d+\.\d+$/.test(version))
   throw new Error("Version must be a semver release");
+const generated = spawnSync(
+  process.execPath,
+  [resolve(directory, "scripts/generate-manifest-config.mjs")],
+  { cwd: directory, encoding: "utf8" },
+);
+if (generated.status !== 0) {
+  process.stderr.write(generated.stderr || generated.stdout);
+  process.exit(generated.status ?? 1);
+}
 // This endpoint deploys to free Studio. It does not publish onchain or enable billing.
 const result = spawnSync(
   resolve(directory, "node_modules/.bin/graph"),

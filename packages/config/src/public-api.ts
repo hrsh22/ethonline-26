@@ -17,6 +17,12 @@ export const PUBLIC_API_PATHS = {
   },
   health: "/healthz",
   history: {
+    auctionBids: "/v1/history/auction/bids",
+    auctionEscrowWithdrawals: "/v1/history/auction/escrow-withdrawals",
+    auctionLifecycle: "/v1/history/auction/lifecycle",
+    auctionTokenClaims: "/v1/history/auction/token-claims",
+    ccaActivations: "/v1/history/protocol/cca-activations",
+    ccaMigrations: "/v1/history/protocol/cca-migrations",
     keeperAttempts: "/v1/history/protocol/keeper-attempts",
     marketCandles: "/v1/history/market/candles",
     marketFees: "/v1/history/market/fees",

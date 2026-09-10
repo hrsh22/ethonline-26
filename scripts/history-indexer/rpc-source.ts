@@ -53,7 +53,35 @@ const eventAbis = {
   "reward-claimed": parseAbiItem(
     "event RewardClaimed(address indexed currentOwner,uint16 indexed identityId,uint8 indexed track,uint256 amount)",
   ),
+  "auction-bid-submitted": parseAbiItem(
+    "event BidSubmitted(uint256 indexed id,address indexed owner,uint256 priceQ96,uint128 amount)",
+  ),
+  "auction-bid-exited": parseAbiItem(
+    "event BidExited(uint256 indexed bidId,address indexed owner,uint256 tokensFilled,uint256 currencyRefunded)",
+  ),
+  "auction-tokens-claimed": parseAbiItem(
+    "event TokensClaimed(uint256 indexed bidId,address indexed owner,uint256 tokensFilled)",
+  ),
+  "cca-migration-succeeded": parseAbiItem(
+    "event Migrated(address indexed initializer,(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) indexed key,uint160 initialSqrtPriceX96,bytes plan)",
+  ),
+  "cca-migration-failed": parseAbiItem(
+    "event MigrationFailed(address indexed initializer,bytes reason)",
+  ),
+  "cca-funds-recovered": parseAbiItem(
+    "event FundsRecovered(address indexed initializer,address indexed recipient,uint256 amount)",
+  ),
+  "cca-activated": parseAbiItem(
+    "event FuelActivated(address indexed governanceOwner)",
+  ),
+  "cca-escrow-withdrawal": parseAbiItem(
+    "event Withdrawal(address indexed token,address indexed beneficiary,uint256 amount)",
+  ),
 } as const satisfies Readonly<Record<HistoryEventName, AbiEvent>>;
+
+const escrowDeployedEvent = parseAbiItem(
+  "event EscrowDeployed(address indexed beneficiary,address indexed escrow)",
+);
 
 export interface HistoryEventDefinition {
   readonly eventName: HistoryEventName;
@@ -61,6 +89,7 @@ export interface HistoryEventDefinition {
   readonly event: AbiEvent;
   readonly indexedArguments?: Readonly<Record<string, unknown>>;
   readonly fixtureArguments: Readonly<Record<string, unknown>>;
+  readonly startBlock?: bigint;
 }
 
 export interface DecodedHistoryLog {
@@ -74,11 +103,12 @@ export interface DecodedHistoryLog {
   readonly args: Readonly<Record<string, unknown>>;
 }
 
-export interface HistoryLogRequest extends HistoryEventDefinition {
+export type HistoryLogRequest = Omit<HistoryEventDefinition, "address"> & {
+  readonly address: Address | readonly Address[];
   readonly fromBlock: bigint;
   readonly toBlock: bigint;
   readonly strict: true;
-}
+};
 
 export interface HistoryPublicClient {
   readonly getChainId: () => Promise<number>;
@@ -212,6 +242,82 @@ export const historyEventDefinitions = (
       amount: 2n,
     },
   },
+  ...(configuration.sources.cca === undefined || configuration.cca === undefined
+    ? []
+    : ([
+        {
+          eventName: "auction-bid-submitted",
+          address: configuration.sources.cca.auction,
+          event: eventAbis["auction-bid-submitted"],
+          startBlock: configuration.cca.startBlock,
+          fixtureArguments: {
+            id: 1n,
+            owner: addressFixture,
+            priceQ96: 2n,
+            amount: 3n,
+          },
+        },
+        {
+          eventName: "auction-bid-exited",
+          address: configuration.sources.cca.auction,
+          event: eventAbis["auction-bid-exited"],
+          startBlock: configuration.cca.startBlock,
+          fixtureArguments: {
+            bidId: 1n,
+            owner: addressFixture,
+            tokensFilled: 2n,
+            currencyRefunded: 3n,
+          },
+        },
+        {
+          eventName: "auction-tokens-claimed",
+          address: configuration.sources.cca.auction,
+          event: eventAbis["auction-tokens-claimed"],
+          startBlock: configuration.cca.claimBlock,
+          fixtureArguments: {
+            bidId: 1n,
+            owner: addressFixture,
+            tokensFilled: 2n,
+          },
+        },
+        {
+          eventName: "cca-migration-succeeded",
+          address: configuration.sources.cca.strategy,
+          event: eventAbis["cca-migration-succeeded"],
+          startBlock: configuration.cca.migrationBlock,
+          fixtureArguments: {
+            initializer: addressFixture,
+            key: hashFixture,
+            initialSqrtPriceX96: 2n,
+            plan: "0x01",
+          },
+        },
+        {
+          eventName: "cca-migration-failed",
+          address: configuration.sources.cca.strategy,
+          event: eventAbis["cca-migration-failed"],
+          startBlock: configuration.cca.migrationBlock,
+          fixtureArguments: { initializer: addressFixture, reason: "0x01" },
+        },
+        {
+          eventName: "cca-funds-recovered",
+          address: configuration.sources.cca.strategy,
+          event: eventAbis["cca-funds-recovered"],
+          startBlock: configuration.cca.migrationBlock,
+          fixtureArguments: {
+            initializer: addressFixture,
+            recipient: addressFixture,
+            amount: 1n,
+          },
+        },
+        {
+          eventName: "cca-activated",
+          address: configuration.sources.cca.launchCoordinator,
+          event: eventAbis["cca-activated"],
+          startBlock: configuration.cca.migrationBlock,
+          fixtureArguments: { governanceOwner: addressFixture },
+        },
+      ] satisfies readonly HistoryEventDefinition[])),
 ];
 
 const errorMessage = (cause: unknown): string =>
@@ -401,6 +507,136 @@ export const createHistoryChainSource = (
   configuration: HistoryIndexConfiguration,
 ): HistoryChainSource => {
   const definitions = historyEventDefinitions(configuration);
+  const knownEscrows = new Map<string, Address>();
+  let escrowFactoryScannedThrough: bigint | undefined;
+  const requestedRange = (
+    definition: HistoryEventDefinition,
+    fromBlock: bigint,
+    toBlock: bigint,
+  ): readonly [bigint, bigint] | undefined => {
+    const effectiveFrom =
+      definition.startBlock !== undefined && definition.startBlock > fromBlock
+        ? definition.startBlock
+        : fromBlock;
+    return effectiveFrom > toBlock ? undefined : [effectiveFrom, toBlock];
+  };
+  const escrowWithdrawals = (fromBlock: bigint, toBlock: bigint) => {
+    const cca = configuration.cca;
+    const sources = configuration.sources.cca;
+    if (cca === undefined || sources === undefined || toBlock < cca.endBlock) {
+      return Effect.succeed(undefined);
+    }
+    const factoryStartBlock =
+      configuration.launchBlock < cca.startBlock
+        ? configuration.launchBlock
+        : cca.startBlock;
+    const rescanFrom =
+      escrowFactoryScannedThrough === undefined
+        ? factoryStartBlock
+        : fromBlock < escrowFactoryScannedThrough + 1n
+          ? fromBlock
+          : escrowFactoryScannedThrough + 1n;
+    const discoveryFrom =
+      rescanFrom < factoryStartBlock ? factoryStartBlock : rescanFrom;
+    const ranges: Array<readonly [bigint, bigint]> = [];
+    for (let start = discoveryFrom; start <= toBlock;) {
+      const candidateEnd = start + configuration.batchBlocks - 1n;
+      const end = candidateEnd < toBlock ? candidateEnd : toBlock;
+      ranges.push([start, end]);
+      start = end + 1n;
+    }
+    return Effect.forEach(
+      ranges,
+      ([rangeFrom, rangeTo]) =>
+        rpc("Could not discover CCA bid escrows", () =>
+          client.getLogs({
+            eventName: "cca-escrow-withdrawal",
+            address: sources.bidEscrowFactory,
+            event: escrowDeployedEvent,
+            fixtureArguments: {
+              beneficiary: addressFixture,
+              escrow: addressFixture,
+            },
+            fromBlock: rangeFrom,
+            toBlock: rangeTo,
+            strict: true,
+          }),
+        ),
+      { concurrency: 1 },
+    ).pipe(
+      Effect.map((batches) => batches.flat()),
+      Effect.flatMap((deployments) =>
+        Effect.try({
+          try: () => {
+            for (const deployment of deployments) {
+              if (
+                deployment.address.toLowerCase() !==
+                sources.bidEscrowFactory.toLowerCase()
+              ) {
+                throw new TypeError(
+                  "Escrow deployment did not match the manifest factory",
+                );
+              }
+              const escrow = String(deployment.args.escrow);
+              if (!/^0x[0-9a-fA-F]{40}$/u.test(escrow)) {
+                throw new TypeError(
+                  "Escrow deployment did not contain an address",
+                );
+              }
+              knownEscrows.set(escrow.toLowerCase(), escrow as Address);
+            }
+            escrowFactoryScannedThrough = toBlock;
+            return [...knownEscrows.values()];
+          },
+          catch: (cause) =>
+            new HistoryDecodeError({
+              message: "Could not decode manifest-bound CCA bid escrows",
+              cause,
+            }),
+        }),
+      ),
+      Effect.flatMap((addresses) => {
+        if (addresses.length === 0) return Effect.succeed(undefined);
+        const baseDefinition: HistoryEventDefinition = {
+          eventName: "cca-escrow-withdrawal",
+          address: addresses[0]!,
+          event: eventAbis["cca-escrow-withdrawal"],
+          startBlock: cca.endBlock,
+          fixtureArguments: {
+            token: addressFixture,
+            beneficiary: addressFixture,
+            amount: 1n,
+          },
+        };
+        const [effectiveFrom, effectiveTo] = requestedRange(
+          baseDefinition,
+          fromBlock,
+          toBlock,
+        )!;
+        return rpc("Could not read cca-escrow-withdrawal logs", () =>
+          client.getLogs({
+            ...baseDefinition,
+            address: addresses,
+            fromBlock: effectiveFrom,
+            toBlock: effectiveTo,
+            strict: true,
+          }),
+        ).pipe(
+          Effect.map((logs) =>
+            addresses.map((address) => {
+              const definition = { ...baseDefinition, address };
+              return [
+                definition,
+                logs.filter(
+                  (log) => log.address.toLowerCase() === address.toLowerCase(),
+                ),
+              ] as const;
+            }),
+          ),
+        );
+      }),
+    );
+  };
   return {
     getChainId: rpc("Could not read history RPC chain ID", client.getChainId),
     getHead: rpc("Could not read history RPC head", () => client.getBlock()),
@@ -411,21 +647,36 @@ export const createHistoryChainSource = (
     getEvents: (fromBlock, toBlock) =>
       Effect.forEach(
         definitions,
-        (definition) =>
-          rpc(`Could not read ${definition.eventName} logs`, () =>
+        (definition) => {
+          const range = requestedRange(definition, fromBlock, toBlock);
+          if (range === undefined) {
+            return Effect.succeed([definition, []] as const);
+          }
+          return rpc(`Could not read ${definition.eventName} logs`, () =>
             client.getLogs({
               ...definition,
-              fromBlock,
-              toBlock,
+              fromBlock: range[0],
+              toBlock: range[1],
               strict: true,
             }),
-          ).pipe(Effect.map((logs) => [definition, logs] as const)),
+          ).pipe(Effect.map((logs) => [definition, logs] as const));
+        },
         { concurrency: configuration.rpcConcurrency },
       ).pipe(
-        Effect.flatMap((definitionsAndLogs) =>
+        Effect.flatMap((staticLogs) =>
+          escrowWithdrawals(fromBlock, toBlock).pipe(
+            Effect.map(
+              (withdrawalLogs) => [staticLogs, withdrawalLogs] as const,
+            ),
+          ),
+        ),
+        Effect.flatMap(([staticLogs, withdrawalLogs]) =>
           decodeLogs({
             client,
-            definitionsAndLogs,
+            definitionsAndLogs:
+              withdrawalLogs === undefined
+                ? staticLogs
+                : [...staticLogs, ...withdrawalLogs],
             rpcConcurrency: configuration.rpcConcurrency,
           }),
         ),

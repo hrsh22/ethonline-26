@@ -26,22 +26,24 @@ Source paths above are relative to `apps/web/`.
 
 ## Proposed navigation
 
-Desktop: ORBIT brand linking home, **Explore / Trade / My Fleet**, wallet/account control. Replace the persistent collector sidebar with a compact header. Mobile uses the same three destinations in a bottom bar; Help and account utilities stay accessible without occupying a primary tab.
+Desktop: ORBIT brand linking home, **Explore / Auction / Trade / My Fleet**, wallet/account control. Replace the persistent collector sidebar with a compact header. Mobile uses the same four destinations in a bottom bar; Help and account utilities stay accessible without occupying a primary tab.
 
-| Existing surface            | Proposed destination          | Treatment                                                                                                       |
-| --------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Home `/`                    | Home                          | Short product introduction, memorable craft visual, one primary collecting action, secondary Explore link       |
-| Start `/start`              | Fixed redirect to My Fleet    | Remove journey/next-action orchestration; preserve old entry links without wallet-stage routing or return loops |
-| Trade `/exchange`           | Trade                         | Chart and buy/sell form visible together; detailed history remains secondary                                    |
-| Fleet `/fleet`              | My Fleet                      | Personal craft grid, pending discoveries, rewards summary; Collection and Rewards subviews                      |
-| Craft `/fleet/[identityId]` | Shared craft detail           | Reachable from My Fleet and Explore; use origin-aware back navigation                                           |
-| Relics `/relics`            | Explore → Relics              | Dedicated visual feature within the public collection; retain a deep link                                       |
-| Rewards `/rewards`          | My Fleet → Rewards            | Preserve direct access via redirect/subview and a claim shortcut; do not bury claim behind a generic menu       |
-| Market `/market`            | Trade → Market                | Chart, history, market statistics; retain a deep link                                                           |
-| Status `/status`            | Footer/Help → Protocol status | Keep public evidence and its availability independent of wallet connection                                      |
-| Learn `/learn`              | Help → How it works           | Canonical explanations and detailed economics                                                                   |
-| Faucet `/faucet`            | Get test funds                | Secondary testnet utility; Trade may link it on insufficient funds, without a collecting journey                |
-| Admin                       | Existing protected area       | Preserve authenticated diagnostics and commands                                                                 |
+Test funding is promoted without becoming a primary destination. A quiet, keyboard-accessible **Get test funds** link remains visible in the sticky collector header on every route and in every wallet state. It sits with the wallet controls at 1280px and wider; below that breakpoint it moves to a compact second header row beside the Base Sepolia/no-value disclosure. Auction and Trade repeat the link beside their blank transaction inputs, with truthful asset and network-fee guidance. Existing balance-shortfall recovery remains local to the attempted action.
+
+| Existing surface            | Proposed destination          | Treatment                                                                                                                |
+| --------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Home `/`                    | Home                          | Short product introduction, memorable craft visual, one primary collecting action, secondary Explore link                |
+| Start `/start`              | Fixed redirect to My Fleet    | Remove journey/next-action orchestration; preserve old entry links without wallet-stage routing or return loops          |
+| Trade `/exchange`           | Trade                         | Chart and buy/sell form visible together; detailed history remains secondary                                             |
+| Fleet `/fleet`              | My Fleet                      | Personal craft grid, pending discoveries, rewards summary; Collection and Rewards subviews                               |
+| Craft `/fleet/[identityId]` | Shared craft detail           | Reachable from My Fleet and Explore; use origin-aware back navigation                                                    |
+| Relics `/relics`            | Explore → Relics              | Dedicated visual feature within the public collection; retain a deep link                                                |
+| Rewards `/rewards`          | My Fleet → Rewards            | Preserve direct access via redirect/subview and a claim shortcut; do not bury claim behind a generic menu                |
+| Market `/market`            | Trade → Market                | Chart, history, market statistics; retain a deep link                                                                    |
+| Status `/status`            | Footer/Help → Protocol status | Keep public evidence and its availability independent of wallet connection                                               |
+| Learn `/learn`              | Help → How it works           | Canonical explanations and detailed economics                                                                            |
+| Faucet `/faucet`            | Get test funds                | Secondary testnet utility promoted in sticky chrome; Auction and Trade link it contextually without a collecting journey |
+| Admin                       | Existing protected area       | Preserve authenticated diagnostics and commands                                                                          |
 
 Explore is a public catalog, not a storefront for selecting a Discovery result. A card opens its detail; the purchase CTA says Buy FUEL. State near that CTA that newly acquired whole units draw craft randomly. Use published previews when live identity state is unavailable and label that distinction once clearly; do not invent live ownership or availability. A full live catalog is a separate data requirement if current APIs cannot support it efficiently.
 
@@ -119,7 +121,7 @@ No contract changes, economics changes, new marketplace, automatic transactions,
 
 ## Acceptance criteria
 
-- Three consistent primary destinations on desktop/mobile; Help, status, and test funding remain findable.
+- Four consistent primary destinations—Explore, Auction, Trade, and My Fleet—on desktop/mobile; Help and status remain secondary, while test funding stays visible in collector chrome.
 - No onboarding ladder, first-Orbiter goal, wallet-stage classifier, or cross-page next-action controller; each destination is directly usable.
 - At 390×844, My Fleet's first viewport shows the collection/access state and useful next action, without global metrics preceding it.
 - A new visitor can explain how a craft is obtained, that identity selection is random, and that Launch is optional and irreversible.

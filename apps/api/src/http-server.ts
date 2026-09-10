@@ -111,6 +111,60 @@ const publicRoutes: ReadonlyMap<string, PublicRoute> = new Map([
     },
   ],
   [
+    PUBLIC_API_PATHS.history.auctionBids,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/bids",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionTokenClaims,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/token-claims",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionEscrowWithdrawals,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/escrow-withdrawals",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionLifecycle,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/lifecycle",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.ccaMigrations,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/protocol/cca-migrations",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.ccaActivations,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/protocol/cca-activations",
+    },
+  ],
+  [
     PUBLIC_API_PATHS.history.marketSwaps,
     {
       method: "GET",

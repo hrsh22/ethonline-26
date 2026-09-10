@@ -144,7 +144,7 @@ describe("collector shell wallet states", () => {
     expect(navigationIndex).toBeLessThan(walletIndex);
   });
 
-  it("keeps all three mobile destinations available in every wallet state", () => {
+  it("keeps all four mobile destinations and sticky funding available in every wallet state", () => {
     for (const status of [
       "disconnected",
       "connecting",
@@ -159,8 +159,10 @@ describe("collector shell wallet states", () => {
       const html = renderShell();
       expect(html).toContain('aria-label="Mobile collector navigation"');
       expect(html).toContain('href="/explore"');
+      expect(html).toContain('href="/auction"');
       expect(html).toContain('href="/exchange"');
       expect(html).toContain('href="/fleet"');
+      expect(html.match(/>Get test funds</gu)).toHaveLength(2);
     }
   });
 });

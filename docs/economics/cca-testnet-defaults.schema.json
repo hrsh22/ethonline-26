@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "./cca-testnet-defaults.schema.json",
+  "title": "ORBIT fresh CCA testnet defaults",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "status",
+    "totalFuelWei",
+    "auctionFuelWei",
+    "liquidityReserveFuelWei",
+    "floorPriceQ96",
+    "floorWethPerFuel",
+    "priceTickSpacingQ96",
+    "minimumWethRaisedWei",
+    "startDelayBlocks",
+    "claimDelayBlocks",
+    "migrationDelayBlocks",
+    "issuanceSteps",
+    "secondaryMarket"
+  ],
+  "properties": {
+    "$schema": { "const": "./cca-testnet-defaults.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "testnet-demo-defaults" },
+    "totalFuelWei": { "$ref": "#/$defs/uint" },
+    "auctionFuelWei": { "$ref": "#/$defs/uint" },
+    "liquidityReserveFuelWei": { "$ref": "#/$defs/uint" },
+    "floorPriceQ96": { "$ref": "#/$defs/uint" },
+    "floorWethPerFuel": { "const": "0.005" },
+    "priceTickSpacingQ96": { "$ref": "#/$defs/uint" },
+    "minimumWethRaisedWei": { "$ref": "#/$defs/uint" },
+    "startDelayBlocks": { "type": "integer", "minimum": 1 },
+    "claimDelayBlocks": { "type": "integer", "minimum": 0 },
+    "migrationDelayBlocks": { "type": "integer", "minimum": 1 },
+    "issuanceSteps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mpsPerBlock", "blockCount"],
+        "properties": {
+          "mpsPerBlock": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "blockCount": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "secondaryMarket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fee",
+        "tickSpacing",
+        "tradingFeeBps",
+        "rewardFeeBps",
+        "protocolLiquidityFeeBps",
+        "creatorFeeBps"
+      ],
+      "properties": {
+        "fee": { "const": 8388608 },
+        "tickSpacing": { "const": 60 },
+        "tradingFeeBps": { "const": 300 },
+        "rewardFeeBps": { "const": 200 },
+        "protocolLiquidityFeeBps": { "const": 85 },
+        "creatorFeeBps": { "const": 15 }
+      }
+    }
+  },
+  "$defs": {
+    "uint": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }
+  }
+}

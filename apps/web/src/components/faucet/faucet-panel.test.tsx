@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const testState = vi.hoisted(() => ({
   fundedThroughBlock: 4_242n,
   protocol: undefined as unknown,
+  returnTo: null as string | null,
   signMessage: vi.fn(async () => `0x${"ab".repeat(65)}`),
 }));
 
@@ -21,6 +22,15 @@ vi.mock("wagmi", () => ({
     getBlockNumber: () => Promise.resolve(testState.fundedThroughBlock),
   }),
   useSignMessage: () => ({ signMessageAsync: testState.signMessage }),
+}));
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () =>
+    new URLSearchParams(
+      testState.returnTo === null
+        ? undefined
+        : { returnTo: testState.returnTo },
+    ),
 }));
 
 vi.mock("@/components/wallet-control", () => ({
@@ -71,6 +81,7 @@ describe("collector testnet faucet", () => {
         queries: { retry: false },
       },
     });
+    testState.returnTo = null;
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -154,6 +165,7 @@ describe("collector testnet faucet", () => {
   });
 
   it("does not dash the cooldown for a wallet that is not in one", async () => {
+    testState.returnTo = "/auction";
     testState.protocol = protocol("ready");
     vi.stubGlobal(
       "fetch",
@@ -205,6 +217,11 @@ describe("collector testnet faucet", () => {
     expect(container.textContent).toContain(
       "Recurring top-ups; wallet cooldown still applies",
     );
+    expect(
+      [...container.querySelectorAll("a[href='/auction']")].map(
+        (link) => link.textContent,
+      ),
+    ).toEqual(["Return to Auction", "Return to Auction"]);
   });
 
   it("shows exact inventory-backed balances and completes one bounded top-up", async () => {

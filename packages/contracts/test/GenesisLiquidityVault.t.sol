@@ -152,6 +152,7 @@ contract GenesisLiquidityVaultTest is CanonicalHookMining {
         MockWETH weth;
         FuelCore liquidToken;
         CanonicalMarketRegistry registry;
+        CanonicalFeeHook hook;
         CanonicalRouter router;
         PoolKey key;
     }
@@ -500,24 +501,24 @@ contract GenesisLiquidityVaultTest is CanonicalHookMining {
         );
     }
 
-    function testHostilePoolInitializationCannotStrandGenesisSupply() external {
+    function testHostilePoolInitializationIsRejectedAndCannotStrandGenesisSupply() external {
         (Fixture memory fixture, GenesisLiquidityVault vault) = _deployPreparedFixture();
-        fixture.manager.initialize(fixture.key, TickMath.getSqrtPriceAtTick(0));
-
+        (bool hostileInitialization,) = address(fixture.manager)
+            .call(
+                abi.encodeCall(
+                    IPoolManager.initialize, (fixture.key, TickMath.getSqrtPriceAtTick(0))
+                )
+            );
+        require(!hostileInitialization, "hostile initialization bypassed the launch hook");
+        vault.initializeAndSeed(type(uint256).max);
         require(
-            _revertSelector(
-                address(vault),
-                abi.encodeCall(GenesisLiquidityVault.initializeAndSeed, (type(uint256).max))
-            ) == GenesisLiquidityVault.PoolAlreadyInitialized.selector,
-            "hostile initialization was not detected before funding"
+            fixture.liquidToken.balanceOf(address(vault)) == vault.roundingDust(),
+            "authorized initialization did not settle the genesis supply"
         );
         require(
-            fixture.liquidToken.balanceOf(address(this)) == fixture.liquidToken.MAX_LIQUID_SUPPLY(),
-            "hostile initialization moved the genesis supply"
-        );
-        require(
-            fixture.liquidToken.balanceOf(address(vault)) == 0,
-            "hostile initialization stranded Liquid Tokens"
+            fixture.liquidToken.balanceOf(address(fixture.manager))
+                == vault.seededLiquidTokenAmount(),
+            "authorized initialization missed PoolManager"
         );
     }
 
@@ -595,7 +596,7 @@ contract GenesisLiquidityVaultTest is CanonicalHookMining {
         fixture.registry = new CanonicalMarketRegistry(
             fixture.manager, address(fixture.liquidToken), address(fixture.weth), address(this)
         );
-        CanonicalFeeHook hook = _deployMinedHook(
+        fixture.hook = _deployMinedHook(
             new CanonicalHookDeployer(),
             fixture.manager,
             fixture.registry,
@@ -616,7 +617,7 @@ contract GenesisLiquidityVaultTest is CanonicalHookMining {
             currency1: currency1,
             fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
             tickSpacing: 60,
-            hooks: IHooks(address(hook))
+            hooks: IHooks(address(fixture.hook))
         });
         fixture.registry.registerPool(fixture.key, address(fixture.router));
         fixture.registry.seal();
@@ -641,6 +642,7 @@ contract GenesisLiquidityVaultTest is CanonicalHookMining {
         vault = new GenesisLiquidityVault(
             ICanonicalMarketRegistry(address(fixture.registry)), address(this)
         );
+        fixture.hook.configureInitializer(address(vault));
         fixture.liquidToken.setDiscoveryExempt(address(fixture.manager), true);
         fixture.liquidToken.setDiscoveryExempt(address(vault), true);
         require(

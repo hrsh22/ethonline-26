@@ -10,6 +10,28 @@ export interface NavigationDestination {
   readonly label: string;
 }
 
+export interface CollectorReturnDestination {
+  readonly href: "/auction" | "/exchange" | "/fleet";
+  readonly label: "Auction" | "Fleet" | "Trade";
+}
+
+/** Strictly validates collector origins that may be carried in a query string. */
+export const collectorReturnDestination = (
+  returnTo: string | null | undefined,
+): CollectorReturnDestination | undefined => {
+  switch (returnTo) {
+    case "/auction":
+      return { href: "/auction", label: "Auction" };
+    case "/exchange":
+      return { href: "/exchange", label: "Trade" };
+    case "/start":
+    case "/fleet":
+      return { href: "/fleet", label: "Fleet" };
+    default:
+      return undefined;
+  }
+};
+
 interface NavigationDefinition {
   readonly href: Route;
   readonly label: string;
@@ -20,6 +42,7 @@ interface NavigationDefinition {
 const collectorNavigation = {
   primary: [
     { href: "/explore", label: "Explore" },
+    { href: "/auction", label: "Auction" },
     { href: "/exchange", label: "Trade" },
     {
       href: "/fleet",

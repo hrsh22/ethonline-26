@@ -7,8 +7,8 @@ export interface Viewport {
 }
 
 /**
- * The release widths, plus focused shell regressions: 320px compact, 781px
- * just above tablet, and 1161/1200px around the formerly colliding wide nav.
+ * Focused shell regressions around compact, navigation, and promoted funding
+ * breakpoints. The 1279/1280 pair guards the two-row to one-row handoff.
  */
 export const RELEASE_VIEWPORTS: readonly Viewport[] = [
   { height: 780, label: "375", width: 375 },
@@ -19,9 +19,15 @@ export const RELEASE_VIEWPORTS: readonly Viewport[] = [
 
 export const SHELL_VIEWPORTS: readonly Viewport[] = [
   { height: 720, label: "320", width: 320 },
-  { height: 900, label: "781", width: 781 },
-  { height: 820, label: "1161", width: 1161 },
+  { height: 844, label: "390", width: 390 },
+  { height: 1024, label: "768", width: 768 },
+  { height: 900, label: "900", width: 900 },
+  { height: 900, label: "901", width: 901 },
+  { height: 768, label: "1024", width: 1024 },
   { height: 838, label: "1200", width: 1200 },
+  { height: 838, label: "1279", width: 1279 },
+  { height: 800, label: "1280", width: 1280 },
+  { height: 900, label: "1440", width: 1440 },
 ];
 
 export interface RouteCase {

@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { parse, print, Kind } from "graphql";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 test("every Messari 1.3.2 field and enum value is preserved with its original GraphQL type", () => {
@@ -56,4 +61,61 @@ test("canonical addresses and pool match the checked deployment manifest", () =>
     "protocolLiquidityVault",
   ])
     assert.ok(yaml.includes(manifest.contracts[key].toLowerCase()));
+});
+
+test("a v3 manifest generates lifecycle-bound CCA sources", () => {
+  const directory = mkdtempSync(join(tmpdir(), "orbit-subgraph-v3-"));
+  try {
+    const manifest = JSON.parse(read("../../../deployments/84532.json"));
+    manifest.schemaVersion = 3;
+    manifest.phase = "cca";
+    delete manifest.contracts.genesisLiquidityVault;
+    Object.assign(manifest.contracts, {
+      continuousClearingAuction: "0x000000000000000000000000000000000000a001",
+      ccaStrategy: "0x000000000000000000000000000000000000a002",
+      ccaLaunchCoordinator: "0x000000000000000000000000000000000000a003",
+      ccaBidEscrowFactory: "0x000000000000000000000000000000000000a004",
+    });
+    manifest.cca = {
+      lifecycle: {
+        startBlock: "500",
+        endBlock: "600",
+        claimBlock: "601",
+        migrationBlock: "601",
+      },
+    };
+    const manifestPath = join(directory, "manifest.json");
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL("./generate-manifest-config.mjs", import.meta.url),
+        ),
+        manifestPath,
+        "--print-yaml",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const yaml = result.stdout.toLowerCase();
+    for (const address of [
+      manifest.contracts.continuousClearingAuction,
+      manifest.contracts.ccaStrategy,
+      manifest.contracts.ccaLaunchCoordinator,
+      manifest.contracts.ccaBidEscrowFactory,
+    ]) {
+      assert.ok(yaml.includes(address.toLowerCase()));
+    }
+    assert.match(
+      yaml,
+      /name: continuousclearingauction[\s\S]*startblock: 500/u,
+    );
+    assert.match(yaml, /name: ccastrategy[\s\S]*startblock: 601/u);
+    assert.match(yaml, /name: ccalaunchcoordinator[\s\S]*startblock: 601/u);
+    assert.match(yaml, /name: ccabidescrowfactory[\s\S]*startblock: 500/u);
+    assert.ok(yaml.includes("templates:"));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

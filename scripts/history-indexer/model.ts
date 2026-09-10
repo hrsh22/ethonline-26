@@ -12,6 +12,14 @@ export const historyEventNames = [
   "track-executed",
   "reward-notified",
   "reward-claimed",
+  "auction-bid-submitted",
+  "auction-bid-exited",
+  "auction-tokens-claimed",
+  "cca-migration-succeeded",
+  "cca-migration-failed",
+  "cca-funds-recovered",
+  "cca-activated",
+  "cca-escrow-withdrawal",
 ] as const;
 
 export type HistoryEventName = (typeof historyEventNames)[number];

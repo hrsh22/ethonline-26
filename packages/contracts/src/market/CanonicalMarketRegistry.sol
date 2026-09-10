@@ -22,8 +22,8 @@ interface ICanonicalRouterConfiguration {
 
 /// @notice One-way registry for the single supported Liquid Token/WETH v4 market.
 contract CanonicalMarketRegistry is TwoStepOwnable {
-    uint160 public constant REQUIRED_PERMISSION_BITS = Hooks.BEFORE_SWAP_FLAG
-        | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
+    uint160 public constant REQUIRED_PERMISSION_BITS = Hooks.BEFORE_INITIALIZE_FLAG
+        | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
         | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG;
     uint160 private constant ALL_PERMISSION_BITS = (1 << 14) - 1;
 

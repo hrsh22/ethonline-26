@@ -15,6 +15,7 @@ import {
 
 import {
   createProtocolContracts,
+  type CcaBid,
   type ProtocolAbi,
   type ProtocolContractName,
 } from "./contracts.js";
@@ -227,6 +228,20 @@ const mapOptional = <Value, Result>(
   value: Value | undefined,
   transform: (value: Value) => Result,
 ) => (value === undefined ? undefined : transform(value));
+
+const allTrue = (conditions: readonly boolean[]) => conditions.every(Boolean);
+
+const ccaAuctionPhase = (
+  currentBlock: bigint,
+  startBlock: bigint,
+  endBlock: bigint,
+  claimBlock: bigint,
+): "scheduled" | "active" | "settling" | "claimable" => {
+  if (currentBlock < startBlock) return "scheduled";
+  if (currentBlock < endBlock) return "active";
+  if (currentBlock < claimBlock) return "settling";
+  return "claimable";
+};
 
 export type OperationalEventType =
   | "reward-epoch"
@@ -685,6 +700,73 @@ export interface ProtocolReaderOptions {
   recentEventLimit?: number;
 }
 
+export interface CcaUnsupportedSnapshot {
+  readonly supported: false;
+  readonly schemaVersion: 2;
+}
+
+export interface CcaAuctionSnapshot {
+  readonly supported: true;
+  readonly observedBlock: bigint;
+  readonly phase: "scheduled" | "active" | "settling" | "claimable";
+  readonly configurationMatchesManifest: boolean;
+  readonly graduated: boolean;
+  readonly finalized: boolean;
+  readonly clearingPriceQ96: bigint;
+  readonly currencyRaised: bigint;
+  readonly tokensCleared: bigint;
+  readonly tokensRemaining: bigint;
+  readonly bidCount: bigint;
+  readonly startBlock: bigint;
+  readonly endBlock: bigint;
+  readonly claimBlock: bigint;
+}
+
+export interface CcaBidSnapshot {
+  readonly supported: true;
+  readonly observedBlock: bigint;
+  readonly bidId: bigint;
+  readonly bid: CcaBid;
+}
+
+export interface CcaReadinessSnapshot {
+  readonly supported: true;
+  readonly observedBlock: bigint;
+  readonly coordinatorConfigured: boolean;
+  readonly poolReady: boolean;
+  readonly recoverySeeded: boolean;
+  readonly activated: boolean;
+  readonly fuelLaunched: boolean;
+  readonly readyToActivate: boolean;
+  readonly marketOpen: boolean;
+}
+
+export interface CcaEscrowSnapshot {
+  readonly supported: true;
+  readonly beneficiary: Address;
+  readonly observedBlock: bigint;
+  readonly escrow: Address;
+  readonly deployed: boolean;
+  readonly registered: boolean;
+  readonly beneficiaryMatches: boolean;
+  readonly discoveryExempt: boolean;
+  readonly protected: boolean;
+  readonly escrowReady: boolean;
+  readonly readyToBid: boolean;
+  readonly wethPermit2Allowance: bigint;
+  readonly wethPermit2Approved: boolean;
+  readonly permit2AuctionAllowance: {
+    readonly amount: bigint;
+    readonly expiration: bigint;
+    readonly nonce: bigint;
+  };
+  readonly permit2AuctionApproved: boolean;
+  readonly fuelBalance: bigint;
+  readonly currencyBalance: bigint;
+  readonly fuelWithdrawalAvailable: boolean;
+  readonly currencyWithdrawalAvailable: boolean;
+}
+
 export interface ProtocolHealthReadOptions {
   /** The full deployment inventory belongs to diagnostics, not collector reads. */
   readonly includeBytecodeInventory?: boolean;
@@ -725,6 +807,7 @@ export const createProtocolReader = ({
   };
   const permanentIdentityCandidateReader =
     history?.permanentIdentityCandidates?.bind(history);
+  const ccaManifest = manifest.schemaVersion === 3 ? manifest : undefined;
   const contracts = createProtocolContracts(manifest);
   const prepareTransaction = createProtocolTransactionPreparer({
     manifest,
@@ -832,6 +915,525 @@ export const createProtocolReader = ({
       });
     }
     return actual;
+  };
+
+  const readCcaAuction = async (): Promise<
+    CcaUnsupportedSnapshot | CcaAuctionSnapshot
+  > => {
+    if (ccaManifest === undefined) {
+      return { supported: false, schemaVersion: 2 };
+    }
+    await verifyChain();
+    const block = await executeRead(
+      "CCA auction block",
+      () => transport.getBlock(),
+      identity,
+    );
+    const results = await executeRead(
+      "CCA auction",
+      () =>
+        transport.readMany(
+          [
+            { contract: "continuousClearingAuction", functionName: "token" },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "currency",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "totalSupply",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "tokensRecipient",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "fundsRecipient",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "validationHook",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "startBlock",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "endBlock",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "claimBlock",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "floorPrice",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "tickSpacing",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "isGraduated",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "clearingPrice",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "currencyRaised",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "totalCleared",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "remainingSupply",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "nextBidId",
+            },
+            {
+              contract: "continuousClearingAuction",
+              functionName: "lastCheckpointedBlock",
+            },
+          ] as const,
+          block.number,
+        ),
+      identity,
+    );
+    const token = successful<Address>(results[0], "CCA token", identity);
+    const currency = successful<Address>(results[1], "CCA currency", identity);
+    const totalSupply = successful<bigint>(results[2], "CCA supply", identity);
+    const tokensRecipient = successful<Address>(
+      results[3],
+      "CCA token recipient",
+      identity,
+    );
+    const fundsRecipient = successful<Address>(
+      results[4],
+      "CCA funds recipient",
+      identity,
+    );
+    const validationHook = successful<Address>(
+      results[5],
+      "CCA validation hook",
+      identity,
+    );
+    const startBlock = successful<bigint>(
+      results[6],
+      "CCA start block",
+      identity,
+    );
+    const endBlock = successful<bigint>(results[7], "CCA end block", identity);
+    const claimBlock = successful<bigint>(
+      results[8],
+      "CCA claim block",
+      identity,
+    );
+    const floorPriceQ96 = successful<bigint>(
+      results[9],
+      "CCA floor price",
+      identity,
+    );
+    const tickSpacingQ96 = successful<bigint>(
+      results[10],
+      "CCA tick spacing",
+      identity,
+    );
+    const expected = ccaManifest.cca;
+    const sameAddress = (left: Address, right: string) =>
+      left.toLowerCase() === right.toLowerCase();
+    const configurationMatchesManifest = allTrue([
+      sameAddress(token, ccaManifest.contracts.fuelCore),
+      sameAddress(currency, ccaManifest.contracts.weth),
+      sameAddress(tokensRecipient, ccaManifest.contracts.ccaRecoverySeeder),
+      sameAddress(fundsRecipient, ccaManifest.contracts.ccaStrategy),
+      sameAddress(validationHook, ccaManifest.contracts.ccaBidValidationHook),
+      totalSupply === BigInt(expected.economics.auctionSupply),
+      floorPriceQ96 === BigInt(expected.economics.floorPriceQ96),
+      tickSpacingQ96 === BigInt(expected.economics.tickSpacingQ96),
+      startBlock === BigInt(expected.lifecycle.startBlock),
+      endBlock === BigInt(expected.lifecycle.endBlock),
+      claimBlock === BigInt(expected.lifecycle.claimBlock),
+    ]);
+    const lastCheckpointedBlock = successful<bigint>(
+      results[17],
+      "CCA last checkpointed block",
+      identity,
+    );
+    return {
+      supported: true,
+      observedBlock: block.number,
+      phase: ccaAuctionPhase(block.number, startBlock, endBlock, claimBlock),
+      configurationMatchesManifest,
+      graduated: successful<boolean>(results[11], "CCA graduation", identity),
+      finalized: lastCheckpointedBlock === endBlock,
+      clearingPriceQ96: successful<bigint>(
+        results[12],
+        "CCA clearing price",
+        identity,
+      ),
+      currencyRaised: successful<bigint>(
+        results[13],
+        "CCA currency raised",
+        identity,
+      ),
+      tokensCleared: successful<bigint>(
+        results[14],
+        "CCA tokens cleared",
+        identity,
+      ),
+      tokensRemaining: successful<bigint>(
+        results[15],
+        "CCA tokens remaining",
+        identity,
+      ),
+      bidCount: successful<bigint>(results[16], "CCA bid count", identity),
+      startBlock,
+      endBlock,
+      claimBlock,
+    };
+  };
+
+  const readCcaBid = async (
+    bidId: bigint,
+  ): Promise<CcaUnsupportedSnapshot | CcaBidSnapshot> => {
+    if (ccaManifest === undefined) {
+      return { supported: false, schemaVersion: 2 };
+    }
+    if (bidId < 0n) throw new RangeError("CCA bid ID cannot be negative");
+    await verifyChain();
+    const block = await executeRead(
+      "CCA bid block",
+      () => transport.getBlock(),
+      identity,
+    );
+    const results = await executeRead(
+      "CCA bid",
+      () =>
+        transport.readMany(
+          [
+            {
+              contract: "continuousClearingAuction",
+              functionName: "bids",
+              args: [bidId],
+            },
+          ] as const,
+          block.number,
+        ),
+      identity,
+    );
+    return {
+      supported: true,
+      observedBlock: block.number,
+      bidId,
+      bid: successful<CcaBid>(results[0], "CCA bid", identity),
+    };
+  };
+
+  const readCcaReadiness = async (): Promise<
+    CcaUnsupportedSnapshot | CcaReadinessSnapshot
+  > => {
+    if (ccaManifest === undefined) {
+      return { supported: false, schemaVersion: 2 };
+    }
+    await verifyChain();
+    const block = await executeRead(
+      "CCA readiness block",
+      () => transport.getBlock(),
+      identity,
+    );
+    const results = await executeRead(
+      "CCA launch readiness",
+      () =>
+        transport.readMany(
+          [
+            { contract: "ccaLaunchCoordinator", functionName: "fuel" },
+            { contract: "ccaLaunchCoordinator", functionName: "readiness" },
+            {
+              contract: "ccaLaunchCoordinator",
+              functionName: "escrowFactory",
+            },
+            {
+              contract: "ccaLaunchCoordinator",
+              functionName: "configurationSealed",
+            },
+            { contract: "ccaLaunchCoordinator", functionName: "activated" },
+            {
+              contract: "ccaCanonicalLaunchReadiness",
+              functionName: "isReady",
+            },
+            { contract: "ccaRecoverySeeder", functionName: "seeded" },
+            { contract: "fuelCore", functionName: "launched" },
+          ] as const,
+          block.number,
+        ),
+      identity,
+    );
+    const sameAddress = (result: ContractReadResult, expected: string) =>
+      successful<Address>(
+        result,
+        "CCA coordinator binding",
+        identity,
+      ).toLowerCase() === expected.toLowerCase();
+    const configurationSealed = successful<boolean>(
+      results[3],
+      "CCA coordinator configuration",
+      identity,
+    );
+    const coordinatorConfigured =
+      configurationSealed &&
+      sameAddress(results[0], ccaManifest.contracts.fuelCore) &&
+      sameAddress(
+        results[1],
+        ccaManifest.contracts.ccaCanonicalLaunchReadiness,
+      ) &&
+      sameAddress(results[2], ccaManifest.contracts.ccaBidEscrowFactory);
+    const activated = successful<boolean>(
+      results[4],
+      "CCA activation",
+      identity,
+    );
+    const poolReady = successful<boolean>(
+      results[5],
+      "CCA pool readiness",
+      identity,
+    );
+    const recoverySeeded = successful<boolean>(
+      results[6],
+      "CCA recovery seed",
+      identity,
+    );
+    const fuelLaunched = successful<boolean>(
+      results[7],
+      "FUEL launch state",
+      identity,
+    );
+    return {
+      supported: true,
+      observedBlock: block.number,
+      coordinatorConfigured,
+      poolReady,
+      recoverySeeded,
+      activated,
+      fuelLaunched,
+      readyToActivate:
+        coordinatorConfigured && poolReady && !activated && !fuelLaunched,
+      marketOpen: activated && fuelLaunched,
+    };
+  };
+
+  const readCcaEscrow = async (
+    beneficiary: Address,
+  ): Promise<CcaUnsupportedSnapshot | CcaEscrowSnapshot> => {
+    if (ccaManifest === undefined) {
+      return { supported: false, schemaVersion: 2 };
+    }
+    await verifyChain();
+    const block = await executeRead(
+      "CCA escrow block",
+      () => transport.getBlock(),
+      identity,
+    );
+    const location = await executeRead(
+      "CCA escrow location",
+      () =>
+        transport.readMany(
+          [
+            {
+              contract: "ccaBidEscrowFactory",
+              functionName: "escrowOf",
+              args: [beneficiary],
+            },
+            {
+              contract: "ccaBidEscrowFactory",
+              functionName: "predictEscrow",
+              args: [beneficiary],
+            },
+            {
+              contract: "weth",
+              functionName: "allowance",
+              args: [beneficiary, ccaManifest.contracts.permit2 as Address],
+            },
+            {
+              contract: "permit2",
+              functionName: "allowance",
+              args: [
+                beneficiary,
+                ccaManifest.contracts.weth as Address,
+                ccaManifest.contracts.continuousClearingAuction as Address,
+              ],
+            },
+          ] as const,
+          block.number,
+        ),
+      identity,
+    );
+    const deployedEscrow = successful<Address>(
+      location[0],
+      "CCA deployed escrow",
+      identity,
+    );
+    const predictedEscrow = successful<Address>(
+      location[1],
+      "CCA predicted escrow",
+      identity,
+    );
+    const wethPermit2Allowance = successful<bigint>(
+      location[2],
+      "WETH Permit2 allowance",
+      identity,
+    );
+    const [permit2Amount, permit2Expiration, permit2Nonce] = successful<
+      readonly [bigint, bigint, bigint]
+    >(location[3], "Permit2 auction allowance", identity);
+    const wethPermit2Approved = wethPermit2Allowance > 0n;
+    const permit2AuctionApproved = allTrue([
+      permit2Amount > 0n,
+      permit2Expiration >= block.timestamp,
+    ]);
+    const permit2AuctionAllowance = {
+      amount: permit2Amount,
+      expiration: permit2Expiration,
+      nonce: permit2Nonce,
+    };
+    const deployed = deployedEscrow !== zeroAddress;
+    const escrow = deployed ? deployedEscrow : predictedEscrow;
+    if (!deployed) {
+      return {
+        supported: true,
+        beneficiary,
+        observedBlock: block.number,
+        escrow,
+        deployed: false,
+        registered: false,
+        beneficiaryMatches: false,
+        discoveryExempt: false,
+        protected: false,
+        escrowReady: false,
+        readyToBid: false,
+        wethPermit2Allowance,
+        wethPermit2Approved,
+        permit2AuctionAllowance,
+        permit2AuctionApproved,
+        fuelBalance: 0n,
+        currencyBalance: 0n,
+        fuelWithdrawalAvailable: false,
+        currencyWithdrawalAvailable: false,
+      };
+    }
+    const results = await executeRead(
+      "CCA escrow readiness",
+      () =>
+        transport.readMany(
+          [
+            {
+              contract: "ccaBidEscrowFactory",
+              functionName: "isEscrow",
+              args: [escrow],
+            },
+            {
+              contract: "ccaBidEscrowFactory",
+              functionName: "beneficiaryOf",
+              args: [escrow],
+            },
+            {
+              contract: "fuelCore",
+              functionName: "isDiscoveryExempt",
+              args: [escrow],
+            },
+            {
+              contract: "fuelCore",
+              functionName: "isProtectedAccount",
+              args: [escrow],
+            },
+            { contract: "fuelCore", functionName: "balanceOf", args: [escrow] },
+            { contract: "weth", functionName: "balanceOf", args: [escrow] },
+            { contract: "fuelCore", functionName: "launched" },
+          ] as const,
+          block.number,
+        ),
+      identity,
+    );
+    const registered = successful<boolean>(
+      results[0],
+      "CCA escrow registration",
+      identity,
+    );
+    const recordedBeneficiary = successful<Address>(
+      results[1],
+      "CCA escrow beneficiary",
+      identity,
+    );
+    const beneficiaryMatches =
+      recordedBeneficiary.toLowerCase() === beneficiary.toLowerCase();
+    const discoveryExempt = successful<boolean>(
+      results[2],
+      "CCA escrow discovery exemption",
+      identity,
+    );
+    const protected_ = successful<boolean>(
+      results[3],
+      "CCA escrow recovery protection",
+      identity,
+    );
+    const fuelBalance = successful<bigint>(
+      results[4],
+      "CCA escrow FUEL",
+      identity,
+    );
+    const currencyBalance = successful<bigint>(
+      results[5],
+      "CCA escrow currency",
+      identity,
+    );
+    const fuelLaunched = successful<boolean>(
+      results[6],
+      "FUEL launch state",
+      identity,
+    );
+    const startBlock = BigInt(ccaManifest.cca.lifecycle.startBlock);
+    const endBlock = BigInt(ccaManifest.cca.lifecycle.endBlock);
+    const escrowReady = allTrue([
+      registered,
+      beneficiaryMatches,
+      discoveryExempt,
+      protected_,
+    ]);
+    return {
+      supported: true,
+      beneficiary,
+      observedBlock: block.number,
+      escrow,
+      deployed,
+      registered,
+      beneficiaryMatches,
+      discoveryExempt,
+      protected: protected_,
+      escrowReady,
+      readyToBid: allTrue([
+        escrowReady,
+        wethPermit2Approved,
+        permit2AuctionApproved,
+        block.number >= startBlock,
+        block.number < endBlock,
+      ]),
+      wethPermit2Allowance,
+      wethPermit2Approved,
+      permit2AuctionAllowance,
+      permit2AuctionApproved,
+      fuelBalance,
+      currencyBalance,
+      fuelWithdrawalAvailable: allTrue([fuelLaunched, fuelBalance > 0n]),
+      currencyWithdrawalAvailable: currencyBalance > 0n,
+    };
   };
 
   const walletHoldingsEvidence = (
@@ -2197,51 +2799,56 @@ export const createProtocolReader = ({
         fallback: 0n,
       },
       {
-        key: "genesisRegistry",
-        request: {
-          contract: "genesisLiquidityVault",
-          functionName: "registry",
-        },
-        fallback: zeroAddress,
-      },
-      {
-        key: "genesisManager",
-        request: {
-          contract: "genesisLiquidityVault",
-          functionName: "manager",
-        },
-        fallback: zeroAddress,
-      },
-      {
-        key: "genesisFuel",
-        request: {
-          contract: "genesisLiquidityVault",
-          functionName: "liquidToken",
-        },
-        fallback: zeroAddress,
-      },
-      {
-        key: "genesisWeth",
-        request: {
-          contract: "genesisLiquidityVault",
-          functionName: "weth",
-        },
-        fallback: zeroAddress,
-      },
-      {
         key: "venueManager",
         request: { contract: "testConversionVenue", functionName: "manager" },
         fallback: zeroAddress,
       },
-      {
-        key: "genesisSeeded",
-        request: {
-          contract: "genesisLiquidityVault",
-          functionName: "seeded",
-        },
-        fallback: false,
-      },
     ] as const);
+    const genesisDefinitions =
+      manifest.schemaVersion === 2
+        ? healthReadDefinitions([
+            {
+              key: "genesisRegistry",
+              request: {
+                contract: "genesisLiquidityVault",
+                functionName: "registry",
+              },
+              fallback: zeroAddress,
+            },
+            {
+              key: "genesisManager",
+              request: {
+                contract: "genesisLiquidityVault",
+                functionName: "manager",
+              },
+              fallback: zeroAddress,
+            },
+            {
+              key: "genesisFuel",
+              request: {
+                contract: "genesisLiquidityVault",
+                functionName: "liquidToken",
+              },
+              fallback: zeroAddress,
+            },
+            {
+              key: "genesisWeth",
+              request: {
+                contract: "genesisLiquidityVault",
+                functionName: "weth",
+              },
+              fallback: zeroAddress,
+            },
+            {
+              key: "genesisSeeded",
+              request: {
+                contract: "genesisLiquidityVault",
+                functionName: "seeded",
+              },
+              fallback: false,
+            },
+          ] as const)
+        : [];
     const trackDefinitions = ([1, 2, 3, 4] as const).flatMap(
       (track) =>
         [
@@ -2376,6 +2983,7 @@ export const createProtocolReader = ({
     });
     return [
       ...baseDefinitions,
+      ...genesisDefinitions,
       ...trackDefinitions,
       ...balanceDefinitions,
       ...relicDefinitions,
@@ -2529,6 +3137,9 @@ export const createProtocolReader = ({
       );
     }
     if (state === undefined) return { failures, price: undefined, state };
+    if (manifest.schemaVersion === 3 && state.sqrtPriceX96 === 0n) {
+      return { failures, price: undefined, state };
+    }
     try {
       const price = deriveCanonicalMarketPrice({
         sqrtPriceX96: state.sqrtPriceX96,
@@ -2565,22 +3176,28 @@ export const createProtocolReader = ({
     );
     const feePotTotal =
       value("rewardPot") + value("liquidityPot") + value("creatorPot");
+    const marketLiquidityChecks: readonly OperationalCheck[] =
+      manifest.schemaVersion === 3 && !value("launched")
+        ? []
+        : [
+            {
+              id: "market:active-liquidity",
+              available: canonicalMarketState !== undefined,
+              status: checkStatus(
+                canonicalMarketState !== undefined &&
+                  canonicalMarketState.activeLiquidity > 0n,
+              ),
+              severity: "critical",
+              expected: copy.health.positiveLiquidity,
+              observed:
+                canonicalMarketState === undefined
+                  ? copy.health.unavailable
+                  : canonicalMarketState.activeLiquidity.toString(),
+              explanation: copy.health.marketLiquidity,
+            },
+          ];
     const baseOperationalChecks = (): readonly OperationalCheck[] => [
-      {
-        id: "market:active-liquidity",
-        available: canonicalMarketState !== undefined,
-        status: checkStatus(
-          canonicalMarketState !== undefined &&
-            canonicalMarketState.activeLiquidity > 0n,
-        ),
-        severity: "critical",
-        expected: copy.health.positiveLiquidity,
-        observed:
-          canonicalMarketState === undefined
-            ? copy.health.unavailable
-            : canonicalMarketState.activeLiquidity.toString(),
-        explanation: copy.health.marketLiquidity,
-      },
+      ...marketLiquidityChecks,
       {
         id: "accounting:fee-pot-backing",
         available: available(
@@ -2647,6 +3264,8 @@ export const createProtocolReader = ({
       });
     return { accounting: baseOperationalChecks(), pauses: pauseChecks() };
   };
+  const legacyOnly = <Value>(values: readonly Value[]): readonly Value[] =>
+    manifest.schemaVersion === 2 ? values : [];
   const assembleHealthSnapshot = async ({
     block,
     includeBytecodeInventory,
@@ -2694,7 +3313,7 @@ export const createProtocolReader = ({
         const displayName =
           copy.reader.contractLabels[
             name as keyof typeof copy.reader.contractLabels
-          ];
+          ] ?? name;
         try {
           const code = await transport.getBytecode(
             contract.address,
@@ -3122,18 +3741,20 @@ export const createProtocolReader = ({
           contracts.canonicalFeeHook.address,
           "liquidityHook",
         ],
-        [
-          "genesis.registry",
-          contracts.canonicalMarketRegistry.address,
-          "genesisRegistry",
-        ],
-        [
-          "genesis.manager",
-          contracts.uniswapV4PoolManager.address,
-          "genesisManager",
-        ],
-        ["genesis.fuel", contracts.fuelCore.address, "genesisFuel"],
-        ["genesis.weth", contracts.weth.address, "genesisWeth"],
+        ...legacyOnly([
+          [
+            "genesis.registry",
+            contracts.canonicalMarketRegistry.address,
+            "genesisRegistry",
+          ],
+          [
+            "genesis.manager",
+            contracts.uniswapV4PoolManager.address,
+            "genesisManager",
+          ],
+          ["genesis.fuel", contracts.fuelCore.address, "genesisFuel"],
+          ["genesis.weth", contracts.weth.address, "genesisWeth"],
+        ] as const),
         [
           "venue.manager",
           contracts.uniswapV4PoolManager.address,
@@ -3520,13 +4141,15 @@ export const createProtocolReader = ({
             explanation: copy.health.marketHook,
           },
           ...adapterValues,
-          {
-            id: "launched",
-            expected: "true",
-            observed: String(value("launched")),
-            available: available("launched"),
-            explanation: copy.health.launched,
-          },
+          ...legacyOnly([
+            {
+              id: "launched",
+              expected: "true",
+              observed: String(value("launched")),
+              available: available("launched"),
+              explanation: copy.health.launched,
+            },
+          ]),
           {
             id: "feeBps",
             expected: "300",
@@ -3561,24 +4184,26 @@ export const createProtocolReader = ({
             available: available("liquiditySealed"),
             explanation: copy.health.liquiditySealed,
           },
-          {
-            id: "genesisLiquidity",
-            sealed: value("genesisSeeded"),
-            available: available("genesisSeeded"),
-            explanation: copy.health.genesisSeeded,
-          },
-          {
-            id: "discoveryExemptions",
-            sealed: value("launched"),
-            available: available("launched"),
-            explanation: copy.health.discoveryExemptions,
-          },
-          {
-            id: "metadata",
-            sealed: value("launched"),
-            available: available("launched"),
-            explanation: copy.health.metadataSealed,
-          },
+          ...legacyOnly([
+            {
+              id: "genesisLiquidity",
+              sealed: value("genesisSeeded"),
+              available: available("genesisSeeded"),
+              explanation: copy.health.genesisSeeded,
+            },
+            {
+              id: "discoveryExemptions",
+              sealed: value("launched"),
+              available: available("launched"),
+              explanation: copy.health.discoveryExemptions,
+            },
+            {
+              id: "metadata",
+              sealed: value("launched"),
+              available: available("launched"),
+              explanation: copy.health.metadataSealed,
+            },
+          ]),
         ],
         rewardTracks: trackNames.map((track, index) => {
           const trackId = (index + 1) as HealthTrack;
@@ -4021,13 +4646,15 @@ export const createProtocolReader = ({
             observed: String(observedChainId),
             explanation: copy.health.chain,
           },
-          {
-            id: "launched",
-            expected: "true",
-            observed: String(value("launched")),
-            available: available("launched"),
-            explanation: copy.health.launched,
-          },
+          ...legacyOnly([
+            {
+              id: "launched",
+              expected: "true",
+              observed: String(value("launched")),
+              available: available("launched"),
+              explanation: copy.health.launched,
+            },
+          ]),
           {
             id: "feeBps",
             expected: "300",
@@ -4240,6 +4867,10 @@ export const createProtocolReader = ({
     identity,
     manifest,
     verifyChain,
+    readCcaAuction,
+    readCcaBid,
+    readCcaReadiness,
+    readCcaEscrow,
     readWallet,
     readStockBalances,
     readCollectible,

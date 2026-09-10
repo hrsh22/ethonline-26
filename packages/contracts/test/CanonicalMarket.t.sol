@@ -21,6 +21,7 @@ import {FuelCore} from "../src/FuelCore.sol";
 import {DeterministicDiscoveryAdapter} from "../src/discovery/DeterministicDiscoveryAdapter.sol";
 import {ICanonicalMarketRegistry} from "../src/interfaces/ICanonicalMarketRegistry.sol";
 import {IDiscoveryAdapter} from "../src/interfaces/IDiscoveryAdapter.sol";
+import {IInitializerHook} from "../src/interfaces/IInitializerHook.sol";
 import {IThresholdRecovery} from "../src/interfaces/IThresholdRecovery.sol";
 import {CanonicalFeeHook} from "../src/market/CanonicalFeeHook.sol";
 import {CanonicalHookDeployer} from "../src/market/CanonicalHookDeployer.sol";
@@ -42,6 +43,12 @@ interface CanonicalMarketVm {
 contract CanonicalRecoveryHarness is IThresholdRecovery {
     function getThreshold() external pure returns (uint256) {
         return 2;
+    }
+}
+
+contract UnauthorizedCanonicalInitializer {
+    function initialize(IPoolManager manager, PoolKey calldata key, uint160 sqrtPriceX96) external {
+        manager.initialize(key, sqrtPriceX96);
     }
 }
 
@@ -264,8 +271,9 @@ contract CanonicalMarketRegistryTest is CanonicalHookMining {
             new CanonicalMarketRegistry(manager, address(fuel), address(weth), address(this));
         CanonicalHookDeployer deployer = new CanonicalHookDeployer();
 
-        uint160 requiredFlags = Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG
-            | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG;
+        uint160 requiredFlags = Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG
+            | Hooks.AFTER_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
+            | Hooks.AFTER_SWAP_RETURNS_DELTA_FLAG;
         CanonicalFeeHook hook = _deployMinedHook(
             deployer,
             manager,
@@ -289,15 +297,42 @@ contract CanonicalMarketRegistryTest is CanonicalHookMining {
         });
 
         registry.registerPool(key, address(router));
+        hook.configureInitializer(address(this));
         registry.seal();
 
         require(registry.isSealed(), "registry did not seal");
         require(PoolId.unwrap(registry.poolId()) == PoolId.unwrap(key.toId()), "wrong pool ID");
         require(registry.router() == address(router), "wrong router");
         require(registry.permissionBits() == requiredFlags, "wrong hook permission bits");
+        require(hook.authorized() == address(this), "wrong initializer authority");
+        require(
+            hook.supportsInterface(type(IInitializerHook).interfaceId),
+            "initializer interface missing"
+        );
+        require(hook.supportsInterface(0x01ffc9a7), "ERC-165 interface missing");
+        (bool reconfigured,) =
+            address(hook).call(abi.encodeCall(hook.configureInitializer, (address(router))));
+        require(!reconfigured, "initializer authority changed");
+
+        _assertUnauthorizedInitializationRejected(manager, key);
+        manager.initialize(key, TickMath.getSqrtPriceAtTick(0));
         (bool secondRegistrationSucceeded,) = address(registry)
             .call(abi.encodeCall(CanonicalMarketRegistry.registerPool, (key, address(router))));
         require(!secondRegistrationSucceeded, "registry accepted a second pool");
+    }
+
+    function _assertUnauthorizedInitializationRejected(PoolManager manager, PoolKey memory key)
+        private
+    {
+        UnauthorizedCanonicalInitializer hostile = new UnauthorizedCanonicalInitializer();
+        (bool initialized,) = address(hostile)
+            .call(
+                abi.encodeCall(
+                    hostile.initialize,
+                    (IPoolManager(address(manager)), key, TickMath.getSqrtPriceAtTick(0))
+                )
+            );
+        require(!initialized, "unauthorized initializer opened the pool");
     }
 }
 
@@ -1022,6 +1057,7 @@ contract CanonicalMarketTradingTest is CanonicalHookMining {
             hooks: IHooks(address(fixture.hook))
         });
         fixture.registry.registerPool(fixture.key, address(fixture.router));
+        fixture.hook.configureInitializer(address(this));
         fixture.registry.seal();
         fixture.fuel.setCanonicalMarketRegistry(ICanonicalMarketRegistry(address(fixture.registry)));
         fixture.fuel.setDiscoveryExempt(address(fixture.manager), true);

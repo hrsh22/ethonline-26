@@ -21,6 +21,7 @@ import { ADMIN_FIXTURE_COOKIE } from "./admin-fixture.ts";
 
 import {
   collectorHeaderCollisionFailure,
+  collectorFundingVisibilityFailure,
   focusFailure,
   idleRequestFailure,
   observeApplicationRequests,
@@ -101,8 +102,22 @@ export const awaitHydration = async (page: Page): Promise<void> => {
         if (Date.now() >= deadline) throw error;
       });
   }
-  await page.getByRole("button", { name: "close modal", exact: true }).click();
-  await dialog.waitFor({ state: "hidden" });
+  const close = page.getByRole("button", {
+    name: "close modal",
+    exact: true,
+  });
+  const closeDeadline = Date.now() + 15_000;
+  while (await dialog.isVisible()) {
+    // Privy's dialog can rerender once after becoming visible. A close click
+    // aimed at the replaced button is discarded, so retry the real user
+    // action until the dialog itself confirms that it closed.
+    await close.click({ timeout: 1_000 }).catch((error) => {
+      if (Date.now() >= closeDeadline) throw error;
+    });
+    await dialog.waitFor({ state: "hidden", timeout: 1_000 }).catch((error) => {
+      if (Date.now() >= closeDeadline) throw error;
+    });
+  }
 };
 
 const connectWallet = async (
@@ -404,6 +419,11 @@ const inspectPage = async (
   if (overflow !== undefined) failures.push(overflow);
   const collision = await collectorHeaderCollisionFailure(page, input.label);
   if (collision !== undefined) failures.push(collision);
+  const fundingVisibility = await collectorFundingVisibilityFailure(
+    page,
+    input.label,
+  );
+  if (fundingVisibility !== undefined) failures.push(fundingVisibility);
   const focus = await focusFailure(page, input.label);
   if (focus !== undefined) failures.push(focus);
   failures.push(...(await renderedStyleFailures(page, input.label)));

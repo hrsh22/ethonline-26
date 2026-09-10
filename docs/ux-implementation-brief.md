@@ -16,6 +16,7 @@ Use the chosen Hangar composition: one featured craft with a selector, with a cl
 | `/fleet/[identityId]`          | Shared craft detail           | Preserve URL; a validated origin (Explore or Fleet) selects back navigation, defaulting to Fleet |
 | `/market`                      | Trade → Market                | Keep a shareable Market view and compatible direct entry                                         |
 | `/relics`                      | Explore → Relics              | Retain a direct entry to the relic group                                                         |
+| `/auction`                     | Auction                       | Preserve direct entry and carry `/faucet?returnTo=/auction` through funding without redirecting  |
 | `/status`, `/learn`, `/faucet` | Secondary utilities           | Remain accessible, including without a wallet                                                    |
 
 Implementation: `apps/web/src/components/fleet/fleet-panel.tsx`, `apps/web/src/components/fleet/fleet-views.tsx`, and `apps/web/src/components/start/collector-return-link.tsx`. The additive `selected` query key preserves the featured craft through detail and Rewards navigation.
@@ -24,7 +25,9 @@ Verify redirects and query preservation before retiring entry-page presentations
 
 ### 2. Collector foundations and shell
 
-Depends on package 1. Introduce the compact collector header, three-destination mobile navigation, readable typography, and quieter composition. Preserve the operator rail and layout: `AdminShell` currently reuses `ShellRail` and sidebar dimensions (`apps/web/src/components/shell/admin-shell.tsx:20`).
+Depends on package 1. Introduce the compact collector header, four-destination navigation—Explore, Auction, Trade, and My Fleet—readable typography, and quieter composition. Preserve the operator rail and layout: `AdminShell` currently reuses `ShellRail` and sidebar dimensions (`apps/web/src/components/shell/admin-shell.tsx:20`).
+
+Keep **Get test funds** in sticky collector chrome for every collector route and wallet state. At 1280px and wider it precedes Notifications and wallet controls. Below 1280px, one responsive instance sits in a compact second row with the Base Sepolia/no-value disclosure; mobile bottom navigation remains unchanged. The link uses a quiet outline treatment, a minimum 44px target, and `aria-current="page"` on `/faucet`.
 
 Scope collector typography/layout changes explicitly; global `:root` token changes currently affect admin and wallet surfaces too. Keep common semantic status colors, focus, reduced motion, and 44px target rules. Reuse wallet controls and accessible menu mechanics.
 
@@ -38,7 +41,9 @@ My Fleet shows the collection, or a simple empty collection with fixed Explore a
 
 Concrete removal boundary: `collector-journey.ts`, `components/start/collector-next-action.tsx`, and `onboarding-panel.tsx`; remove their Fleet/Start consumers and guided-journey links on Home/Learn/recovery. Keep generic validated origin navigation only where useful, translating legacy `/start` returns to the fixed Fleet destination. Page-local wallet and protocol data already supply operational facts; do not recreate the deleted journey helpers under a new name.
 
-Retain operational state where it belongs: connection/network access at the wallet boundary, insufficient balance and gas checks in the attempted transaction, pending/delayed discovery beside the relevant holdings, and fresh ownership/reward checks on their actions. Keep the faucet as a testnet utility, optionally linked from Trade when funds are insufficient. None of these facts feeds a cross-page user progression model.
+Retain operational state where it belongs: connection/network access at the wallet boundary, insufficient balance and gas checks in the attempted transaction, pending/delayed discovery beside the relevant holdings, and fresh ownership/reward checks on their actions. Keep the faucet as a testnet utility. Auction explains that bidding needs test WETH plus Base Sepolia ETH for fees; Trade explains that it accepts test ETH or WETH and that ETH also covers fees. Both link from blank forms, and typed shortfall states keep insufficient-balance recovery available. Unknown or failed reads never become zero. None of these facts feeds a cross-page user progression model.
+
+Faucet return handling uses a strict `/auction`, `/exchange`, `/fleet`, and legacy `/start` allowlist. `/start` continues to resolve to Fleet. A direct faucet visit keeps the Trade continuation. After successful funding, both the main continuation and explicit return link name the validated origin; funding never redirects or starts a transaction automatically, and unresolved outcomes retain their existing retry and reconciliation actions.
 
 Keep filtering, URL validation and Back restoration; reuse discovery progress/outcomes and stale-holdings action locks. Never treat a failed holdings read as an empty wallet that needs another purchase.
 

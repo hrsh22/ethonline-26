@@ -1,0 +1,70 @@
+query CcaLifecycle {
+  auctionBidSubmissions(first: 100, orderBy: blockNumber, orderDirection: asc) {
+    id
+    bidId
+    owner
+    priceQ96
+    amount
+    blockNumber
+    timestamp
+  }
+  auctionBidExits(first: 100, orderBy: blockNumber, orderDirection: asc) {
+    id
+    bidId
+    owner
+    tokensFilled
+    currencyRefunded
+    blockNumber
+    timestamp
+  }
+  auctionTokenClaims(first: 100, orderBy: blockNumber, orderDirection: asc) {
+    id
+    bidId
+    owner
+    tokensFilled
+    blockNumber
+    timestamp
+  }
+  ccaMigrations(first: 20, orderBy: blockNumber, orderDirection: asc) {
+    id
+    initializer
+    poolKeyHash
+    initialSqrtPriceX96
+    plan
+    blockNumber
+    timestamp
+  }
+  ccaMigrationFailures(first: 20, orderBy: blockNumber, orderDirection: asc) {
+    id
+    initializer
+    reason
+    blockNumber
+    timestamp
+  }
+  ccaFundsRecoveries(first: 20, orderBy: blockNumber, orderDirection: asc) {
+    id
+    initializer
+    recipient
+    amount
+    blockNumber
+    timestamp
+  }
+  ccaActivations(first: 20, orderBy: blockNumber, orderDirection: asc) {
+    id
+    governanceOwner
+    blockNumber
+    timestamp
+  }
+  ccaEscrowWithdrawals(first: 100, orderBy: blockNumber, orderDirection: asc) {
+    id
+    escrow {
+      id
+      beneficiary
+    }
+    token
+    beneficiary
+    amount
+    blockNumber
+    timestamp
+  }
+}

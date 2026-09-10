@@ -311,10 +311,21 @@
   > :is(.disabled-reason, .state-feedback) {
   position: absolute;
   z-index: 60;
-  top: calc(100% + 1.5rem);
+  /* Below 1280px the funding utility occupies a second header row. Clear the
+   * entire sticky header so transient wallet notices cannot cover its link. */
+  top: calc(100% + 4.5rem);
   right: 0;
   width: min(22rem, calc(100vw - 2rem));
   margin: 0;
+}
+
+@media (min-width: 80rem) {
+  [data-shell="collector"]
+    [data-collector-wallet-actions]
+    .wallet-control-state
+    > :is(.disabled-reason, .state-feedback) {
+    top: calc(100% + 1.5rem);
+  }
 }
 
 [data-shell="collector"]

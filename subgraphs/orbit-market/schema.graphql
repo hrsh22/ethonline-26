@@ -909,3 +909,101 @@ type RewardClaim @entity(immutable: true) {
   identityId: Int!
   amount: BigInt!
 }
+
+type AuctionBidSubmission @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  bidId: BigInt!
+  owner: Bytes!
+  priceQ96: BigInt!
+  amount: BigInt!
+}
+
+type AuctionBidExit @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  bidId: BigInt!
+  owner: Bytes!
+  tokensFilled: BigInt!
+  currencyRefunded: BigInt!
+}
+
+type AuctionTokenClaim @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  bidId: BigInt!
+  owner: Bytes!
+  tokensFilled: BigInt!
+}
+
+type CcaMigration @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  initializer: Bytes!
+  poolKeyHash: Bytes!
+  initialSqrtPriceX96: BigInt!
+  plan: Bytes!
+}
+
+type CcaMigrationFailure @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  initializer: Bytes!
+  reason: Bytes!
+}
+
+type CcaFundsRecovery @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  initializer: Bytes!
+  recipient: Bytes!
+  amount: BigInt!
+}
+
+type CcaActivation @entity(immutable: true) {
+  id: ID!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  governanceOwner: Bytes!
+}
+
+type CcaEscrow @entity(immutable: true) {
+  id: ID!
+  beneficiary: Bytes!
+  createdHash: String!
+  createdLogIndex: Int!
+  createdBlockNumber: BigInt!
+  createdTimestamp: BigInt!
+}
+
+type CcaEscrowWithdrawal @entity(immutable: true) {
+  id: ID!
+  escrow: CcaEscrow!
+  hash: String!
+  logIndex: Int!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  token: Bytes!
+  beneficiary: Bytes!
+  amount: BigInt!
+}

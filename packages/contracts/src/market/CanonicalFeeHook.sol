@@ -11,6 +11,8 @@ import {BeforeSwapDelta, toBeforeSwapDelta} from "v4-core/types/BeforeSwapDelta.
 import {Currency} from "v4-core/types/Currency.sol";
 import {PoolKey} from "v4-core/types/PoolKey.sol";
 
+import {IInitializerHook} from "../interfaces/IInitializerHook.sol";
+
 import {CanonicalMarketRegistry} from "./CanonicalMarketRegistry.sol";
 
 interface IFuelCanonicalPolicy {
@@ -18,7 +20,7 @@ interface IFuelCanonicalPolicy {
 }
 
 /// @notice Applies the permanent 3% Canonical Market fee entirely against its WETH leg.
-contract CanonicalFeeHook is IHooks {
+contract CanonicalFeeHook is IHooks, IInitializerHook {
     using SafeCast for uint256;
 
     uint256 public constant FEE_DENOMINATOR = 10_000;
@@ -39,6 +41,9 @@ contract CanonicalFeeHook is IHooks {
     uint256 public currentFeeAmount;
     uint256 public currentWethVolume;
 
+    address public authorized;
+    address public recoveryInitializer;
+
     bool private _active;
     bool private _feeCollected;
     bool private _withdrawing;
@@ -57,6 +62,11 @@ contract CanonicalFeeHook is IHooks {
     error Reentrancy();
     error UnauthorizedDestination(address caller);
     error UnauthorizedRouter(address caller);
+    error UnauthorizedConfiguration(address caller);
+    error UnauthorizedInitializer(address caller);
+    error InitializerAlreadyConfigured(address initializer);
+    error RecoveryInitializerAlreadyConfigured(address initializer);
+    error RegistryAlreadySealed();
 
     event FeeAccrued(
         address indexed trader,
@@ -67,6 +77,8 @@ contract CanonicalFeeHook is IHooks {
         uint256 creatorAmount
     );
     event PotPulled(address indexed destination, uint256 amount);
+    event InitializerConfigured(address indexed initializer);
+    event RecoveryInitializerConfigured(address indexed initializer);
 
     constructor(
         IPoolManager manager_,
@@ -106,6 +118,36 @@ contract CanonicalFeeHook is IHooks {
 
     function weth() external view returns (address) {
         return _weth;
+    }
+
+    /// @notice Binds the one strategy allowed to initialize the canonical pool.
+    /// @dev Configuration is one-time. An unconfigured hook rejects every initialization.
+    function configureInitializer(address initializer) external {
+        if (msg.sender != _registry.owner()) revert UnauthorizedConfiguration(msg.sender);
+        if (authorized != address(0)) revert InitializerAlreadyConfigured(authorized);
+        if (initializer.code.length == 0) revert InvalidConfiguration(initializer);
+        authorized = initializer;
+        emit InitializerConfigured(initializer);
+    }
+
+    /// @notice Binds the sole fallback initializer used after a terminal CCA migration failure.
+    /// @dev The fallback must be fixed before the canonical registry is sealed. Its own entrypoint
+    ///      is responsible for proving the committed migration failed before it calls PoolManager.
+    function configureRecoveryInitializer(address initializer) external {
+        if (msg.sender != _registry.owner()) revert UnauthorizedConfiguration(msg.sender);
+        if (_registry.isSealed()) revert RegistryAlreadySealed();
+        if (recoveryInitializer != address(0)) {
+            revert RecoveryInitializerAlreadyConfigured(recoveryInitializer);
+        }
+        if (initializer.code.length == 0 || initializer == authorized) {
+            revert InvalidConfiguration(initializer);
+        }
+        recoveryInitializer = initializer;
+        emit RecoveryInitializerConfigured(initializer);
+    }
+
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IInitializerHook).interfaceId || interfaceId == 0x01ffc9a7;
     }
 
     function beforeSwap(
@@ -279,8 +321,17 @@ contract CanonicalFeeHook is IHooks {
         return uint256(amount < 0 ? -amount : amount);
     }
 
-    function beforeInitialize(address, PoolKey calldata, uint160) external pure returns (bytes4) {
-        revert HookNotImplemented();
+    function beforeInitialize(address sender, PoolKey calldata key, uint160)
+        external
+        view
+        onlyPoolManager
+        returns (bytes4)
+    {
+        if (sender != authorized && sender != recoveryInitializer) {
+            revert UnauthorizedInitializer(sender);
+        }
+        if (!_registry.isSealed() || !_registry.isRegisteredPool(key)) revert InvalidPool();
+        return IHooks.beforeInitialize.selector;
     }
 
     function afterInitialize(address, PoolKey calldata, uint160, int24)

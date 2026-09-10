@@ -166,6 +166,24 @@ describe("Exchange panel", () => {
     container.remove();
   });
 
+  it("offers truthful test funding beside a blank order", async () => {
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+
+    expect(container.textContent).toContain(
+      "Trade with test ETH or WETH. ETH also covers network fees.",
+    );
+    expect(
+      container.querySelector("a[href='/faucet?returnTo=/exchange']")
+        ?.textContent,
+    ).toBe("Get test funds");
+  });
+
   it("aborts the obsolete quote as soon as the input changes, before debounce", async () => {
     const signals: AbortSignal[] = [];
     testState.protocol = {
@@ -742,9 +760,11 @@ describe("Exchange panel", () => {
 
     expect(testState.quoteExactInput).not.toHaveBeenCalled();
     expect(container.textContent).toContain("Not enough WETH");
-    expect(container.querySelector("a[href='/faucet']")?.textContent).toBe(
-      "Get test WETH",
-    );
+    expect(
+      [...container.querySelectorAll("a[href='/faucet?returnTo=/exchange']")]
+        .map((link) => link.textContent)
+        .includes("Get test WETH"),
+    ).toBe(true);
     expect(
       [
         ...container.querySelectorAll<HTMLButtonElement>(

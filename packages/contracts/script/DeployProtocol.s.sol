@@ -482,6 +482,7 @@ contract DeployProtocol is Script {
         protocol.genesisLiquidity = new GenesisLiquidityVault(
             ICanonicalMarketRegistry(address(protocol.marketRegistry)), roles.owner
         );
+        protocol.hook.configureInitializer(address(protocol.genesisLiquidity));
         protocol.metadataRenderer = new PlaceholderMetadataRenderer(
             IAttributeMetadataRegistry(address(protocol.attributes)),
             PlaceholderMetadataRenderer.IdentityConfiguration({

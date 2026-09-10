@@ -57,6 +57,10 @@ Fee logs may occur before or after a Swap in the same receipt. There is no arbit
 
 Contract addresses and PoolId come from [`deployments/84532.json`](../../deployments/84532.json). Event ABIs are extracted from the compiled canonical Solidity artifacts. All sources begin at block 46,351,953, before the observed genesis event at block 46,352,949 (transaction `0x9ba52c33aef5c7b6f4e66352b708eb7f50f257fcdc68751c121ae1b99848cbad`). Only the exact canonical PoolId is accepted from PoolManager.
 
+`subgraph.yaml` and `src/constants.ts` are generated from that manifest. For a CCA deployment, set `ORBIT_DEPLOYMENT_MANIFEST` to its v3 manifest before running `pnpm codegen`, `pnpm build`, or `pnpm deploy:studio`. V3 generation binds auction sources to `cca.lifecycle.startBlock`, migration and activation sources to `cca.lifecycle.migrationBlock`, and the escrow factory to the auction start. Factory events create dynamic escrow data sources, so only registered CCA escrows can produce `CcaEscrowWithdrawal` records.
+
+CCA bid submissions, exits, token claims, migration success, migration failure, recovered funds, Fuel activation, and escrow withdrawals have dedicated entities. They do not contribute to standardized `Swap` or fee entities. [`queries/cca-lifecycle.graphql`](queries/cca-lifecycle.graphql) reads the lifecycle records directly.
+
 Graph Node handles event ordering and reorg rollback. Read `_meta.hasIndexingErrors`, indexed block/hash/timestamp and deployment identity before accepting a response; an empty result while backfilling is not proof of no fees. This subgraph provides sponsor analytics through the API adapter. The SQLite Historical Read Model and direct block-pinned balances, roles, ownership and transaction recovery keep their existing responsibilities.
 
 ## Evidence
