@@ -296,7 +296,7 @@ const deploymentManifestFixtures = (): ReadonlyArray<{
     ) as Record<string, unknown>,
   },
   {
-    name: "v2 Base Sepolia protocol",
+    name: "checked Base Sepolia protocol",
     manifest: JSON.parse(
       readFileSync("../../deployments/84532.json", "utf8"),
     ) as Record<string, unknown>,
@@ -453,7 +453,7 @@ describe("Base Sepolia deployment manifest", () => {
     // is caught. A genuine redeployment changes it, and updating it is part of
     // recording that deployment.
     expect(deploymentManifestFingerprint(manifest)).toBe(
-      "0xc2b38da2a82de62f6cb914e6bf971465a6e6bee79cf355ddc98cde12ec182618",
+      "0x4acaf587773a454e20de450530d53fe35ae1e62dc90c01806ae528c715c3aeaa",
     );
     if (!isProtocolDeploymentManifest(manifest)) {
       throw new Error("expected a Base Sepolia protocol deployment");
@@ -530,13 +530,22 @@ describe("Base Sepolia deployment manifest", () => {
       "canonicalHookDeployer",
       "canonicalMarketRegistry",
       "canonicalRouter",
+      "ccaBidEscrowFactory",
+      "ccaBidValidationHook",
+      "ccaCanonicalLaunchReadiness",
+      "ccaLaunchFunding",
+      "ccaLaunchCoordinator",
+      "ccaRecoverySeeder",
+      "ccaStrategy",
       "claimGate",
+      "continuousClearingAuction",
+      "continuousClearingAuctionFactory",
       "discoveryAdapter",
       "epochConverter",
       "fuelCore",
       "fuelMirror",
-      "genesisLiquidityVault",
       "googlcConversionAdapter",
+      "liquidityLauncher",
       "metacConversionAdapter",
       "metadataRenderer",
       "mockAaplc",
@@ -544,11 +553,14 @@ describe("Base Sepolia deployment manifest", () => {
       "mockMetac",
       "mockNvdac",
       "nvdacConversionAdapter",
+      "permanentPositionRecipient",
+      "permit2",
       "protocolLiquidityVault",
       "recoveryAuthority",
       "rewardLedger",
       "testConversionVenue",
       "uniswapV4PoolManager",
+      "uniswapV4PositionManager",
       "usdc",
       "weth",
     ]);
@@ -958,8 +970,6 @@ describe("Base Sepolia deployment manifest", () => {
       { path: ["canonicalPool", "poolId"], value: zeroHash },
       { path: ["canonicalPool", "currency0"], value: zeroAddress },
       { path: ["canonicalPool", "hooks"], value: zeroAddress },
-      { path: ["canonicalPool", "seedSqrtPriceX96"], value: "0" },
-      { path: ["canonicalPool", "activeLiquidity"], value: "0" },
       { path: ["launch", "blockNumber"], value: "0" },
       { path: ["launch", "transactionHash"], value: zeroHash },
       { path: ["transactions", "step000"], value: zeroHash },
@@ -1152,7 +1162,7 @@ describe("Base Sepolia deployment manifest", () => {
         }),
     );
 
-    const baseProtocol = completeManifests[3]!.manifest;
+    const baseProtocol = completeManifests[2]!.manifest;
     rejected.push(...nestedProtocolMutations(baseProtocol));
 
     rejected.push(
@@ -1169,7 +1179,7 @@ describe("Base Sepolia deployment manifest", () => {
       },
       {
         name: "mismatched protocol chain and network",
-        candidate: setPath(baseProtocol, ["chainId"], 31_337),
+        candidate: setPath(baseProtocol, ["chainId"], 84_532),
       },
       {
         name: "mismatched venue chain",
