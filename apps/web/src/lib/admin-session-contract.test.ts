@@ -16,8 +16,8 @@ import {
 const localDeploymentFingerprint = `0x${"f".repeat(64)}` as `0x${string}`;
 const challengeDeploymentFingerprint = `0x${"11".repeat(32)}` as const;
 const challengeAddress = "0x8D01188806aA960F95A3fe4A343DFC26A8a7e6B5";
-const challengeIssuedAt = "2026-08-31T08:00:00.000Z";
-const challengeExpiresAt = "2026-08-31T08:05:00.000Z";
+const challengeIssuedAt = "2026-09-05T08:00:00.000Z";
+const challengeExpiresAt = "2026-09-05T08:05:00.000Z";
 const challengeMessage = `${
   "https://admin.orbit.example wants you to sign in with your Ethereum account:\n" +
   `${challengeAddress}\n\n` +
@@ -40,15 +40,15 @@ const challengeExpectation = {
   address: challengeAddress,
   appOrigin: "https://admin.orbit.example",
   deploymentFingerprint: challengeDeploymentFingerprint,
-  now: new Date("2026-08-31T08:01:00.000Z"),
+  now: new Date("2026-09-05T08:01:00.000Z"),
 } as const;
 const session = {
   address: "0x1111111111111111111111111111111111111111",
   chainId: 84_532,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: localDeploymentFingerprint,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: { hash: `0x${"a".repeat(64)}`, number: "31000000" },
   roles: ["keeper"],
 };
@@ -164,7 +164,7 @@ describe("admin challenge before wallet signature", () => {
         ...challenge,
         message: challengeMessage.replace(
           challengeIssuedAt,
-          "2026-08-31T08:02:00.000Z",
+          "2026-09-05T08:02:00.000Z",
         ),
       },
     ],
@@ -235,7 +235,7 @@ describe("admin challenge before wallet signature", () => {
         { ...challengeExpectation, now: new Date(challengeExpiresAt) },
       ],
       [
-        { ...challenge, expiresAt: "2026-08-31T08:06:00.000Z" },
+        { ...challenge, expiresAt: "2026-09-05T08:06:00.000Z" },
         challengeExpectation,
       ],
       [

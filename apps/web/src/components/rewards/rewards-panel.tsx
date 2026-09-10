@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Panel, Well } from "@/components/ui/panel";
-import { Amount, Percent, Unavailable } from "@/components/ui/value";
+import { Amount, Unavailable } from "@/components/ui/value";
 import { applicationCopy, identity } from "@/lib/identity";
 import { isTransactionInFlight } from "@/lib/transaction-state";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
@@ -49,13 +49,6 @@ const TRACK_COMPANIES: Record<string, string> = {
   METAc: "Meta",
   NVDAc: "NVIDIA",
 };
-
-/** The allocation split every track reserves, from CONTEXT.md. */
-const ALLOCATION = [
-  { label: applicationCopy.rewards.allocationOrdinary, share: 0.825 },
-  { label: applicationCopy.rewards.allocationBasket, share: 0.125 },
-  { label: applicationCopy.rewards.allocationIndicator, share: 0.05 },
-] as const;
 
 const rewardWalletView = (walletRead: WalletRead) => {
   switch (walletRead.status) {
@@ -113,7 +106,7 @@ const rewardWalletView = (walletRead: WalletRead) => {
             ? ({
                 description:
                   walletRead.snapshot.collectibles.permanent.length === 0
-                    ? "Launch a Grounded Craft to make it permanent and reward-eligible. Review your Fleet when you are ready."
+                    ? `This wallet holds no ${identity.terms.permanentCollectible}s. Attached rewards belong to permanent, reward-eligible identities.`
                     : walletRead.snapshot.collectibles.permanent.some(
                           (craft) => craft.claimEligible,
                         )
@@ -161,33 +154,6 @@ const trackIndexFor = (craft: RewardedCraft): number => {
   );
   return index > 0 ? index : 1;
 };
-
-function TrackPanel({
-  index,
-}: {
-  readonly index: (typeof TRACK_INDICES)[number];
-}) {
-  const track = identity.rewardTrackLabels[index];
-  return (
-    <li className="min-w-0" data-reward-track={track}>
-      <Panel
-        className="h-full"
-        meta={<span>{applicationCopy.rewards.trackMeta(index)}</span>}
-        title={`${TRACK_COMPANIES[track] ?? track} · ${track}`}
-      >
-        <DataList>
-          {ALLOCATION.map((entry) => (
-            <DataRow
-              key={entry.label}
-              label={entry.label}
-              value={<Percent fractionDigits={1} value={entry.share} />}
-            />
-          ))}
-        </DataList>
-      </Panel>
-    </li>
-  );
-}
 
 /**
  * A batch claim spends gas across several identities at once. The review
@@ -617,30 +583,6 @@ export function RewardsPanel() {
       </Panel>
 
       <CollectorHelp topic="rewards" />
-      <Panel title="How rewards reach your wallet">
-        <p className="text-body-sm text-ink-soft">
-          Trading fees fund conversions into the four reward tokens. Completed
-          conversions attach rewards to eligible identities. The current owner
-          reviews and claims those attached tokens.
-        </p>
-        <p className="mt-2 text-body-sm text-ink-soft">
-          Queued conversions are shared protocol funds, not your wallet’s
-          claimable balance. Station and Observatory pots can accrue before
-          Launch, but become claimable only after Launch. An ordinary track’s
-          unclaimed pot is reserved until its first ordinary Orbiter becomes
-          eligible.
-        </p>
-      </Panel>
-      <Disclosure title="Reward allocation by track" searchable>
-        <ul
-          aria-label={applicationCopy.rewards.tracksLabel}
-          className="grid gap-3 tablet:grid-cols-2 laptop:grid-cols-4"
-        >
-          {TRACK_INDICES.map((index) => (
-            <TrackPanel index={index} key={index} />
-          ))}
-        </ul>
-      </Disclosure>
       <PolicyDisclosure />
     </div>
   );

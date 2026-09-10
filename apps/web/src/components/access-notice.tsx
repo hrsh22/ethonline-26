@@ -6,6 +6,7 @@ import { applicationCopy } from "@/lib/identity";
 import { ConnectWalletAction } from "@/components/connect-wallet-action";
 import { StateFeedback } from "@/components/state-feedback";
 import { Button } from "@/components/ui/button";
+import { useWalletSession } from "@/providers/wallet-session";
 
 const messages = {
   disconnected: {
@@ -100,6 +101,14 @@ const noticeFor = (walletRead: WalletRead) => {
   }
 };
 
+const isConnecting = (
+  walletRead: WalletRead,
+  session: ReturnType<typeof useWalletSession>,
+) =>
+  walletRead.status === "blocked" &&
+  walletRead.accessState === "disconnected" &&
+  (!session.ready || session.connecting);
+
 export function AccessNotice({
   compact = false,
 }: {
@@ -107,8 +116,18 @@ export function AccessNotice({
 }) {
   const { refreshWallet, walletRead, walletSynchronizing } =
     useProtocolClient();
-  const notice =
-    walletSynchronizing && walletRead.status === "loaded"
+  const session = useWalletSession();
+  const connecting = isConnecting(walletRead, session);
+  const notice = connecting
+    ? {
+        message: {
+          title: "Connecting wallet",
+          body: "Waiting for the wallet connection to finish.",
+        },
+        retriable: false,
+        tone: "loading" as const,
+      }
+    : walletSynchronizing && walletRead.status === "loaded"
       ? {
           message: {
             title: applicationCopy.access.walletLoadingTitle,

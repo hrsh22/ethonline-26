@@ -56,6 +56,6 @@ describe("canonical collectible identity route", () => {
   it("does not describe a non-canonical segment as a collectible", async () => {
     const metadata = await generateMetadata(routeProperties("0042"));
 
-    expect(metadata.title).toBe("Fleet");
+    expect(metadata.title).toBe("My Fleet");
   });
 });

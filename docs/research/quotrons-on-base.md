@@ -1,6 +1,6 @@
 # QUOTRONS-style product on Base: research brief
 
-Research date: 2026-08-25. This brief uses first-party product documentation, official Base/Coinbase materials, onchain contract references, the issuer prospectus, and official regulatory statements. It separates confirmed facts from product/legal inference.
+Research date: 2026-09-08. This brief uses first-party product documentation, official Base/Coinbase materials, onchain contract references, the issuer prospectus, and official regulatory statements. It separates confirmed facts from product/legal inference.
 
 ## Bottom line
 

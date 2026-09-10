@@ -1,6 +1,6 @@
 # Acquiring Coinbase Tokenized Stocks on Base
 
-Research date: 2026-08-25. Onchain observations were made against Base mainnet around chain tip block `50,443,391` (2026-08-25 16:42:09 UTC). Pool-discovery calls used `latest` rather than a pinned block, so the addresses below are reproducible factory lookups, but this is not a historical reserve snapshot.
+Onchain observations were made against Base mainnet around chain tip block `50,443,391`. Pool-discovery calls used `latest` rather than a pinned block, so the addresses below are reproducible factory lookups, but this is not a historical reserve snapshot.
 
 ## Bottom line
 

@@ -1,0 +1,317 @@
+{
+  "endpoint": "https://api.studio.thegraph.com/query/85163/orbit-market/0.1.3",
+  "queriedAt": "2026-09-07T22:38:27.847Z",
+  "variables": {
+    "poolId": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d"
+  },
+  "result": {
+    "data": {
+      "rewardFundingSummary": {
+        "id": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d",
+        "totalFeesWeth": "74728207546066959",
+        "totalRewardsWeth": "49818805030711304",
+        "totalLiquidityWeth": "21172992138052302",
+        "totalCreatorWeth": "3736410377303353",
+        "totalConvertedWeth": "49678805030711304",
+        "feeEventCount": 18,
+        "conversionCount": 4,
+        "lastEventBlock": "46526067",
+        "lastEventTimestamp": "1788820422",
+        "pool": {
+          "id": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d",
+          "inventoryComplete": true,
+          "inputTokenBalances": [
+            "4422860133601086790751",
+            "143103875691092721"
+          ],
+          "inputTokens": [
+            {
+              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+              "symbol": "FUEL",
+              "decimals": 18
+            },
+            {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST",
+              "decimals": 18
+            }
+          ],
+          "swaps": [
+            {
+              "id": "swap-0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928-166",
+              "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
+              "timestamp": "1788820422",
+              "amountIn": "6790000000000000",
+              "amountOut": "1171360501692246067",
+              "tokenIn": {
+                "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              },
+              "tokenOut": {
+                "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+                "symbol": "FUEL",
+                "decimals": 18
+              }
+            },
+            {
+              "id": "swap-0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a-29",
+              "hash": "0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a",
+              "timestamp": "1788782420",
+              "amountIn": "49650902897932807501",
+              "amountOut": "290999999999999999",
+              "tokenIn": {
+                "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+                "symbol": "FUEL",
+                "decimals": 18
+              },
+              "tokenOut": {
+                "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              }
+            },
+            {
+              "id": "swap-0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662-232",
+              "hash": "0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662",
+              "timestamp": "1788782412",
+              "amountIn": "291000000000000000",
+              "amountOut": "49650902897932807501",
+              "tokenIn": {
+                "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              },
+              "tokenOut": {
+                "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+                "symbol": "FUEL",
+                "decimals": 18
+              }
+            },
+            {
+              "id": "swap-0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01-220",
+              "hash": "0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01",
+              "timestamp": "1788782402",
+              "amountIn": "49650902897932807501",
+              "amountOut": "290999999999999999",
+              "tokenIn": {
+                "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+                "symbol": "FUEL",
+                "decimals": 18
+              },
+              "tokenOut": {
+                "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              }
+            },
+            {
+              "id": "swap-0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1-193",
+              "hash": "0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1",
+              "timestamp": "1788782394",
+              "amountIn": "291000000000000000",
+              "amountOut": "49650902897932807501",
+              "tokenIn": {
+                "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              },
+              "tokenOut": {
+                "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+                "symbol": "FUEL",
+                "decimals": 18
+              }
+            }
+          ]
+        }
+      },
+      "hookFeeAccruals": [
+        {
+          "id": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928-165",
+          "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
+          "logIndex": 165,
+          "blockNumber": "46526067",
+          "timestamp": "1788820422",
+          "trader": "0xd86df743ee66906981e34beecfd5f7afd89caac9",
+          "wethVolume": "7000000000000000",
+          "feesWeth": "210000000000000",
+          "rewardsWeth": "140000000000000",
+          "liquidityWeth": "59500000000000",
+          "creatorWeth": "10500000000000"
+        },
+        {
+          "id": "0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a-30",
+          "hash": "0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a",
+          "logIndex": 30,
+          "blockNumber": "46507066",
+          "timestamp": "1788782420",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "290999999999999999",
+          "feesWeth": "8729999999999999",
+          "rewardsWeth": "5819999999999999",
+          "liquidityWeth": "2473499999999999",
+          "creatorWeth": "436500000000001"
+        },
+        {
+          "id": "0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662-231",
+          "hash": "0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662",
+          "logIndex": 231,
+          "blockNumber": "46507062",
+          "timestamp": "1788782412",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "300000000000000000",
+          "feesWeth": "9000000000000000",
+          "rewardsWeth": "6000000000000000",
+          "liquidityWeth": "2550000000000000",
+          "creatorWeth": "450000000000000"
+        },
+        {
+          "id": "0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01-221",
+          "hash": "0x811a9e0691caba3613e3cf8d31301b2b35b2a6409da9486eab95511454162c01",
+          "logIndex": 221,
+          "blockNumber": "46507057",
+          "timestamp": "1788782402",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "290999999999999999",
+          "feesWeth": "8729999999999999",
+          "rewardsWeth": "5819999999999999",
+          "liquidityWeth": "2473499999999999",
+          "creatorWeth": "436500000000001"
+        },
+        {
+          "id": "0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1-192",
+          "hash": "0x31c81d86363adf2519a3b5ff541dda21320fefd327d0afacc16de90e90bf71f1",
+          "logIndex": 192,
+          "blockNumber": "46507053",
+          "timestamp": "1788782394",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "300000000000000000",
+          "feesWeth": "9000000000000000",
+          "rewardsWeth": "6000000000000000",
+          "liquidityWeth": "2550000000000000",
+          "creatorWeth": "450000000000000"
+        },
+        {
+          "id": "0x81ce9d92e6485f1e75788ca29af328ca2d45e1f8c57f4ffc8f6eb7aa0ab80d35-125",
+          "hash": "0x81ce9d92e6485f1e75788ca29af328ca2d45e1f8c57f4ffc8f6eb7aa0ab80d35",
+          "logIndex": 125,
+          "blockNumber": "46507048",
+          "timestamp": "1788782384",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "290999999999999999",
+          "feesWeth": "8729999999999999",
+          "rewardsWeth": "5819999999999999",
+          "liquidityWeth": "2473499999999999",
+          "creatorWeth": "436500000000001"
+        },
+        {
+          "id": "0x5924845eaa8dc325f036aa3d7b740b528e37b8a2aded86199c6f94f7865bcaaf-210",
+          "hash": "0x5924845eaa8dc325f036aa3d7b740b528e37b8a2aded86199c6f94f7865bcaaf",
+          "logIndex": 210,
+          "blockNumber": "46507044",
+          "timestamp": "1788782376",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "300000000000000000",
+          "feesWeth": "9000000000000000",
+          "rewardsWeth": "6000000000000000",
+          "liquidityWeth": "2550000000000000",
+          "creatorWeth": "450000000000000"
+        },
+        {
+          "id": "0x754f00746d079247d748a8220a7f45859db25edafaf79b8dbf78292ed7410662-25",
+          "hash": "0x754f00746d079247d748a8220a7f45859db25edafaf79b8dbf78292ed7410662",
+          "logIndex": 25,
+          "blockNumber": "46507039",
+          "timestamp": "1788782366",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "290999999999999999",
+          "feesWeth": "8729999999999999",
+          "rewardsWeth": "5819999999999999",
+          "liquidityWeth": "2473499999999999",
+          "creatorWeth": "436500000000001"
+        },
+        {
+          "id": "0x62b228e8ea6b5a971d8c743cc068ef7edcad5adce9175afa359ef01a7a18f0b2-16",
+          "hash": "0x62b228e8ea6b5a971d8c743cc068ef7edcad5adce9175afa359ef01a7a18f0b2",
+          "logIndex": 16,
+          "blockNumber": "46507035",
+          "timestamp": "1788782358",
+          "trader": "0x5991fd6ecc5634c4de497b47eb0aa0065fffb214",
+          "wethVolume": "300000000000000000",
+          "feesWeth": "9000000000000000",
+          "rewardsWeth": "6000000000000000",
+          "liquidityWeth": "2550000000000000",
+          "creatorWeth": "450000000000000"
+        },
+        {
+          "id": "0xdd2a422fc9edbada68a1300b3961ace7576731c25198ed4905cf18472c64efd5-44",
+          "hash": "0xdd2a422fc9edbada68a1300b3961ace7576731c25198ed4905cf18472c64efd5",
+          "logIndex": 44,
+          "blockNumber": "46500232",
+          "timestamp": "1788768752",
+          "trader": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+          "wethVolume": "100000000000000",
+          "feesWeth": "3000000000000",
+          "rewardsWeth": "2000000000000",
+          "liquidityWeth": "850000000000",
+          "creatorWeth": "150000000000"
+        }
+      ],
+      "rewardConversions": [
+        {
+          "id": "0x6def163335e7118661c8a167e004d39bcca13e5e79d9d02693ce0bf1c6bd1987-97",
+          "hash": "0x6def163335e7118661c8a167e004d39bcca13e5e79d9d02693ce0bf1c6bd1987",
+          "logIndex": 97,
+          "blockNumber": "46507993",
+          "timestamp": "1788784274",
+          "track": 4,
+          "wethSpent": "12419701257677826",
+          "stockReceived": "1203632607033616613",
+          "deferredWeth": "0"
+        },
+        {
+          "id": "0xba09641aaa5d4ec34842a12d967d078f8b6d468aec559e22d8f9a810776963bf-137",
+          "hash": "0xba09641aaa5d4ec34842a12d967d078f8b6d468aec559e22d8f9a810776963bf",
+          "logIndex": 137,
+          "blockNumber": "46507988",
+          "timestamp": "1788784264",
+          "track": 3,
+          "wethSpent": "12419701257677826",
+          "stockReceived": "1205106919939488332",
+          "deferredWeth": "0"
+        },
+        {
+          "id": "0x0d813cfb686a7c70389cc541b65c3a0e2d8b427c8079ec0a454ff005e5df8345-69",
+          "hash": "0x0d813cfb686a7c70389cc541b65c3a0e2d8b427c8079ec0a454ff005e5df8345",
+          "logIndex": 69,
+          "blockNumber": "46507984",
+          "timestamp": "1788784256",
+          "track": 2,
+          "wethSpent": "12419701257677826",
+          "stockReceived": "1206582435706955271",
+          "deferredWeth": "0"
+        },
+        {
+          "id": "0xb7da7af1038027fa6a49caad9135583da1ead2ba7b432a7f9f9e7f9a95b9cb73-179",
+          "hash": "0xb7da7af1038027fa6a49caad9135583da1ead2ba7b432a7f9f9e7f9a95b9cb73",
+          "logIndex": 179,
+          "blockNumber": "46507980",
+          "timestamp": "1788784248",
+          "track": 1,
+          "wethSpent": "12419701257677826",
+          "stockReceived": "1208062517354625799",
+          "deferredWeth": "0"
+        }
+      ],
+      "_meta": {
+        "block": {
+          "number": 46526207,
+          "hash": "0xaaee5e5953448ff73b3e07b0d49d4cd80aa7373ffcc6f58b62186bd01175d012",
+          "timestamp": 1788820702
+        },
+        "hasIndexingErrors": false,
+        "deployment": "QmXBGqF3KLdY1P9osp4xVZ8e3eaAQNKHGuEmfE2MhtvnbC"
+      }
+    }
+  }
+}

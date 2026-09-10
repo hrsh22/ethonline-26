@@ -88,6 +88,8 @@ const createProtocol = () => ({
   },
   healthPending: false,
   healthError: null,
+  marketHistory: { status: "loading" as const },
+  refreshMarketHistory: vi.fn(),
   nativeBalanceRead: {
     status: "loaded" as const,
     balance: {
@@ -162,6 +164,24 @@ describe("Exchange panel", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+  });
+
+  it("offers truthful test funding beside a blank order", async () => {
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+
+    expect(container.textContent).toContain(
+      "Trade with test ETH or WETH. ETH also covers network fees.",
+    );
+    expect(
+      container.querySelector("a[href='/faucet?returnTo=/exchange']")
+        ?.textContent,
+    ).toBe("Get test funds");
   });
 
   it("aborts the obsolete quote as soon as the input changes, before debounce", async () => {
@@ -346,6 +366,22 @@ describe("Exchange panel", () => {
     expect(container.textContent).not.toContain(
       "quotes become available after the sealed Base Sepolia deployment is recorded",
     );
+  });
+
+  it("places the live market before the order form in the responsive reading order", async () => {
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+
+    const panels = [...container.querySelectorAll<HTMLElement>("[data-panel]")];
+    expect(panels[0]?.textContent).toContain("Loading indexed market history");
+    expect(panels[0]?.parentElement?.className).toContain("laptop:col-span-7");
+    expect(panels[1]?.querySelector("#exchange-amount")).not.toBeNull();
+    expect(panels[1]?.className).toContain("laptop:col-span-5");
   });
 
   it("labels and disables the action while a transaction is pending", async () => {
@@ -623,7 +659,9 @@ describe("Exchange panel", () => {
     expect(balanceCell("$FUEL").value).toBe("\u2014");
     expect(container.textContent).not.toContain("0 WETH");
     expect(
-      container.querySelectorAll("[role='alert'], [role='status']"),
+      [...container.querySelectorAll("[role='alert'], [role='status']")].filter(
+        (message) => message.textContent?.includes("wallet balance"),
+      ),
     ).toHaveLength(1);
   });
 
@@ -643,7 +681,9 @@ describe("Exchange panel", () => {
 
     expect(container.textContent).toContain("Reading the wallet balance");
     expect(
-      container.querySelectorAll("[role='alert'], [role='status']"),
+      [...container.querySelectorAll("[role='alert'], [role='status']")].filter(
+        (message) => message.textContent?.includes("wallet balance"),
+      ),
     ).toHaveLength(1);
   });
 
@@ -720,9 +760,11 @@ describe("Exchange panel", () => {
 
     expect(testState.quoteExactInput).not.toHaveBeenCalled();
     expect(container.textContent).toContain("Not enough WETH");
-    expect(container.querySelector("a[href='/faucet']")?.textContent).toBe(
-      "Get test WETH",
-    );
+    expect(
+      [...container.querySelectorAll("a[href='/faucet?returnTo=/exchange']")]
+        .map((link) => link.textContent)
+        .includes("Get test WETH"),
+    ).toBe(true);
     expect(
       [
         ...container.querySelectorAll<HTMLButtonElement>(

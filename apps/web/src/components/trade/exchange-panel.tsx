@@ -3,11 +3,11 @@
 import { runPublicRead } from "@orbit/protocol/read-lifetime";
 
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 
 import { CollectorReturnLink } from "@/components/start/collector-return-link";
+import { TestFundsLink } from "@/components/shell/test-funds-link";
 import { AccessNotice } from "@/components/access-notice";
 import { DisabledReason } from "@/components/state-feedback";
 import {
@@ -22,12 +22,14 @@ import {
   ExchangeInstrument,
   ExchangeMarketReference,
 } from "@/components/trade/exchange-instrument";
+import { TradeMarketChartContent } from "@/components/trade/trade-market-chart";
 import {
   exchangeAccessQuoteMessage,
   ExchangeDecisionReview,
   ExchangeTradeEvidence,
 } from "@/components/trade/exchange-review-checklist";
 import { Button } from "@/components/ui/button";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Amount } from "@/components/ui/value";
 import { Panel } from "@/components/ui/panel";
 import {
@@ -509,11 +511,14 @@ function InsufficientBalanceFeedback({
         )}
       </p>
       {intent.recovery === "faucet" ? (
-        <Link className={recoveryLinkClassName} href="/faucet">
+        <TestFundsLink
+          className={recoveryLinkClassName}
+          href="/faucet?returnTo=/exchange"
+        >
           {intent.asset === "native"
             ? applicationCopy.exchange.nativeFaucetRecovery
             : applicationCopy.exchange.faucetRecovery}
-        </Link>
+        </TestFundsLink>
       ) : intent.recovery === "buy" ? (
         <button
           className={recoveryLinkClassName}
@@ -558,78 +563,64 @@ function ExchangeIntentFeedback({
   );
 }
 
-/**
- * The right-hand column: the wallet the trade spends from and the market it
- * trades on. Disconnected, the wallet panel carries the connect action while
- * the order panel stays usable up to the submit button.
- */
-function ExchangeSidePanels({
+/** Wallet and market evidence stays available without competing with the order. */
+function ExchangeSecondaryDetails({
   balances,
   displayedQuote,
   payAsset,
   protocol,
-  showAccessNotice,
 }: {
   readonly balances: WalletBalances;
   readonly displayedQuote: ExchangeQuote | undefined;
   readonly payAsset: string;
   readonly protocol: ProtocolClient;
-  readonly showAccessNotice: boolean;
 }) {
   return (
-    <div className="grid content-start gap-3 laptop:col-span-5">
-      <Panel
-        footer={
-          <div className="flex justify-end">
-            <ExchangeBalancesRefresh
-              enabled={
-                protocol.walletRead.status === "loaded" ||
-                protocol.walletRead.status === "failed"
-              }
-              onRefresh={protocol.refreshWallet}
-            />
-          </div>
-        }
-        title={applicationCopy.exchange.walletTitle}
-        titleId="exchange-wallet-title"
-      >
-        <div className="grid gap-3">
-          {showAccessNotice ? <AccessNotice compact /> : null}
-          {/* A blocked read has no balances to list; three dashes under a
-           * connect button would be a row of dead metrics. */}
-          {protocol.walletRead.status === "blocked" ? null : (
-            <ExchangeBalancesBoard
-              labelledBy="exchange-wallet-title"
-              observedBlock={balances.observedBlock}
-              payAsset={payAsset}
-              rows={[
-                {
-                  asset: applicationCopy.exchange.nativeEth,
-                  ...balances.nativeEth,
-                },
-                {
-                  asset: applicationCopy.exchange.wrappedEth,
-                  ...balances.settlementToken,
-                },
-                {
-                  asset: applicationCopy.exchange.token,
-                  ...balances.liquidToken,
-                },
-              ]}
-            />
-          )}
+    <Disclosure searchable title="Wallet balances and market details">
+      <div className="grid gap-4">
+        <h3 className="sr-only" id="exchange-wallet-title">
+          {applicationCopy.exchange.walletTitle}
+        </h3>
+        {/* A blocked read has no balances to list; three dashes under a
+         * connect button would be a row of dead metrics. */}
+        {protocol.walletRead.status === "blocked" ? null : (
+          <ExchangeBalancesBoard
+            labelledBy="exchange-wallet-title"
+            observedBlock={balances.observedBlock}
+            payAsset={payAsset}
+            rows={[
+              {
+                asset: applicationCopy.exchange.nativeEth,
+                ...balances.nativeEth,
+              },
+              {
+                asset: applicationCopy.exchange.wrappedEth,
+                ...balances.settlementToken,
+              },
+              {
+                asset: applicationCopy.exchange.token,
+                ...balances.liquidToken,
+              },
+            ]}
+          />
+        )}
+        <div className="flex justify-end">
+          <ExchangeBalancesRefresh
+            enabled={
+              protocol.walletRead.status === "loaded" ||
+              protocol.walletRead.status === "failed"
+            }
+            onRefresh={protocol.refreshWallet}
+          />
         </div>
-      </Panel>
-      <Panel title={applicationCopy.exchange.marketTitle}>
-        <ExchangeMarketReference
-          feeBasisPoints={displayedQuote?.tradingFeeBps}
-          priceWei={protocol.health?.market.price?.wethPerLiquidTokenWei}
-        />
-        <p className="mt-3 text-body-sm text-ink-soft">
-          {applicationCopy.exchange.discoveryRule}
-        </p>
-      </Panel>
-    </div>
+        <div className="border-t border-line pt-3">
+          <ExchangeMarketReference
+            feeBasisPoints={displayedQuote?.tradingFeeBps}
+            priceWei={protocol.health?.market.price?.wethPerLiquidTokenWei}
+          />
+        </div>
+      </div>
+    </Disclosure>
   );
 }
 
@@ -714,15 +705,25 @@ export function ExchangePanel() {
   /* DOM order is the reading order a trader needs: inputs, the current quote
    * summary, the submit button, then the full terms as evidence. */
   return (
-    <div className="mt-4 grid gap-3 laptop:grid-cols-12">
-      <div className="laptop:col-span-12">
+    <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 laptop:grid-cols-12 laptop:items-start">
+      <div className="min-w-0 laptop:col-span-12">
         <CollectorReturnLink />
+      </div>
+      <div className="min-w-0 laptop:col-span-7 laptop:sticky laptop:top-24">
+        <TradeMarketChartContent
+          history={protocol.marketHistory}
+          onRefresh={protocol.refreshMarketHistory}
+          priceWei={referencePriceWei}
+        />
       </div>
       <Panel
         bodyClassName="grid gap-4"
-        className="laptop:col-span-7"
+        className="laptop:col-span-5"
         title={applicationCopy.exchange.orderTitle}
       >
+        {accessNoticeVisible(protocol, intent.status) ? (
+          <AccessNotice compact />
+        ) : null}
         <ExchangeDirectionControl
           direction={direction}
           onDirection={setDirection}
@@ -754,6 +755,10 @@ export function ExchangePanel() {
             intent={intent}
             onBuyRecovery={() => setDirection("buy")}
           />
+          <p className="text-body-sm text-ink-soft">
+            Trade with test ETH or WETH. ETH also covers network fees.{" "}
+            <TestFundsLink href="/faucet?returnTo=/exchange" />
+          </p>
         </div>
         <p className="text-body-sm text-ink-soft">
           {direction === "buy" && settlementMode === "native"
@@ -761,6 +766,9 @@ export function ExchangePanel() {
             : `Your wallet may first ask to approve ${assets.pay}, then confirm the ${direction === "buy" ? "purchase" : "sale"}. Approval alone does not complete the trade.`}
         </p>
         <DiscoveryShortfall protocol={protocol} direction={direction} />
+        <p className="text-body-sm text-ink-soft">
+          {applicationCopy.exchange.discoveryRule}
+        </p>
         <p className="text-body-sm text-ink-soft">
           Network: {deploymentEnvironment.chainLabel}. Valueless test assets.
         </p>
@@ -788,14 +796,13 @@ export function ExchangePanel() {
           referencePriceWei={referencePriceWei}
           settlementMode={settlementMode}
         />
+        <ExchangeSecondaryDetails
+          balances={walletBalanceValues(protocol)}
+          displayedQuote={displayedQuote}
+          payAsset={assets.pay}
+          protocol={protocol}
+        />
       </Panel>
-      <ExchangeSidePanels
-        balances={walletBalanceValues(protocol)}
-        displayedQuote={displayedQuote}
-        payAsset={assets.pay}
-        protocol={protocol}
-        showAccessNotice={accessNoticeVisible(protocol, intent.status)}
-      />
     </div>
   );
 }

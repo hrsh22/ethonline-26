@@ -105,7 +105,7 @@ function CollectorHelpTopics() {
     <Section
       headingId="help"
       title="Help with collecting"
-      description="Find the explanation for the step you are on."
+      description="Answers about your wallet, craft, and transactions."
     >
       <div className="grid gap-4 tablet:grid-cols-2">
         {topics.map((topic) => (
@@ -151,7 +151,7 @@ function CollectorHelpTopics() {
 function CollectingLoop() {
   return (
     <Section
-      description="Three steps are enough to begin, and every contract can be inspected before a wallet is connected."
+      description="Understand each action; every contract can be inspected without connecting a wallet."
       headingId="collecting-loop"
       title="The collecting loop"
     >
@@ -169,7 +169,7 @@ function CollectingLoop() {
         ))}
       </ol>
       <div className="mt-3 flex flex-wrap gap-2">
-        <ButtonLink href="/start">Start the guided journey</ButtonLink>
+        <ButtonLink href="/explore">Explore the collection</ButtonLink>
         <ButtonLink href="/exchange" variant="outline">
           Open {identity.navigation.exchange}
         </ButtonLink>
@@ -373,6 +373,7 @@ function ContractsPanel() {
 
 function HistoryPanel() {
   const launch = protocolDeploymentManifest?.launch;
+  const awaitingCcaSettlement = protocolDeploymentManifest?.schemaVersion === 3;
   return (
     <Panel
       footer={
@@ -390,8 +391,12 @@ function HistoryPanel() {
     >
       <DataList>
         <DataRow
-          label="Base Sepolia launch"
-          note="staging proof"
+          label={
+            awaitingCcaSettlement
+              ? "Base Sepolia CCA setup"
+              : "Base Sepolia launch"
+          }
+          note={awaitingCcaSettlement ? "auction pending" : "staging proof"}
           value={
             launch ? (
               <a
@@ -409,10 +414,7 @@ function HistoryPanel() {
           }
         />
         <DataRow label="Mainnet" value="Not deployed" />
-        <DataRow
-          label="Recorded incidents"
-          value="None as of 4 September 2026"
-        />
+        <DataRow label="Recorded incidents" value="None recorded" />
       </DataList>
     </Panel>
   );

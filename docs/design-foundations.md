@@ -1,28 +1,31 @@
 # Application design foundations
 
-The application ships a single visual identity called **Graphite**:
-a dark, dense, data-first instrument. One theme, always dark, built for reading
-live numbers, recognising owned objects at a glance, and making irreversible
-decisions calmly.
+The application ships a single dark visual identity called **Graphite**.
+The collector uses the **Hangar** composition: one featured craft with a
+selector, readable product typography, and quiet surrounding controls.
+The operator console remains a dense, data-first instrument. Both make
+irreversible decisions calmly and keep the same semantic status colors.
 
-Structure comes from boxed panels drawn with hairlines on a near-black canvas.
-One monospace family carries every role, and the single accent — signal orange
+Structure comes from restrained hairlines on a near-black canvas.
+The single accent — signal orange
 — is reserved for live values, the primary action, the current destination and
 a lit Orbiter. Purple or pink Web3 gradients, glass panels, glow effects,
 scanline textures, and marquee tickers are outside this system.
 
 It supports two working modes without pretending they are two systems:
 
-- The collector experience is the product. A persistent left rail holds every
-  destination; the content column opens with a board of what is true right now.
-- The operator console is the same rail with a different payload: the console
+- The collector experience is the product. A compact header holds Explore,
+  Trade, and My Fleet; mobile uses those same three destinations in a bottom
+  bar. Objects and the current task come before protocol accounting.
+- The operator console retains its rail: the console
   destinations, the session being operated under, and denser boards.
 
 ## Scope of the current system
 
-Every surface reads the Graphite map on `:root` — collector and operator
-console alike. There is one token map, no theme scope, and no
-`prefers-color-scheme` split anywhere.
+Every surface reads the Graphite color map on `:root`. Typography is scoped
+under `[data-shell="collector"]`; collector changes must not alter the
+operator's rail, density, or wallet theme. There is no `prefers-color-scheme`
+split.
 
 ## Semantic color
 
@@ -60,15 +63,17 @@ read custom properties, the literals are asserted against the token map by
 
 ## Typography
 
-- JetBrains Mono is the only face, in both applications. It is bound to
-  `--font-sans`, `--font-mono` and `--font-display`, so headings, labels,
-  numerals and body share one rhythm and columns of values align.
+- Barlow carries collector prose, headings, and actions. IBM Plex Mono
+  carries Fleet identifiers and measured values; other collector surfaces retain JetBrains Mono. Collector headings and actions
+  use sentence case, not instrument-style uppercase labels.
+- The operator retains JetBrains Mono for every role. Root font bindings
+  stay mono; the collector scope changes only its own sans/display bindings.
 
 The type scale lives in the `@theme` block: `label` (the 12px floor, caps,
 tracked), `caption`, `body-sm`, `body`, `lede`, `title-sm`, `title`, `heading`,
 `display` and `hero`. Panel titles, column headers and units are caps labels.
-Body copy is 14px; twelve pixels is the floor for labels, never for a paragraph
-or an action.
+Collector body copy and primary actions target 16px. Operator body copy is
+14px; twelve pixels is the floor for labels, never for a paragraph or action.
 
 Measured values are typeset, not printed raw. A value carries an explicit
 precision, its unit as a quiet label, and tabular figures; a full-precision
@@ -76,16 +81,26 @@ value belongs in a `title` or a disclosure, never in a truncated display string.
 
 ## Density and layout
 
-Collector screens use density level 7 of 10. A route opens with a board of live
-figures or the object itself; explanation comes last and collapsed. Panels sit
-in a gap-of-12px grid; padding inside a panel is 16px. No paragraph outside a
-disclosure is longer than one sentence.
+Collector screens use density level 4 of 10. My Fleet opens on one featured
+owned craft and a selector; a compact balance/reward summary supports it.
+Match the B prototype's composition: a wide left selector, a separate framed
+artwork stage, and an unboxed identity caption on the right. Use underline
+filters, balance beside the Collection/Rewards tabs, and a compact reward strip.
+Completed activity belongs in Notifications, not a permanent page-wide banner;
+pending and unresolved actions keep their recovery controls visible.
+An empty collection has fixed Explore and Trade links, independent of balances.
+Advanced filters and technical evidence are secondary. Trade keeps its live
+chart and form together: side by side on desktop, compact chart above the
+form on mobile. Home is an editorial introduction, not an accounting board.
+Prose stays concise and below 80 characters per line.
 
 Admin screens use density level 8 of 10. Put related facts in shared boards,
 tables, ledgers, or split panes. High density never permits tiny explanatory
 copy or ambiguous controls.
 
-The shell owns the rail and the status strip; a route owns one content column.
+The collector shell owns the header and mobile navigation; the operator shell
+owns its rail. A route owns one content column. A compact testnet/no-value
+disclosure persists; routine block/health telemetry belongs in Status.
 Interactive controls have a minimum 44px target. Containers nest at most one
 level deep: inside a panel, related facts become rows, wells, or metric cells,
 never another panel. Metric boards are equal columns on a shared baseline, so a
@@ -117,7 +132,10 @@ Every surface that can load, fail, or hold nothing designs those states beside
 its populated state. A blocked condition is announced before the control it
 blocks. An unreadable value is one clear statement, not a grid of placeholders,
 and an empty or disconnected surface shows what the product is plus one action
-rather than a row of dashes.
+rather than a row of dashes. There is no onboarding ladder, user-stage
+classifier, cross-page next-action controller, or first-Orbiter completion
+goal. Wallet access, insufficient funds, pending discovery, and transaction
+recovery are action-local facts. Launch is optional, not unfinished onboarding.
 
 Use `StateFeedback` for loading, empty, blocked, partial, stale, error, success
 and notice. Errors are assertive alerts; everything else is a polite status.

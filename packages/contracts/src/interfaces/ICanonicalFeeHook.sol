@@ -8,6 +8,14 @@ interface ICanonicalFeeHook {
 
     function weth() external view returns (address);
 
+    function authorized() external view returns (address);
+
+    function configureInitializer(address initializer) external;
+
+    function recoveryInitializer() external view returns (address);
+
+    function configureRecoveryInitializer(address initializer) external;
+
     function rewardDestination() external view returns (address);
 
     function rewardPot() external view returns (uint256);

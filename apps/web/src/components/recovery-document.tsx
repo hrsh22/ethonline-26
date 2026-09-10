@@ -56,13 +56,18 @@ export function RecoveryDocument({
             <nav aria-label={applicationCopy.shell.protocolNavigation}>
               <ul className="flex flex-wrap items-center gap-1">
                 <li>
-                  <ButtonLink href="/start" size="sm" variant="ghost">
-                    {applicationCopy.navigation.start}
+                  <ButtonLink href="/fleet" size="sm" variant="ghost">
+                    {applicationCopy.navigation.collection}
                   </ButtonLink>
                 </li>
                 <li>
                   <ButtonLink href="/status" size="sm" variant="ghost">
                     {applicationCopy.navigation.status}
+                  </ButtonLink>
+                </li>
+                <li>
+                  <ButtonLink href="/faucet" size="sm" variant="ghost">
+                    Get test funds
                   </ButtonLink>
                 </li>
               </ul>

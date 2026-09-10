@@ -1438,11 +1438,273 @@
           "codehash": { "$ref": "#/$defs/nonZeroHash" }
         }
       }
+    },
+    "ccaProtocolContracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aaplcConversionAdapter",
+        "attributeRegistry",
+        "canonicalFeeHook",
+        "canonicalHookDeployer",
+        "canonicalMarketRegistry",
+        "canonicalRouter",
+        "ccaBidEscrowFactory",
+        "ccaBidValidationHook",
+        "ccaCanonicalLaunchReadiness",
+        "ccaLaunchFunding",
+        "ccaLaunchCoordinator",
+        "ccaRecoverySeeder",
+        "ccaStrategy",
+        "claimGate",
+        "continuousClearingAuction",
+        "continuousClearingAuctionFactory",
+        "discoveryAdapter",
+        "epochConverter",
+        "fuelCore",
+        "fuelMirror",
+        "googlcConversionAdapter",
+        "liquidityLauncher",
+        "metacConversionAdapter",
+        "metadataRenderer",
+        "mockAaplc",
+        "mockGooglc",
+        "mockMetac",
+        "mockNvdac",
+        "nvdacConversionAdapter",
+        "permanentPositionRecipient",
+        "permit2",
+        "protocolLiquidityVault",
+        "recoveryAuthority",
+        "rewardLedger",
+        "testConversionVenue",
+        "uniswapV4PoolManager",
+        "uniswapV4PositionManager",
+        "usdc",
+        "weth"
+      ],
+      "properties": {
+        "aaplcConversionAdapter": { "$ref": "#/$defs/nonZeroAddress" },
+        "attributeRegistry": { "$ref": "#/$defs/nonZeroAddress" },
+        "canonicalFeeHook": { "$ref": "#/$defs/nonZeroAddress" },
+        "canonicalHookDeployer": { "$ref": "#/$defs/nonZeroAddress" },
+        "canonicalMarketRegistry": { "$ref": "#/$defs/nonZeroAddress" },
+        "canonicalRouter": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaBidEscrowFactory": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaBidValidationHook": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaCanonicalLaunchReadiness": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaLaunchFunding": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaLaunchCoordinator": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaRecoverySeeder": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaStrategy": { "$ref": "#/$defs/nonZeroAddress" },
+        "claimGate": { "$ref": "#/$defs/nonZeroAddress" },
+        "continuousClearingAuction": { "$ref": "#/$defs/nonZeroAddress" },
+        "continuousClearingAuctionFactory": {
+          "$ref": "#/$defs/nonZeroAddress"
+        },
+        "discoveryAdapter": { "$ref": "#/$defs/nonZeroAddress" },
+        "epochConverter": { "$ref": "#/$defs/nonZeroAddress" },
+        "fuelCore": { "$ref": "#/$defs/nonZeroAddress" },
+        "fuelMirror": { "$ref": "#/$defs/nonZeroAddress" },
+        "googlcConversionAdapter": { "$ref": "#/$defs/nonZeroAddress" },
+        "liquidityLauncher": { "$ref": "#/$defs/nonZeroAddress" },
+        "metacConversionAdapter": { "$ref": "#/$defs/nonZeroAddress" },
+        "metadataRenderer": { "$ref": "#/$defs/nonZeroAddress" },
+        "mockAaplc": { "$ref": "#/$defs/nonZeroAddress" },
+        "mockGooglc": { "$ref": "#/$defs/nonZeroAddress" },
+        "mockMetac": { "$ref": "#/$defs/nonZeroAddress" },
+        "mockNvdac": { "$ref": "#/$defs/nonZeroAddress" },
+        "nvdacConversionAdapter": { "$ref": "#/$defs/nonZeroAddress" },
+        "permanentPositionRecipient": { "$ref": "#/$defs/nonZeroAddress" },
+        "permit2": { "$ref": "#/$defs/nonZeroAddress" },
+        "protocolLiquidityVault": { "$ref": "#/$defs/nonZeroAddress" },
+        "recoveryAuthority": { "$ref": "#/$defs/nonZeroAddress" },
+        "rewardLedger": { "$ref": "#/$defs/nonZeroAddress" },
+        "testConversionVenue": { "$ref": "#/$defs/nonZeroAddress" },
+        "uniswapV4PoolManager": { "$ref": "#/$defs/nonZeroAddress" },
+        "uniswapV4PositionManager": { "$ref": "#/$defs/nonZeroAddress" },
+        "usdc": { "$ref": "#/$defs/nonZeroAddress" },
+        "weth": { "$ref": "#/$defs/nonZeroAddress" },
+        "ccaCreate2Deployer": { "$ref": "#/$defs/nonZeroAddress" }
+      }
+    },
+    "pendingCcaCanonicalPool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "poolId",
+        "currency0",
+        "currency1",
+        "fee",
+        "tickSpacing",
+        "hooks",
+        "seedSqrtPriceX96",
+        "activeLiquidity"
+      ],
+      "properties": {
+        "poolId": { "$ref": "#/$defs/nonZeroHash" },
+        "currency0": { "$ref": "#/$defs/nonZeroAddress" },
+        "currency1": { "$ref": "#/$defs/nonZeroAddress" },
+        "fee": { "const": 8388608 },
+        "tickSpacing": { "const": 60 },
+        "hooks": { "$ref": "#/$defs/nonZeroAddress" },
+        "seedSqrtPriceX96": { "const": "0" },
+        "activeLiquidity": { "const": "0" }
+      }
+    },
+    "ccaConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provenance", "economics", "lifecycle"],
+      "properties": {
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "continuousClearingAuction",
+            "liquidityLauncher",
+            "lbpStrategy"
+          ],
+          "properties": {
+            "continuousClearingAuction": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["commit", "version"],
+              "properties": {
+                "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+                "version": {
+                  "type": "string",
+                  "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+].+)?$"
+                }
+              }
+            },
+            "liquidityLauncher": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["commit", "version"],
+              "properties": {
+                "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+                "version": {
+                  "type": "string",
+                  "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+].+)?$"
+                }
+              }
+            },
+            "lbpStrategy": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["commit", "version"],
+              "properties": {
+                "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+                "version": {
+                  "type": "string",
+                  "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+].+)?$"
+                }
+              }
+            }
+          }
+        },
+        "economics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "totalFuelSupply",
+            "auctionSupply",
+            "liquidityReserve",
+            "minimumRaise",
+            "floorPriceQ96",
+            "tickSpacingQ96"
+          ],
+          "properties": {
+            "totalFuelSupply": { "const": "4444000000000000000000" },
+            "auctionSupply": { "$ref": "#/$defs/positiveDecimal" },
+            "liquidityReserve": { "$ref": "#/$defs/positiveDecimal" },
+            "minimumRaise": { "$ref": "#/$defs/positiveDecimal" },
+            "floorPriceQ96": { "$ref": "#/$defs/positiveDecimal" },
+            "tickSpacingQ96": { "$ref": "#/$defs/positiveDecimal" }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "startBlock",
+            "endBlock",
+            "claimBlock",
+            "migrationBlock"
+          ],
+          "properties": {
+            "startBlock": { "$ref": "#/$defs/positiveDecimal" },
+            "endBlock": { "$ref": "#/$defs/positiveDecimal" },
+            "claimBlock": { "$ref": "#/$defs/positiveDecimal" },
+            "migrationBlock": { "$ref": "#/$defs/positiveDecimal" }
+          }
+        }
+      }
+    },
+    "ccaProtocolManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "$schema",
+        "schemaVersion",
+        "chainId",
+        "network",
+        "phase",
+        "contracts",
+        "roles",
+        "identity",
+        "conversionPools",
+        "canonicalPool",
+        "seals",
+        "launch",
+        "transactions",
+        "cca"
+      ],
+      "properties": {
+        "$schema": { "const": "./schema.json" },
+        "blockedVenues": { "$ref": "#/$defs/blockedVenues" },
+        "canonicalPool": { "$ref": "#/$defs/pendingCcaCanonicalPool" },
+        "chainId": { "enum": [31337, 84532] },
+        "claimPolicy": { "$ref": "#/$defs/claimPolicy" },
+        "contracts": { "$ref": "#/$defs/ccaProtocolContracts" },
+        "conversionPools": { "$ref": "#/$defs/conversionPools" },
+        "identity": { "$ref": "#/$defs/identity" },
+        "launch": { "$ref": "#/$defs/launch" },
+        "moduleOwners": { "$ref": "#/$defs/moduleOwners" },
+        "modulePendingOwners": { "$ref": "#/$defs/modulePendingOwners" },
+        "network": { "enum": ["anvil", "base-sepolia"] },
+        "phase": { "const": "cca" },
+        "roles": { "$ref": "#/$defs/roles" },
+        "schemaVersion": { "const": 3 },
+        "seals": { "$ref": "#/$defs/seals" },
+        "transactions": { "$ref": "#/$defs/transactions" },
+        "cca": { "$ref": "#/$defs/ccaConfiguration" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "chainId": { "const": 31337 },
+            "network": { "const": "anvil" },
+            "contracts": {
+              "required": ["ccaCreate2Deployer"],
+              "type": "object"
+            }
+          }
+        },
+        {
+          "properties": {
+            "chainId": { "const": 84532 },
+            "network": { "const": "base-sepolia" }
+          }
+        }
+      ]
     }
   },
   "oneOf": [
     { "$ref": "#/$defs/selfFundedVenueManifest" },
     { "$ref": "#/$defs/officialVenueManifest" },
-    { "$ref": "#/$defs/protocolManifest" }
+    { "$ref": "#/$defs/protocolManifest" },
+    { "$ref": "#/$defs/ccaProtocolManifest" }
   ]
 }

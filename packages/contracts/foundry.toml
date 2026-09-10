@@ -1,4 +1,5 @@
 [profile.default]
+auto_detect_remappings = false
 auto_detect_solc = false
 evm_version = "cancun"
 fs_permissions = [
@@ -13,11 +14,35 @@ remappings = [
   "@openzeppelin/contracts/=lib/v4-core/lib/openzeppelin-contracts/contracts/",
   "@openzeppelin/contracts@4.9.6/=lib/openzeppelin-contracts-4.9.6/contracts/",
   "forge-std/=lib/v4-core/lib/forge-std/src/",
+  "v4-core/=lib/v4-core/src/",
+  "solmate/=lib/v4-core/lib/solmate/",
+  "continuous-clearing-auction/=lib/continuous-clearing-auction/src/",
+  "liquidity-launcher/=lib/liquidity-launcher/",
+  "lib/continuous-clearing-auction/:@openzeppelin/contracts/=lib/continuous-clearing-auction/lib/openzeppelin-contracts/contracts/",
+  "lib/continuous-clearing-auction/:@uniswap/v4-core/=lib/liquidity-launcher/lib/v4-core/",
+  "lib/continuous-clearing-auction/:blocknumberish/=lib/continuous-clearing-auction/lib/blocknumberish/",
+  "lib/continuous-clearing-auction/:liquidity-launcher/=lib/continuous-clearing-auction/lib/liquidity-launcher/",
+  "lib/continuous-clearing-auction/:solady/=lib/continuous-clearing-auction/lib/solady/src/",
+  "lib/continuous-clearing-auction/:v4-periphery/=lib/continuous-clearing-auction/lib/v4-periphery/",
+  "lib/liquidity-launcher/:@openzeppelin/contracts/=lib/liquidity-launcher/lib/openzeppelin-contracts/contracts/",
+  "lib/liquidity-launcher/:@solady/=lib/liquidity-launcher/lib/solady/",
+  "lib/liquidity-launcher/:@uniswap/blocknumberish/=lib/liquidity-launcher/lib/blocknumberish/",
+  "lib/liquidity-launcher/:@uniswap/uerc20-factory/=lib/liquidity-launcher/lib/uerc20-factory/",
+  "lib/liquidity-launcher/:@uniswap/v4-core/=lib/liquidity-launcher/lib/v4-core/",
+  "lib/liquidity-launcher/:@uniswap/v4-periphery/=lib/liquidity-launcher/lib/v4-periphery/",
+  "lib/liquidity-launcher/:permit2/=lib/liquidity-launcher/lib/permit2/",
+  "lib/liquidity-launcher/:solady/=lib/liquidity-launcher/lib/solady/src/",
 ]
 script = "script"
 solc_version = "0.8.26"
 src = "src"
 test = "test"
+
+additional_compiler_profiles = [{ name = "cca_via_ir", optimizer_runs = 11111, via_ir = true }]
+
+compilation_restrictions = [
+  { paths = "lib/continuous-clearing-auction/src/ContinuousClearingAuctionFactory.sol", via_ir = true },
+]
 
 [fmt]
 line_length = 100

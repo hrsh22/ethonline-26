@@ -1,6 +1,6 @@
 import type { Route } from "next";
 
-import { applicationCopy } from "@/lib/identity";
+import { applicationCopy, identity } from "@/lib/identity";
 
 export type ShellContext = "collector" | "admin";
 
@@ -9,6 +9,28 @@ export interface NavigationDestination {
   readonly href: Route;
   readonly label: string;
 }
+
+export interface CollectorReturnDestination {
+  readonly href: "/auction" | "/exchange" | "/fleet";
+  readonly label: "Auction" | "Fleet" | "Trade";
+}
+
+/** Strictly validates collector origins that may be carried in a query string. */
+export const collectorReturnDestination = (
+  returnTo: string | null | undefined,
+): CollectorReturnDestination | undefined => {
+  switch (returnTo) {
+    case "/auction":
+      return { href: "/auction", label: "Auction" };
+    case "/exchange":
+      return { href: "/exchange", label: "Trade" };
+    case "/start":
+    case "/fleet":
+      return { href: "/fleet", label: "Fleet" };
+    default:
+      return undefined;
+  }
+};
 
 interface NavigationDefinition {
   readonly href: Route;
@@ -19,21 +41,19 @@ interface NavigationDefinition {
 
 const collectorNavigation = {
   primary: [
-    { href: "/start", label: applicationCopy.navigation.start },
-    { href: "/exchange", label: applicationCopy.navigation.exchange },
+    { href: "/explore", label: "Explore" },
+    { href: "/auction", label: "Auction" },
+    { href: "/exchange", label: "Trade" },
     {
       href: "/fleet",
-      label: applicationCopy.navigation.collection,
+      label: identity.navigation.collectionTask,
       nested: true,
     },
-    { href: "/relics", label: applicationCopy.navigation.relics },
-    { href: "/rewards", label: applicationCopy.navigation.rewards },
   ],
   utility: [
-    { href: "/market", label: applicationCopy.navigation.market },
-    { href: "/status", label: applicationCopy.navigation.status },
-    { href: "/learn", label: applicationCopy.navigation.learn },
-    { href: "/faucet", label: applicationCopy.navigation.faucet },
+    { href: "/learn", label: "Learn" },
+    { href: "/status", label: "Protocol status" },
+    { href: "/faucet", label: "Faucet" },
   ],
 } as const satisfies NavigationDefinitions;
 
@@ -80,8 +100,16 @@ export const createShellNavigation = (
 ) => {
   const definitions =
     context === "collector" ? collectorNavigation : adminNavigation;
+  const primaryPathname =
+    context === "collector"
+      ? pathname === "/market"
+        ? "/exchange"
+        : pathname === "/relics"
+          ? "/explore"
+          : pathname
+      : pathname;
   return {
-    primary: destinations(pathname, definitions.primary),
+    primary: destinations(primaryPathname, definitions.primary),
     utility: destinations(pathname, definitions.utility),
   } as const;
 };

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { FleetPanel } from "@/components/fleet/fleet-panel";
-import { PageFrame, PageHeading } from "@/components/ui/page";
+import { FleetHeading, FleetViews } from "@/components/fleet/fleet-views";
+import { PageFrame } from "@/components/ui/page";
 import { applicationCopy } from "@/lib/identity";
 
 export const metadata = {
@@ -11,13 +11,9 @@ export const metadata = {
 
 export default function FleetPage() {
   return (
-    <PageFrame>
-      <PageHeading
-        eyebrow={applicationCopy.fleet.eyebrow}
-        lede={applicationCopy.fleet.introduction}
-        title={applicationCopy.fleet.title}
-      />
-      <FleetPanel />
+    <PageFrame className="fleet-page">
+      <FleetHeading />
+      <FleetViews />
     </PageFrame>
   );
 }

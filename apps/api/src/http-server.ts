@@ -1,3 +1,4 @@
+import type { RewardFundingService } from "./graph-analytics.js";
 import {
   createServer,
   type IncomingMessage,
@@ -72,6 +73,7 @@ export interface PublicApiRateLimiters {
 }
 
 export interface PublicApiServerOptions {
+  readonly rewardFunding?: RewardFundingService;
   readonly adminAuth?: AdminAuthService;
   readonly configuration: PublicApiConfiguration;
   readonly fetcher?: typeof fetch;
@@ -106,6 +108,60 @@ const publicRoutes: ReadonlyMap<string, PublicRoute> = new Map([
       queryPolicy: "none",
       upstream: "history",
       upstreamPath: "/v1/status",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionBids,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/bids",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionTokenClaims,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/token-claims",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionEscrowWithdrawals,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/escrow-withdrawals",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.auctionLifecycle,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/auction/lifecycle",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.ccaMigrations,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/protocol/cca-migrations",
+    },
+  ],
+  [
+    PUBLIC_API_PATHS.history.ccaActivations,
+    {
+      method: "GET",
+      queryPolicy: "history-page",
+      upstream: "history",
+      upstreamPath: "/v1/protocol/cca-activations",
     },
   ],
   [
@@ -1419,7 +1475,10 @@ const preflight = (
       "Preflight requires an allowed origin",
     );
   }
-  const route = publicRoutes.get(url.pathname);
+  const route =
+    url.pathname === PUBLIC_API_PATHS.analytics.rewardFunding
+      ? { method: "GET" }
+      : publicRoutes.get(url.pathname);
   const requestedMethod = request.headers["access-control-request-method"];
   const requestedHeaders =
     request.headers["access-control-request-headers"]?.toLowerCase();
@@ -1924,6 +1983,66 @@ const dispatchAdmin = async (
   );
 };
 
+const dispatchRewardFunding = async (
+  request: IncomingMessage,
+  response: ServerResponse,
+  cors: CorsPolicy,
+  url: URL,
+  options: PublicApiServerOptions,
+): Promise<void> => {
+  if (request.method !== "GET")
+    throw new PublicRequestError(
+      405,
+      "method-not-allowed",
+      "Method not allowed",
+    );
+  if (url.search.length > 0)
+    throw new PublicRequestError(
+      400,
+      "invalid-query",
+      "Query parameters are not supported",
+    );
+  json(
+    response,
+    200,
+    options.rewardFunding === undefined
+      ? {
+          state: "unavailable",
+          reason: "not-configured",
+          observedAt: Date.now(),
+        }
+      : await options.rewardFunding.read(),
+    cors,
+  );
+};
+
+const dispatchPublicProxy = async (
+  request: IncomingMessage,
+  response: ServerResponse,
+  cors: CorsPolicy,
+  url: URL,
+  options: PublicApiServerOptions,
+): Promise<void> => {
+  const route = publicRoutes.get(url.pathname);
+  if (route === undefined) {
+    throw new PublicRequestError(404, "route-not-found", "Route not found");
+  }
+  if (request.method !== route.method) {
+    throw new PublicRequestError(
+      405,
+      "method-not-allowed",
+      "Method not allowed",
+    );
+  }
+  const prepared = await prepareUpstreamRequest(
+    request,
+    url,
+    route,
+    options.configuration,
+  );
+  await proxy(response, cors, prepared, options);
+};
+
 const dispatch = async (
   request: IncomingMessage,
   response: ServerResponse,
@@ -1962,24 +2081,11 @@ const dispatch = async (
     await dispatchAdmin(request, response, cors, url, options);
     return;
   }
-  const route = publicRoutes.get(url.pathname);
-  if (route === undefined) {
-    throw new PublicRequestError(404, "route-not-found", "Route not found");
+  if (url.pathname === PUBLIC_API_PATHS.analytics.rewardFunding) {
+    await dispatchRewardFunding(request, response, cors, url, options);
+    return;
   }
-  if (request.method !== route.method) {
-    throw new PublicRequestError(
-      405,
-      "method-not-allowed",
-      "Method not allowed",
-    );
-  }
-  const prepared = await prepareUpstreamRequest(
-    request,
-    url,
-    route,
-    options.configuration,
-  );
-  await proxy(response, cors, prepared, options);
+  await dispatchPublicProxy(request, response, cors, url, options);
 };
 
 const handleRequest = async (

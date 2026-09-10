@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/font/google", () => ({
+  Barlow: () => ({ variable: "font-barlow" }),
+  IBM_Plex_Mono: () => ({ variable: "font-plex-mono" }),
   JetBrains_Mono: () => ({ variable: "font-mono" }),
 }));
 
@@ -42,10 +44,10 @@ describe("root document layout", () => {
     expect(routeHtml).toContain("Return to the protocol overview");
     expect(globalHtml).toContain('data-shell="collector"');
     expect(globalHtml).toContain('href="#main-content"');
-    expect(globalHtml).toContain('href="/start"');
+    expect(globalHtml).toContain('href="/fleet"');
     expect(globalHtml).toContain('href="/learn"');
     expect(globalHtml).toMatch(
-      /class="[^"]*min-h-11[^"]*"[^>]*href="\/start"/u,
+      /class="[^"]*min-h-11[^"]*"[^>]*href="\/fleet"/u,
     );
     expect(globalHtml).toContain("Return to the protocol overview");
   });

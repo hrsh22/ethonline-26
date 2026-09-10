@@ -12,9 +12,9 @@ describe("web deployment binding", () => {
   it("publishes staging by default for the current POC", () => {
     expect(deploymentEnvironment.name).toBe("staging");
     expect(protocolDeploymentManifest).toMatchObject({
-      schemaVersion: 2,
+      schemaVersion: 3,
       chainId: 84_532,
-      phase: "launched",
+      phase: "cca",
     });
   });
 

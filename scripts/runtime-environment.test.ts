@@ -18,6 +18,34 @@ import {
 } from "./runtime-environment.ts";
 
 describe("runtime service process isolation", () => {
+  it("keeps Graph query credentials in the API and deploy authority out of runtime services", () => {
+    const environment = {
+      GRAPH_STUDIO_QUERY_URL:
+        "https://api.studio.thegraph.com/query/1/orbit-market/v1",
+      GRAPH_API_KEY: "query-test-key",
+      GRAPH_STUDIO_DEPLOY_KEY: "deploy-test-key",
+      NEXT_PUBLIC_PRIVY_APP_ID: "public-app-id",
+    };
+    expect(createRuntimeServiceEnvironment("api", environment)).toMatchObject({
+      GRAPH_STUDIO_QUERY_URL: environment.GRAPH_STUDIO_QUERY_URL,
+      GRAPH_API_KEY: environment.GRAPH_API_KEY,
+    });
+    for (const service of [
+      "api",
+      "funding",
+      "history",
+      "operator",
+      "web",
+    ] as const) {
+      const projected = createRuntimeServiceEnvironment(service, environment);
+      expect(projected.GRAPH_STUDIO_DEPLOY_KEY).toBeUndefined();
+      if (service !== "api") expect(projected.GRAPH_API_KEY).toBeUndefined();
+    }
+    expect(
+      createRuntimeServiceEnvironment("web", environment)
+        .NEXT_PUBLIC_PRIVY_APP_ID,
+    ).toBe("public-app-id");
+  });
   it("keeps admin-auth authority state in the API process and out of web", () => {
     const environment = {
       ADMIN_AUTH_APP_ORIGIN: "https://orbit.example",

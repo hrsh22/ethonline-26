@@ -249,9 +249,12 @@ export const collectorHeaderCollisionFailure = async (
     const header = navigation.closest("header") as HTMLElement;
     const toggle = header.querySelector<HTMLElement>(
       '[aria-controls="collector-navigation"]',
-    ) as HTMLElement;
+    );
     const brand = header.querySelector<HTMLElement>("a") as HTMLElement;
-    const actions = toggle.parentElement as HTMLElement;
+    const actions =
+      header.querySelector<HTMLElement>("[data-collector-wallet-actions]") ??
+      toggle?.parentElement;
+    if (actions === null || actions === undefined) return undefined;
     const box = (element: Element) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -326,6 +329,64 @@ export const collectorHeaderCollisionFailure = async (
   return collision === undefined
     ? undefined
     : { detail: `${label}: ${collision}`, kind: "layout-collision" };
+};
+
+/** The promoted faucet utility must be both rendered and reachable above any
+ * transient wallet notice in the sticky collector header. */
+export const collectorFundingVisibilityFailure = async (
+  page: Page,
+  label: string,
+): Promise<BrowserFailure | undefined> => {
+  const visibleLink = page.locator(
+    '[data-shell="collector"] header a[href="/faucet"]:visible',
+  );
+  if ((await visibleLink.count()) === 1) {
+    // Hydration opens and closes the real wallet chooser. Let its exit layer
+    // finish releasing pointer events before testing the header beneath it.
+    await visibleLink.click({ trial: true, timeout: 5_000 }).catch(() => {});
+  }
+  const issue = await page.evaluate(() => {
+    const header = document.querySelector<HTMLElement>(
+      '[data-shell="collector"] header',
+    );
+    if (header === null) return undefined;
+    const links = [
+      ...header.querySelectorAll<HTMLAnchorElement>('a[href="/faucet"]'),
+    ].filter((link) => {
+      const style = getComputedStyle(link);
+      const rect = link.getBoundingClientRect();
+      return [
+        style.display !== "none",
+        style.visibility !== "hidden",
+        Number(style.opacity) > 0,
+        rect.width > 0,
+        rect.height > 0,
+      ].every(Boolean);
+    });
+    if (links.length !== 1)
+      return `expected one visible Get test funds link, found ${links.length}`;
+    const link = links[0]!;
+    const rect = link.getBoundingClientRect();
+    const top = document.elementFromPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+    if (top === null || (!link.contains(top) && !top.contains(link)))
+      return `Get test funds is obscured by ${top?.tagName.toLowerCase() ?? "nothing"}`;
+    if (
+      [
+        rect.left < 0,
+        rect.top < 0,
+        rect.right > document.documentElement.clientWidth,
+        rect.bottom > document.documentElement.clientHeight,
+      ].some(Boolean)
+    )
+      return "Get test funds is clipped outside the viewport";
+    return undefined;
+  });
+  return issue === undefined
+    ? undefined
+    : { detail: `${label}: ${issue}`, kind: "layout-collision" };
 };
 
 /**

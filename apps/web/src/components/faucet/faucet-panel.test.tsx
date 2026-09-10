@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const testState = vi.hoisted(() => ({
   fundedThroughBlock: 4_242n,
   protocol: undefined as unknown,
+  returnTo: null as string | null,
   signMessage: vi.fn(async () => `0x${"ab".repeat(65)}`),
 }));
 
@@ -21,6 +22,15 @@ vi.mock("wagmi", () => ({
     getBlockNumber: () => Promise.resolve(testState.fundedThroughBlock),
   }),
   useSignMessage: () => ({ signMessageAsync: testState.signMessage }),
+}));
+
+vi.mock("next/navigation", () => ({
+  useSearchParams: () =>
+    new URLSearchParams(
+      testState.returnTo === null
+        ? undefined
+        : { returnTo: testState.returnTo },
+    ),
 }));
 
 vi.mock("@/components/wallet-control", () => ({
@@ -71,6 +81,7 @@ describe("collector testnet faucet", () => {
         queries: { retry: false },
       },
     });
+    testState.returnTo = null;
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -154,6 +165,7 @@ describe("collector testnet faucet", () => {
   });
 
   it("does not dash the cooldown for a wallet that is not in one", async () => {
+    testState.returnTo = "/auction";
     testState.protocol = protocol("ready");
     vi.stubGlobal(
       "fetch",
@@ -205,6 +217,11 @@ describe("collector testnet faucet", () => {
     expect(container.textContent).toContain(
       "Recurring top-ups; wallet cooldown still applies",
     );
+    expect(
+      [...container.querySelectorAll("a[href='/auction']")].map(
+        (link) => link.textContent,
+      ),
+    ).toEqual(["Return to Auction", "Return to Auction"]);
   });
 
   it("shows exact inventory-backed balances and completes one bounded top-up", async () => {
@@ -292,9 +309,7 @@ describe("collector testnet faucet", () => {
     expect(
       container.querySelector("[data-funding-state='funded']"),
     ).not.toBeNull();
-    expect(container.textContent).toContain(
-      "Wallet funded for the test journey",
-    );
+    expect(container.textContent).toContain("Test wallet funded");
     expect(container.textContent).toContain("Buy $FUEL on Trade");
     expect(container.textContent).toContain("0.01 ETH");
     expect(container.textContent).toContain("0 ETH to reach target");
@@ -378,9 +393,7 @@ describe("collector testnet faucet", () => {
           method: "POST",
         }),
       );
-      expect(container.textContent).toContain(
-        "Wallet funded for the test journey",
-      );
+      expect(container.textContent).toContain("Test wallet funded");
       const eligibleAgain = [...container.querySelectorAll("dt")].find(
         (term) => term.textContent === "Eligible again",
       )?.nextElementSibling;

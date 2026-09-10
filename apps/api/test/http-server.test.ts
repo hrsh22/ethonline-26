@@ -71,7 +71,7 @@ const testAdminAuth = (
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = randomValues.shift();
         if (value === undefined) throw new Error("Random sequence exhausted");
@@ -324,8 +324,8 @@ const publicFundingFixture = (
       challenge: {
         chainId: 84_532,
         domain: "orbit.test",
-        expiresAt: "2026-09-01T01:00:00.000Z",
-        issuedAt: "2026-09-01T00:55:00.000Z",
+        expiresAt: "2026-09-06T01:00:00.000Z",
+        issuedAt: "2026-09-06T00:55:00.000Z",
         message: "orbit.test wants you to sign in with your Ethereum account:",
         nonce: `0x${"cd".repeat(16)}`,
         recipient,
@@ -1204,8 +1204,8 @@ describe("VM-owned public API", () => {
             address: adminAddress,
             chainId: 84_532,
             deploymentFingerprint,
-            expiresAt: "2026-08-31T08:15:00.000Z",
-            issuedAt: "2026-08-31T08:00:00.000Z",
+            expiresAt: "2026-09-05T08:15:00.000Z",
+            issuedAt: "2026-09-05T08:00:00.000Z",
             observedBlock: {
               hash: observedBlock.hash,
               number: "12345",
@@ -2608,5 +2608,55 @@ describe("VM-owned public API", () => {
       },
     );
     expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+it("serves optional funding analytics through a fixed GET with CORS and no arbitrary query", async () => {
+  const read = vi.fn(async () => ({
+    state: "unavailable" as const,
+    reason: "budget-exhausted" as const,
+    observedAt: 100,
+  }));
+  await withServer(
+    { configuration: configuration(), rewardFunding: { read } },
+    async (url) => {
+      const response = await fetch(
+        `${url}${PUBLIC_API_PATHS.analytics.rewardFunding}`,
+        { headers: { origin: allowedOrigin } },
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("access-control-allow-origin")).toBe(
+        allowedOrigin,
+      );
+      expect(await response.json()).toEqual({
+        state: "unavailable",
+        reason: "budget-exhausted",
+        observedAt: 100,
+      });
+      expect(
+        (
+          await fetch(
+            `${url}${PUBLIC_API_PATHS.analytics.rewardFunding}?query=anything`,
+          )
+        ).status,
+      ).toBe(400);
+      expect(
+        (
+          await fetch(`${url}${PUBLIC_API_PATHS.analytics.rewardFunding}`, {
+            method: "POST",
+          })
+        ).status,
+      ).toBe(405);
+      expect(read).toHaveBeenCalledTimes(1);
+    },
+  );
+  await withServer({ configuration: configuration() }, async (url) => {
+    const response = await fetch(
+      `${url}${PUBLIC_API_PATHS.analytics.rewardFunding}`,
+    );
+    expect(await response.json()).toMatchObject({
+      state: "unavailable",
+      reason: "not-configured",
+    });
   });
 });

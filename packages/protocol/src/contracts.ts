@@ -1,5 +1,10 @@
 import type { ProtocolDeploymentManifest } from "@orbit/config/deployment-manifest";
-import { parseAbi, type Abi, type Address } from "viem";
+import {
+  parseAbi,
+  type Abi,
+  type Address,
+  type ContractFunctionReturnType,
+} from "viem";
 
 const protocolErrorSignatures = [
   "error TradingLocked()",
@@ -35,6 +40,7 @@ const fuelCoreAbi = parseAbi([
   "function pendingDiscoveryAt(address account,uint256 index) view returns (bytes32)",
   "function isPendingDiscovery(bytes32 requestId) view returns (bool)",
   "function isDiscoveryExempt(address account) view returns (bool)",
+  "function isProtectedAccount(address account) view returns (bool)",
   "function isFrozen(address account) view returns (bool)",
   "function isPermanentIdentity(uint16 identityId) view returns (bool)",
   "function owner() view returns (address)",
@@ -179,6 +185,10 @@ const erc20Abi = parseAbi([
   "function allowance(address owner,address spender) view returns (uint256)",
   "function approve(address spender,uint256 amount) returns (bool)",
 ]);
+const permit2Abi = parseAbi([
+  "function allowance(address owner,address token,address spender) view returns (uint160 amount,uint48 expiration,uint48 nonce)",
+  "function approve(address token,address spender,uint160 amount,uint48 expiration)",
+]);
 const conversionAdapterAbi = parseAbi([
   "function configuredTrack() view returns (uint8)",
   "function converter() view returns (address)",
@@ -191,6 +201,112 @@ const conversionAdapterAbi = parseAbi([
   "function usdcStockPoolId() view returns (bytes32)",
 ]);
 const noReadsAbi = [] as const satisfies Abi;
+
+const continuousClearingAuctionAbi = parseAbi([
+  "function submitBid(uint256 maxPriceQ96,uint128 amount,address owner,uint256 prevTickPriceQ96,bytes hookData) payable returns (uint256 bidId)",
+  "function submitBid(uint256 maxPriceQ96,uint128 amount,address owner,bytes hookData) payable returns (uint256 bidId)",
+  "function checkpoint() returns ((uint256 clearingPrice,uint256 currencyRaisedAtClearingPriceQ96X7,uint256 cumulativeMpsPerPrice,uint24 cumulativeMps,uint64 prev,uint64 next) checkpoint)",
+  "function clearingPrice() view returns (uint256)",
+  "function isGraduated() view returns (bool)",
+  "function currencyRaised() view returns (uint256)",
+  "function totalCleared() view returns (uint256)",
+  "function remainingSupply() view returns (uint256)",
+  "function nextBidId() view returns (uint256)",
+  "function lastCheckpointedBlock() view returns (uint64)",
+  "function bids(uint256 bidId) view returns ((uint64 startBlock,uint24 startCumulativeMps,uint64 exitedBlock,uint256 maxPrice,address owner,uint256 amountQ96,uint256 tokensFilled) bid)",
+  "function exitBid(uint256 bidId)",
+  "function exitPartiallyFilledBid(uint256 bidId,uint64 lastFullyFilledCheckpointBlock,uint64 outbidBlock)",
+  "function claimTokens(uint256 bidId)",
+  "function claimTokensBatch(address owner,uint256[] bidIds)",
+  "function currency() view returns (address)",
+  "function token() view returns (address)",
+  "function totalSupply() view returns (uint128)",
+  "function tokensRecipient() view returns (address)",
+  "function fundsRecipient() view returns (address)",
+  "function startBlock() view returns (uint64)",
+  "function endBlock() view returns (uint64)",
+  "function claimBlock() view returns (uint64)",
+  "function validationHook() view returns (address)",
+  "function floorPrice() view returns (uint256)",
+  "function tickSpacing() view returns (uint256)",
+  "event BidSubmitted(uint256 indexed id,address indexed owner,uint256 priceQ96,uint128 amount)",
+  "event BidExited(uint256 indexed bidId,address indexed owner,uint256 tokensFilled,uint256 currencyRefunded)",
+  "event TokensClaimed(uint256 indexed bidId,address indexed owner,uint256 tokensFilled)",
+  "event CheckpointUpdated(uint256 blockNumber,uint256 clearingPriceQ96,uint24 cumulativeMps)",
+]);
+
+const continuousClearingAuctionFactoryAbi = parseAbi([
+  "function create(address token,uint256 amount,bytes configData,bytes32 salt) returns (address distributor)",
+  "function getAddress(address token,uint256 amount,bytes configData,bytes32 salt,address sender) view returns (address distributor)",
+  "function protocolFeeController() view returns (address)",
+  "event AuctionCreated(address indexed auction,address indexed token,uint256 amount,bytes configData)",
+]);
+
+const ccaBidEscrowFactoryAbi = parseAbi([
+  "function fuel() view returns (address)",
+  "function currency() view returns (address)",
+  "function registrar() view returns (address)",
+  "function escrowOf(address beneficiary) view returns (address)",
+  "function beneficiaryOf(address escrow) view returns (address)",
+  "function isEscrow(address escrow) view returns (bool)",
+  "function deployEscrow(address beneficiary) returns (address escrow)",
+  "function predictEscrow(address beneficiary) view returns (address)",
+  "event EscrowDeployed(address indexed beneficiary,address indexed escrow)",
+]);
+
+const ccaBidEscrowAbi = parseAbi([
+  "function beneficiary() view returns (address)",
+  "function fuel() view returns (address)",
+  "function currency() view returns (address)",
+  "function MAX_FUEL_WITHDRAWAL() view returns (uint256)",
+  "function withdrawCurrency() returns (uint256 amount)",
+  "function withdrawFuel() returns (uint256 amount)",
+  "event Withdrawal(address indexed token,address indexed beneficiary,uint256 amount)",
+]);
+
+const ccaBidValidationHookAbi = parseAbi([
+  "function auction() view returns (address)",
+  "function factory() view returns (address)",
+  "function validate(uint256 maxPrice,uint128 amount,address owner,address sender,bytes hookData) view",
+]);
+
+const ccaLaunchCoordinatorAbi = parseAbi([
+  "function fuel() view returns (address)",
+  "function readiness() view returns (address)",
+  "function configurationAuthority() view returns (address)",
+  "function governanceOwner() view returns (address)",
+  "function escrowFactory() view returns (address)",
+  "function configurationSealed() view returns (bool)",
+  "function activated() view returns (bool)",
+  "function activate()",
+]);
+
+const ccaCanonicalLaunchReadinessAbi = parseAbi([
+  "function registry() view returns (address)",
+  "function hook() view returns (address)",
+  "function strategy() view returns (address)",
+  "function positionRecipient() view returns (address)",
+  "function isReady() view returns (bool)",
+]);
+
+const permanentPositionRecipientAbi = parseAbi([
+  "function positionManager() view returns (address)",
+  "function expectedPoolId() view returns (bytes32)",
+  "function receivedPositionCount() view returns (uint256)",
+  "function hasCanonicalPosition() view returns (bool)",
+]);
+
+const ccaRecoverySeederAbi = parseAbi([
+  "function registry() view returns (address)",
+  "function strategy() view returns (address)",
+  "function positionRecipient() view returns (address)",
+  "function auction() view returns (address)",
+  "function reserveSupply() view returns (uint128)",
+  "function migrationBlock() view returns (uint64)",
+  "function seeded() view returns (bool)",
+  "function sweepUnsoldTokens()",
+  "function recoverAndSeed()",
+]);
 
 const discoveryAdapterAbi = parseAbi([
   "function requestSequenceCount() view returns (uint256)",
@@ -211,7 +327,7 @@ const discoveryAdapterAbi = parseAbi([
   "event DiscoveryFinalizationProgress(uint256 indexed vrfRequestId,uint256 finalizedCount,uint256 totalCount)",
 ]);
 
-const requiredContracts = {
+const sharedRequiredContracts = {
   fuelCore: fuelCoreAbi,
   fuelMirror: fuelMirrorAbi,
   attributeRegistry: attributeRegistryAbi,
@@ -233,14 +349,6 @@ const requiredContracts = {
   canonicalRouter: canonicalRouterAbi,
   canonicalHookDeployer: noReadsAbi,
   protocolLiquidityVault: protocolLiquidityVaultAbi,
-  genesisLiquidityVault: parseAbi([
-    "function registry() view returns (address)",
-    "function manager() view returns (address)",
-    "function liquidToken() view returns (address)",
-    "function weth() view returns (address)",
-    "function seeded() view returns (bool)",
-    "function seededLiquidity() view returns (uint128)",
-  ]),
   uniswapV4PoolManager: parseAbi([
     "function extsload(bytes32 slot) view returns (bytes32 value)",
   ]),
@@ -263,6 +371,44 @@ const requiredContracts = {
   nvdacConversionAdapter: conversionAdapterAbi,
 } as const satisfies Record<string, Abi>;
 
+const legacyRequiredContracts = {
+  genesisLiquidityVault: parseAbi([
+    "function registry() view returns (address)",
+    "function manager() view returns (address)",
+    "function liquidToken() view returns (address)",
+    "function weth() view returns (address)",
+    "function seeded() view returns (bool)",
+    "function seededLiquidity() view returns (uint128)",
+  ]),
+} as const satisfies Record<string, Abi>;
+
+const ccaRequiredContracts = {
+  continuousClearingAuction: continuousClearingAuctionAbi,
+  continuousClearingAuctionFactory: continuousClearingAuctionFactoryAbi,
+  ccaBidEscrowFactory: ccaBidEscrowFactoryAbi,
+  ccaBidValidationHook: ccaBidValidationHookAbi,
+  ccaLaunchFunding: noReadsAbi,
+  ccaLaunchCoordinator: ccaLaunchCoordinatorAbi,
+  ccaCanonicalLaunchReadiness: ccaCanonicalLaunchReadinessAbi,
+  ccaRecoverySeeder: ccaRecoverySeederAbi,
+  permanentPositionRecipient: permanentPositionRecipientAbi,
+  liquidityLauncher: noReadsAbi,
+  ccaStrategy: noReadsAbi,
+  permit2: permit2Abi,
+  uniswapV4PositionManager: noReadsAbi,
+} as const satisfies Record<string, Abi>;
+
+const optionalCcaContracts = {
+  ccaCreate2Deployer: noReadsAbi,
+} as const satisfies Record<string, Abi>;
+
+const requiredContracts = {
+  ...sharedRequiredContracts,
+  ...legacyRequiredContracts,
+  ...ccaRequiredContracts,
+  ...optionalCcaContracts,
+} as const;
+
 export type ProtocolContractName = keyof typeof requiredContracts;
 export type ProtocolAbi<Name extends ProtocolContractName> =
   (typeof requiredContracts)[Name];
@@ -277,9 +423,21 @@ export const createProtocolContracts = (
   readonly [Name in ProtocolContractName]: ProtocolContract<Name>;
 } =>
   Object.fromEntries(
-    Object.entries(requiredContracts).map(([untypedName, abi]) => {
+    Object.entries({
+      ...sharedRequiredContracts,
+      ...(manifest.schemaVersion === 2
+        ? legacyRequiredContracts
+        : {
+            ...ccaRequiredContracts,
+            ...(!("ccaCreate2Deployer" in manifest.contracts)
+              ? {}
+              : optionalCcaContracts),
+          }),
+    }).map(([untypedName, abi]) => {
       const name = untypedName as ProtocolContractName;
-      const address = manifest.contracts[name];
+      const address = (manifest.contracts as Readonly<Record<string, string>>)[
+        name
+      ];
       if (address === undefined) {
         throw new Error(`Missing protocol contract ${name}`);
       }
@@ -290,3 +448,27 @@ export const createProtocolContracts = (
   };
 
 export const protocolAbis = requiredContracts;
+
+export const ccaAbis = {
+  continuousClearingAuction: continuousClearingAuctionAbi,
+  continuousClearingAuctionFactory: continuousClearingAuctionFactoryAbi,
+  bidEscrow: ccaBidEscrowAbi,
+  bidEscrowFactory: ccaBidEscrowFactoryAbi,
+  bidValidationHook: ccaBidValidationHookAbi,
+  launchCoordinator: ccaLaunchCoordinatorAbi,
+  launchReadiness: ccaCanonicalLaunchReadinessAbi,
+  recoverySeeder: ccaRecoverySeederAbi,
+  permanentPositionRecipient: permanentPositionRecipientAbi,
+  liquidityLauncher: noReadsAbi,
+  create2Deployer: noReadsAbi,
+  launchFunding: noReadsAbi,
+  permit2: permit2Abi,
+} as const;
+
+export type ContinuousClearingAuctionAbi = typeof continuousClearingAuctionAbi;
+export type Permit2Abi = typeof permit2Abi;
+export type CcaBid = ContractFunctionReturnType<
+  ContinuousClearingAuctionAbi,
+  "view",
+  "bids"
+>;

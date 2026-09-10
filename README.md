@@ -11,7 +11,7 @@ Every Base Sepolia asset used by this project is a valueless test asset. Nothing
 - Next.js 16.3.3 and React 19.2.8
 - shadcn/ui with Tailwind CSS 4
 - Effect 3 for typed services, errors, and configuration decoding
-- Reown AppKit, viem, and wagmi for Base connectivity and extension-free email wallets
+- Privy, viem, and wagmi for external wallets and email-created embedded wallets on Base Sepolia
 - Foundry with Solidity 0.8.26
 
 Dependencies are exact in package manifests and resolved by the committed `pnpm-lock.yaml`.
@@ -56,6 +56,7 @@ pnpm history:worker
 pnpm operator:base-sepolia
 pnpm operator:watch
 RPC_URL=http://127.0.0.1:8545 pnpm deploy:protocol
+pnpm deploy:cca-protocol -- --local-test
 pnpm --dir packages/config generate:manifest
 ```
 
@@ -123,6 +124,8 @@ to sign eligible Base Sepolia transactions. Start the web separately with `pnpm 
 
 `pnpm deploy:protocol` is the fail-closed composition entry point for chain IDs `31337` and `84532`. On an empty Anvil chain it deploys local infrastructure and the complete protocol, seeds all six pools, seals every immutable boundary, launches, records confirmed transaction hashes in `deployments/31337.json`, and verifies an idempotent rerun without broadcasting. Base Sepolia reuses the confirmed self-funded WETH-like/USDC-like venue and official v4 PoolManager, then deploys the complete protocol. A single development wallet may hold the deployer, guardian, keeper, liquidity-executor, and creator roles for this valueless POC; threshold recovery still requires a distinct cosigner, and the four mutable modules are owned by a governance Safe after the scripted handover in [docs/operations/module-governance.md](docs/operations/module-governance.md). The command never prints the deployment private key.
 
+`pnpm deploy:cca-protocol -- --local-test` starts an isolated Anvil chain and rehearses the fresh CCA replacement end to end. It deploys new local v4 and launch infrastructure, every project-owned module, a new 4,444 FUEL supply, conversion pools, deterministic bidder custody, and a funded auction. It then checks the uninitialized canonical PoolKey, module ownership and seals, contiguous successful receipts, and an exact schema-v3 manifest. For Base Sepolia, provide the reviewed JSON input through `CCA_DEPLOYMENT_INPUT`, choose a new `CCA_MANIFEST_OUTPUT`, and run without `--broadcast` first. The simulation writes only a composition sidecar. Adding `-- --broadcast` is the explicit transaction gate; it refuses to overwrite an existing manifest and publishes the canonical manifest only after every setup receipt and onchain postcondition passes. The auction remains pending until settlement, permissionless pool seeding, and coordinator activation.
+
 Public contract addresses live in checked deployment configuration, never in `.env`: `development` selects `deployments/31337.json`, `staging` selects `deployments/84532.json`, and `production` has no address manifest until a reviewed Base mainnet deployment is published. CLI deployments derive the environment from the RPC chain and use `DEPLOYMENT_ENVIRONMENT` only as an optional fail-closed cross-check. `pnpm dev` explicitly selects the staging binding and Base Sepolia network; use `pnpm dev:local` only when running against Anvil. This deployment target is independent of Next.js development mode. Selecting production fails closed instead of borrowing mock addresses. RPC URLs, signing keys, and connector credentials remain in the ignored root or service-specific environment files described below; do not create an `apps/web/.env*` file.
 
 `pnpm funding:worker` starts the separate loopback-only self-service funding service used by the public `/start` route through `apps/api`. A minimal launcher gives the signer process only variables from the dedicated ignored `.env.testnet-funding`; deployer and operator keys from the shared environment are not inherited. The service uses a finite, inventory-only signer that transfers existing valueless test WETH and Base Sepolia gas; it cannot mint or hold any protocol role. Signed transactions are persisted before broadcast, while cooldowns, lifetime limits, pending recovery, and receipts survive restarts in a private SQLite ledger. `pnpm dev` never starts this worker. See [`docs/operations/testnet-funding.md`](docs/operations/testnet-funding.md) before provisioning inventory or enabling it.
@@ -169,3 +172,7 @@ Chain ID: `84532`
 | Permit2                    | `0x000000000022D473030F116dDEE9F6B43aC78BA3` |
 
 The official addresses remain reference infrastructure and the official v4 `PoolManager` is used. The deployed POC settlement addresses come from `deployments/84532.json`; its clearly labelled WETH-like and USDC-like assets are project-owned test fixtures, not the official tokens listed above. The checked-in values are decoded through Effect Schema in `packages/config` before use.
+
+## ETHOnline integrations
+
+See the [integration runbook](docs/operations/ethonline-2026-integrations.md) for Privy setup, live Uniswap transaction evidence, the standardized Graph subgraph, and the free-service boundary. Uniswap developer feedback is in [FEEDBACK.md](FEEDBACK.md).

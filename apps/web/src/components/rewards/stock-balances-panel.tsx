@@ -159,7 +159,7 @@ export function StockBalancesPanel() {
     >
       <p className="text-body-sm text-ink-soft">
         Tokens already held by your wallet, separate from the unclaimed rewards
-        below. These are no-value Base Sepolia test tokens.
+        in My Fleet. These are no-value Base Sepolia test tokens.
       </p>
       <StockBalanceContent read={read} />
     </Panel>

@@ -1,6 +1,6 @@
 # Base Sepolia infrastructure for the ORBIT 4444 POC
 
-_Verified 26 August 2026 against official primary sources._
+_Verified against official primary sources._
 
 ## Confirmed Uniswap v4 deployment
 

@@ -90,6 +90,96 @@ const ProtocolContracts = Schema.Struct({
   weth: NonZeroEvmAddress,
 });
 
+const CcaProtocolContractFields = {
+  aaplcConversionAdapter: NonZeroEvmAddress,
+  attributeRegistry: NonZeroEvmAddress,
+  canonicalFeeHook: NonZeroEvmAddress,
+  canonicalHookDeployer: NonZeroEvmAddress,
+  canonicalMarketRegistry: NonZeroEvmAddress,
+  canonicalRouter: NonZeroEvmAddress,
+  ccaBidEscrowFactory: NonZeroEvmAddress,
+  ccaBidValidationHook: NonZeroEvmAddress,
+  ccaCanonicalLaunchReadiness: NonZeroEvmAddress,
+  ccaLaunchFunding: NonZeroEvmAddress,
+  ccaLaunchCoordinator: NonZeroEvmAddress,
+  ccaRecoverySeeder: NonZeroEvmAddress,
+  ccaStrategy: NonZeroEvmAddress,
+  claimGate: NonZeroEvmAddress,
+  continuousClearingAuction: NonZeroEvmAddress,
+  continuousClearingAuctionFactory: NonZeroEvmAddress,
+  discoveryAdapter: NonZeroEvmAddress,
+  epochConverter: NonZeroEvmAddress,
+  fuelCore: NonZeroEvmAddress,
+  fuelMirror: NonZeroEvmAddress,
+  googlcConversionAdapter: NonZeroEvmAddress,
+  liquidityLauncher: NonZeroEvmAddress,
+  metacConversionAdapter: NonZeroEvmAddress,
+  metadataRenderer: NonZeroEvmAddress,
+  mockAaplc: NonZeroEvmAddress,
+  mockGooglc: NonZeroEvmAddress,
+  mockMetac: NonZeroEvmAddress,
+  mockNvdac: NonZeroEvmAddress,
+  nvdacConversionAdapter: NonZeroEvmAddress,
+  permanentPositionRecipient: NonZeroEvmAddress,
+  permit2: NonZeroEvmAddress,
+  protocolLiquidityVault: NonZeroEvmAddress,
+  recoveryAuthority: NonZeroEvmAddress,
+  rewardLedger: NonZeroEvmAddress,
+  testConversionVenue: NonZeroEvmAddress,
+  uniswapV4PoolManager: NonZeroEvmAddress,
+  uniswapV4PositionManager: NonZeroEvmAddress,
+  usdc: NonZeroEvmAddress,
+  weth: NonZeroEvmAddress,
+} as const;
+
+const AnvilCcaProtocolContracts = Schema.Struct({
+  ...CcaProtocolContractFields,
+  ccaCreate2Deployer: NonZeroEvmAddress,
+});
+
+const BaseSepoliaCcaProtocolContracts = Schema.Union(
+  Schema.Struct(CcaProtocolContractFields),
+  Schema.Struct({
+    ...CcaProtocolContractFields,
+    ccaCreate2Deployer: NonZeroEvmAddress,
+  }),
+);
+
+const GitCommit = Schema.String.pipe(Schema.pattern(/^[0-9a-f]{40}$/));
+const VersionLabel = Schema.String.pipe(
+  Schema.pattern(/^v?[0-9]+\.[0-9]+\.[0-9]+(?:[-+].+)?$/),
+);
+const CcaConfiguration = Schema.Struct({
+  provenance: Schema.Struct({
+    continuousClearingAuction: Schema.Struct({
+      commit: GitCommit,
+      version: VersionLabel,
+    }),
+    liquidityLauncher: Schema.Struct({
+      commit: GitCommit,
+      version: VersionLabel,
+    }),
+    lbpStrategy: Schema.Struct({
+      commit: GitCommit,
+      version: VersionLabel,
+    }),
+  }),
+  economics: Schema.Struct({
+    totalFuelSupply: Schema.Literal("4444000000000000000000"),
+    auctionSupply: PositiveDecimal,
+    liquidityReserve: PositiveDecimal,
+    minimumRaise: PositiveDecimal,
+    floorPriceQ96: PositiveDecimal,
+    tickSpacingQ96: PositiveDecimal,
+  }),
+  lifecycle: Schema.Struct({
+    startBlock: PositiveDecimal,
+    endBlock: PositiveDecimal,
+    claimBlock: PositiveDecimal,
+    migrationBlock: PositiveDecimal,
+  }),
+});
+
 const VerifiedConversionPoolSchema = Schema.Struct({
   poolId: NonZeroBytes32,
   currency0: NonZeroEvmAddress,
@@ -141,6 +231,17 @@ const VerifiedCanonicalPoolSchema = Schema.Struct({
   hooks: NonZeroEvmAddress,
   seedSqrtPriceX96: PositiveDecimal,
   activeLiquidity: PositiveDecimal,
+});
+
+const PendingCcaCanonicalPoolSchema = Schema.Struct({
+  poolId: NonZeroBytes32,
+  currency0: NonZeroEvmAddress,
+  currency1: NonZeroEvmAddress,
+  fee: Schema.Literal(8_388_608),
+  tickSpacing: Schema.Literal(60),
+  hooks: NonZeroEvmAddress,
+  seedSqrtPriceX96: Schema.Literal("0"),
+  activeLiquidity: Schema.Literal("0"),
 });
 
 const ProtocolDeploymentManifestPrefix = {
@@ -270,6 +371,34 @@ const BaseSepoliaProtocolDeploymentManifestSchema = Schema.Struct({
   ...ProtocolDeploymentManifestBody,
 });
 
+const CcaProtocolDeploymentManifestPrefix = {
+  $schema: Schema.Literal("./schema.json"),
+  schemaVersion: Schema.Literal(3),
+} as const;
+
+const CcaProtocolDeploymentManifestBody = {
+  ...ProtocolDeploymentManifestBody,
+  phase: Schema.Literal("cca"),
+  canonicalPool: PendingCcaCanonicalPoolSchema,
+  cca: CcaConfiguration,
+} as const;
+
+const AnvilCcaProtocolDeploymentManifestSchema = Schema.Struct({
+  ...CcaProtocolDeploymentManifestPrefix,
+  chainId: Schema.Literal(31_337),
+  network: Schema.Literal("anvil"),
+  ...CcaProtocolDeploymentManifestBody,
+  contracts: AnvilCcaProtocolContracts,
+});
+
+const BaseSepoliaCcaProtocolDeploymentManifestSchema = Schema.Struct({
+  ...CcaProtocolDeploymentManifestPrefix,
+  chainId: Schema.Literal(84_532),
+  network: Schema.Literal("base-sepolia"),
+  ...CcaProtocolDeploymentManifestBody,
+  contracts: BaseSepoliaCcaProtocolContracts,
+});
+
 const ProtocolDeploymentStagingManifestBody = {
   ...ProtocolDeploymentManifestBody,
   launch: Schema.Struct({
@@ -296,9 +425,14 @@ const BaseSepoliaProtocolDeploymentStagingManifestSchema = Schema.Struct({
 type VenueDeploymentManifest =
   | typeof SelfFundedVenueDeploymentManifestSchema.Type
   | typeof OfficialVenueDeploymentManifestSchema.Type;
-export type ProtocolDeploymentManifest =
+export type ProtocolDeploymentManifestV2 =
   | typeof AnvilProtocolDeploymentManifestSchema.Type
   | typeof BaseSepoliaProtocolDeploymentManifestSchema.Type;
+export type ProtocolDeploymentManifestV3 =
+  | typeof AnvilCcaProtocolDeploymentManifestSchema.Type
+  | typeof BaseSepoliaCcaProtocolDeploymentManifestSchema.Type;
+export type ProtocolDeploymentManifest =
+  ProtocolDeploymentManifestV2 | ProtocolDeploymentManifestV3;
 export type ProtocolDeploymentStagingManifest =
   | typeof AnvilProtocolDeploymentStagingManifestSchema.Type
   | typeof BaseSepoliaProtocolDeploymentStagingManifestSchema.Type;
@@ -518,6 +652,54 @@ const protocolCrossFieldSemanticIssueFields = (
   return fields;
 };
 
+const ccaSemanticIssueFields = (
+  manifest: ProtocolDeploymentManifestV3,
+): readonly string[] => {
+  const fields: string[] = [];
+  const economics = manifest.cca.economics;
+  const lifecycle = manifest.cca.lifecycle;
+  if (
+    manifest.cca.provenance.lbpStrategy.commit !==
+    manifest.cca.provenance.liquidityLauncher.commit
+  ) {
+    fields.push(
+      "cca.provenance.lbpStrategy.commit",
+      "cca.provenance.liquidityLauncher.commit",
+    );
+  }
+  if (
+    BigInt(economics.auctionSupply) + BigInt(economics.liquidityReserve) !==
+    BigInt(economics.totalFuelSupply)
+  ) {
+    fields.push(
+      "cca.economics.auctionSupply",
+      "cca.economics.liquidityReserve",
+      "cca.economics.totalFuelSupply",
+    );
+  }
+  const uint128Maximum = (1n << 128n) - 1n;
+  if (BigInt(economics.auctionSupply) > uint128Maximum) {
+    fields.push("cca.economics.auctionSupply");
+  }
+  if (BigInt(economics.minimumRaise) > uint128Maximum) {
+    fields.push("cca.economics.minimumRaise");
+  }
+  const startBlock = BigInt(lifecycle.startBlock);
+  const endBlock = BigInt(lifecycle.endBlock);
+  const claimBlock = BigInt(lifecycle.claimBlock);
+  const migrationBlock = BigInt(lifecycle.migrationBlock);
+  if (startBlock >= endBlock) {
+    fields.push("cca.lifecycle.startBlock", "cca.lifecycle.endBlock");
+  }
+  if (claimBlock <= endBlock) {
+    fields.push("cca.lifecycle.claimBlock", "cca.lifecycle.endBlock");
+  }
+  if (migrationBlock <= endBlock || migrationBlock > claimBlock) {
+    fields.push("cca.lifecycle.migrationBlock", "cca.lifecycle.claimBlock");
+  }
+  return fields;
+};
+
 const ZERO_EVM_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /**
@@ -591,9 +773,10 @@ const sharedSemanticIssueFields = (
     manifest.contracts as Record<string, string>,
   ),
   ...conversionPoolSemanticIssueFields(manifest),
-  ...(manifest.schemaVersion === 2
+  ...(manifest.schemaVersion === 2 || manifest.schemaVersion === 3
     ? protocolCrossFieldSemanticIssueFields(manifest)
     : []),
+  ...(manifest.schemaVersion === 3 ? ccaSemanticIssueFields(manifest) : []),
 ];
 
 export const validateDeploymentManifestSemantics = <
@@ -603,7 +786,7 @@ export const validateDeploymentManifestSemantics = <
 ): Manifest => {
   const fields = [
     ...sharedSemanticIssueFields(manifest),
-    ...(manifest.schemaVersion === 2
+    ...(manifest.schemaVersion === 2 || manifest.schemaVersion === 3
       ? transactionSemanticIssueFields(manifest)
       : []),
   ];
@@ -666,6 +849,20 @@ const decodeBaseSepoliaProtocolDeploymentManifestStructure =
       exactParseOptions,
     ),
   );
+const decodeAnvilCcaProtocolDeploymentManifestStructure =
+  sanitizeManifestDecode(
+    Schema.decodeUnknownSync(
+      AnvilCcaProtocolDeploymentManifestSchema,
+      exactParseOptions,
+    ),
+  );
+const decodeBaseSepoliaCcaProtocolDeploymentManifestStructure =
+  sanitizeManifestDecode(
+    Schema.decodeUnknownSync(
+      BaseSepoliaCcaProtocolDeploymentManifestSchema,
+      exactParseOptions,
+    ),
+  );
 const decodeAnvilProtocolDeploymentStagingManifestStructure =
   sanitizeManifestDecode(
     Schema.decodeUnknownSync(
@@ -703,10 +900,16 @@ const decodeProtocolDeploymentManifestStructure = (
   if (record === undefined) {
     throw new DeploymentManifestValidationError(["manifest"]);
   }
-  if (record.schemaVersion !== 2) {
+  if (record.schemaVersion !== 2 && record.schemaVersion !== 3) {
     throw new DeploymentManifestValidationError(["schemaVersion"]);
   }
-  return selectedProtocolDeploymentMode(record) === "anvil"
+  const anvil = selectedProtocolDeploymentMode(record) === "anvil";
+  if (record.schemaVersion === 3) {
+    return anvil
+      ? decodeAnvilCcaProtocolDeploymentManifestStructure(input)
+      : decodeBaseSepoliaCcaProtocolDeploymentManifestStructure(input);
+  }
+  return anvil
     ? decodeAnvilProtocolDeploymentManifestStructure(input)
     : decodeBaseSepoliaProtocolDeploymentManifestStructure(input);
 };
@@ -754,7 +957,7 @@ const decodeDeploymentManifestStructure = (
   if (record === undefined) {
     throw new DeploymentManifestValidationError(["manifest"]);
   }
-  if (record.schemaVersion === 2) {
+  if (record.schemaVersion === 2 || record.schemaVersion === 3) {
     return decodeProtocolDeploymentManifestStructure(input);
   }
   if (record.schemaVersion !== 1) {

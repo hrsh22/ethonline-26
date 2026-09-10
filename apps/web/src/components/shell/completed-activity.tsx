@@ -10,15 +10,8 @@ export function CompletedActivity({
 }) {
   if (records.length === 0) return null;
   return (
-    <details className="mt-3 text-body">
-      <summary className="min-h-11 cursor-pointer content-center">
-        Recent completed activity ({records.length})
-      </summary>
-      <p className="text-body-sm text-ink-soft">
-        Up to 20 confirmed actions saved on this device. These are past
-        transactions; current ownership and rewards are shown on the collectible
-        page.
-      </p>
+    <section className="mt-3 text-body" aria-label="New notifications">
+      <h3 className="text-body font-medium">New activity ({records.length})</h3>
       <ol className="mt-2 grid gap-3">
         {[...records].reverse().map((record) => (
           <li
@@ -26,6 +19,11 @@ export function CompletedActivity({
             className="grid gap-1 border-t border-line pt-3"
           >
             <strong>{record.state.label} · confirmed</strong>
+            {record.state.message === undefined ? null : (
+              <p className="text-body-sm text-ink-soft">
+                {record.state.message}
+              </p>
+            )}
             <span className="text-body-sm text-ink-soft">
               Base Sepolia · {new Date(record.savedAt).toLocaleString()}
             </span>
@@ -50,6 +48,6 @@ export function CompletedActivity({
           </li>
         ))}
       </ol>
-    </details>
+    </section>
   );
 }

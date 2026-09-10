@@ -3,7 +3,6 @@ import { toFunctionSelector } from "viem";
 import type { Page } from "playwright";
 import {
   CollectorFixture,
-  COLLECTOR_HASH,
   COLLECTOR_VRF_REQUEST,
 } from "./collector-fixture.ts";
 
@@ -33,10 +32,34 @@ export async function checkLaunchJourney(
   await submitLaunch(page);
   assert.equal(fixture.submissions.length, 1);
   await page.reload();
+  await page
+    .getByRole("link", { name: "View transaction", exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: /^Notifications/ }).click();
+  const notifications = page.locator('[data-slot="popover-content"]');
+  await notifications
+    .getByText("No new notifications.", { exact: true })
+    .waitFor();
+  // Confirmation must arrive while the panel is open so closing it proves
+  // that newly displayed activity is marked read, including across reload.
   fixture.confirm();
   await page
     .getByRole("heading", { name: "Orbiter #42", exact: true })
     .waitFor({ timeout: 20_000 });
+  await notifications
+    .getByRole("link", { name: "View Orbiter #42", exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", {
+        name: "Help with this wallet action",
+        exact: true,
+      })
+      .count(),
+    0,
+  );
+  await page.keyboard.press("Escape");
+  await notifications.waitFor({ state: "hidden" });
   await page.getByRole("link", { name: "Back to Fleet", exact: true }).click();
   await page
     .getByRole("link", { name: /Inspect/ })
@@ -45,31 +68,50 @@ export async function checkLaunchJourney(
   assert.ok((await page.locator("main").innerText()).includes("42"));
   await assertMobileCollectionText(page, true);
   assert.equal(fixture.submissions.length, 1);
-  await page
-    .getByRole("link", { name: "View Orbiter #42", exact: true })
-    .waitFor();
-  await page
-    .getByRole("button", { name: "Dismiss completed activity", exact: true })
-    .click();
-  await page.reload();
-  const completed = page.locator("details").filter({
-    has: page.locator("summary", { hasText: "Recent completed activity" }),
-  });
-  await completed.locator("summary").click();
-  await completed.getByText(/Launch.*#42.*confirmed/).waitFor();
+  assert.equal(await page.locator('[data-status="confirmed"]').count(), 0);
   assert.equal(
-    await completed
-      .getByRole("link", { name: "View transaction", exact: true })
-      .getAttribute("href"),
-    `https://sepolia.basescan.org/tx/${COLLECTOR_HASH}`,
+    await page
+      .getByRole("button", { name: "Dismiss completed activity", exact: true })
+      .count(),
+    0,
+  );
+  await page.reload();
+  await page
+    .getByRole("link", { name: /Inspect/ })
+    .first()
+    .waitFor({ timeout: 20_000 });
+  assert.equal(await page.locator('[data-status="confirmed"]').count(), 0);
+  assert.equal(await page.locator("#collector-activity").count(), 0);
+  await page.getByRole("button", { name: /^Notifications/ }).click();
+  assert.equal(
+    await page
+      .locator('[data-slot="popover-content"]')
+      .getByText("No new notifications.", { exact: true })
+      .count(),
+    1,
   );
   assert.equal(
-    await completed
-      .getByRole("link", { name: "View identity #42", exact: true })
-      .getAttribute("href"),
-    "/fleet/42",
+    await page
+      .locator('[data-slot="popover-content"]')
+      .getByRole("link", { name: "View transaction", exact: true })
+      .count(),
+    0,
   );
   assert.equal(fixture.submissions.length, 1);
+  await page.keyboard.press("Escape");
+  await page
+    .locator('[data-slot="popover-content"]')
+    .waitFor({ state: "hidden" });
+  await page.waitForFunction(
+    () =>
+      document.activeElement?.getAttribute("aria-label") === "Notifications",
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: /^Notifications/ })
+      .evaluate((button) => button === document.activeElement),
+    true,
+  );
 }
 
 export async function checkPartialRewardsJourney(
@@ -159,8 +201,11 @@ export async function checkQuoteRecoveryJourney(
     `Expected <=4 quote HTTP requests, observed ${fixture.quoteRequests}`,
   );
   assert.equal(fixture.submissions.length, 0);
-  await page.getByRole("link", { name: "Fleet", exact: true }).first().click();
-  await page.getByRole("heading", { name: "Fleet", exact: true }).waitFor();
+  await page
+    .getByRole("link", { name: "My Fleet", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page.getByRole("heading", { name: "My Fleet", exact: true }).waitFor();
 }
 
 export async function checkFundingDiscoveryJourney(
@@ -211,7 +256,10 @@ export async function checkFundingDiscoveryJourney(
   await page
     .getByText("Confirmed on Base Sepolia", { exact: true })
     .waitFor({ timeout: 20_000 });
-  await page.getByRole("link", { name: "Fleet", exact: true }).first().click();
+  await page
+    .getByRole("link", { name: "My Fleet", exact: true })
+    .filter({ visible: true })
+    .click();
   await page
     .getByText(/Randomness is taking longer than expected/i)
     .first()
@@ -239,6 +287,8 @@ export async function checkTradeStagesJourney(
   page: Page,
   fixture: CollectorFixture,
 ) {
+  // A fresh Trade entry must load indexed history without visiting Market first.
+  await page.getByRole("group", { name: "Chart range", exact: true }).waitFor();
   fixture.receiptAvailable = true;
   const input = page.getByLabel("You pay", { exact: true });
   const submit = (label: string) =>

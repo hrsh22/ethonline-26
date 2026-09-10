@@ -12,6 +12,10 @@ import {
 } from "@orbit/config/history-runtime";
 
 export interface PublicApiConfiguration {
+  readonly graphAnalytics?: {
+    readonly queryUrl: string;
+    readonly apiKey?: string;
+  };
   readonly adminAuth: {
     readonly appOrigin: string;
     readonly challengeTtlMilliseconds: number;
@@ -262,6 +266,7 @@ export const resolvePublicApiConfiguration = (
         ) * 1_000,
     },
     allowedOrigins: origins,
+    ...graphConfiguration(environment),
     fundingApiToken: secret(environment, "TESTNET_FUNDING_API_TOKEN"),
     fundingServiceUrl: loopbackHttpUrl(
       required(environment, "TESTNET_FUNDING_SERVICE_URL"),
@@ -324,5 +329,36 @@ export const resolvePublicApiConfiguration = (
       100,
       60_000,
     ),
+  };
+};
+
+const graphConfiguration = (
+  environment: Environment,
+): Pick<PublicApiConfiguration, "graphAnalytics"> => {
+  const value = optional(environment, "GRAPH_STUDIO_QUERY_URL");
+  if (value === undefined) return {};
+  const url = parsedUrl(
+    value,
+    "GRAPH_STUDIO_QUERY_URL must be a Studio query URL",
+  );
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== "api.studio.thegraph.com" ||
+    !/^\/query\/[0-9]+\/[a-z0-9-]+\/[^/]+$/u.test(url.pathname) ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error(
+      "GRAPH_STUDIO_QUERY_URL must be an HTTPS Studio query URL without credentials",
+    );
+  }
+  const apiKey = optional(environment, "GRAPH_API_KEY");
+  return {
+    graphAnalytics: {
+      queryUrl: url.href,
+      ...(apiKey === undefined ? {} : { apiKey }),
+    },
   };
 };

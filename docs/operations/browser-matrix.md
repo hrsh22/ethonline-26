@@ -137,12 +137,27 @@ Every interactive page must handle a real dialog interaction before inspection.
 The static global 404 is checked as a recovery document, without a wallet shell. Connected
 cases then open the wallet picker and select a locally injected EIP-6963 wallet.
 Its provider emits account/chain changes and refuses all signing and sending.
-Installing it alone does not count as a connection.
+Installing it alone does not count as a connection. The connecting case requires
+the pending indicator while the provider request is unresolved, then verifies
+that dismissing the Privy dialog returns to disconnected with a retry action.
+Choosing to close the dialog is distinct from a wallet connection failure.
+A separate session case verifies connected reload, disconnect of all restored
+connectors, and a subsequent disconnected reload while the extension retains its grant.
 
-Release and CI builds use a fixed public test Reown project ID. Only Reown's
-directory/configuration/image requests are stubbed; the application and wallet
-connector are real. A normal app build is not changed. Running `test:browser`
+Release and CI builds use a fixed public Privy app ID. Only Privy's public app
+configuration, logout acknowledgment, and analytics requests are stubbed; the application, SDK, and
+EIP-6963 wallet connector are real. The external-wallet fixture acknowledges the
+embedded frame's transport-readiness handshake and rejects every embedded-wallet
+operation. The production metadata icon is fetched from the local test server.
+Email OTP and embedded-wallet creation need a separate live browser check; the
+harness does not fabricate authentication. A normal app build is not changed.
+Running `test:browser`
 against an arbitrary prior build requires wallet connection to be configured.
+
+The pinned Coinbase SDK COOP checker is patched to inspect actual response
+headers on 404 documents. The page retains its 404 status, incompatible COOP
+headers still fail, and other HTTP errors still fail. The SDK regression test
+imports the installed dependency to verify all three behaviors.
 
 The `state:cached-stale` case loads a real encoded public snapshot from browser
 storage, fails the live refresh, and requires the same collection count, funds,
@@ -198,7 +213,7 @@ the selected Profile 1 restored both plugins without installation or new grants.
 ## Manual Chrome checklist
 
 Scripted success is not accepted as the only proof. Before a release, one
-person runs this by hand with a real Reown wallet on Base Sepolia:
+person runs this by hand with a real wallet through Privy on Base Sepolia:
 
 1. Connect an ordinary wallet. Confirm the faucet signs its wallet-control
    proof and reports funded, then cooldown on a second attempt.

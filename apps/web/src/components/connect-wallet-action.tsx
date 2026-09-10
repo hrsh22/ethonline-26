@@ -1,10 +1,9 @@
 "use client";
 
-import { modal } from "@reown/appkit/react";
-
 import { WalletConnectionAction } from "@/components/wallet-connection-action";
 import { applicationCopy } from "@/lib/identity";
-import { isReownConfigured } from "@/lib/wagmi";
+import { isWalletConfigured } from "@/lib/wagmi";
+import { useWalletSession } from "@/providers/wallet-session";
 
 /**
  * The recovery action for a state that is blocked only by a missing wallet.
@@ -18,19 +17,17 @@ import { isReownConfigured } from "@/lib/wagmi";
  * deployment, because an action that cannot work is worse than none.
  */
 export function ConnectWalletAction() {
-  if (!isReownConfigured) return null;
+  const session = useWalletSession();
+  if (!isWalletConfigured) return null;
   return (
     <WalletConnectionAction
-      onContinue={() =>
-        // The modal rejects if it is already open or still initialising;
-        // neither is a failure the reader needs to hear about.
-        void Promise.resolve(modal?.open({ view: "Connect" })).catch(
-          () => undefined,
-        )
-      }
+      disabled={!session.ready || session.connecting}
+      onContinue={session.connect}
       size="sm"
     >
-      {applicationCopy.shell.connectWallet}
+      {!session.ready || session.connecting
+        ? "Connecting wallet"
+        : applicationCopy.shell.connectWallet}
     </WalletConnectionAction>
   );
 }

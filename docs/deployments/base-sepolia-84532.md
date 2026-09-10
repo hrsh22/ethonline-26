@@ -1,6 +1,6 @@
 # Base Sepolia deployment 84532
 
-ORBIT 4444 was redeployed on Base Sepolia on 2026-09-01 as a deliberately
+ORBIT 4444 was redeployed on Base Sepolia as a deliberately
 breaking development deployment. It is not a production deployment. The
 canonical machine-readable record is
 [`deployments/84532.json`](../../deployments/84532.json).
@@ -101,9 +101,9 @@ deployment.
 
 ## Superseded development contracts
 
-The earlier 2026-09-01 protocol at
+The earlier protocol at
 `0x1Ed22fdF0D7Dca9c9a2De6D83c99E6da50706407` used a mintable ERC-20 that did
 not implement WETH deposit/withdraw and therefore could not support the native
-router path. It and the older 2026-08-27 deployments remain visible on-chain but
+router path. It and the older deployments remain visible on-chain but
 are intentionally absent from the app manifest and runtime indexes. Their NFTs
 and balances are development artifacts and are not migrated.

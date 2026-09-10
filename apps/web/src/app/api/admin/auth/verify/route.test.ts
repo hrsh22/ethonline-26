@@ -13,8 +13,8 @@ const session = {
   chainId: 84_532,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: `0x${"f".repeat(64)}`,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: { hash: `0x${"a".repeat(64)}`, number: "31000000" },
   roles: ["keeper"],
 };
@@ -37,7 +37,7 @@ describe("admin verification route", () => {
         { apiVersion: 1, session },
         {
           headers: {
-            "set-cookie": `orbit_admin_session=${handle}; Domain=api.orbit.example; Path=/v1/admin; SameSite=None; Max-Age=900; Expires=Mon, 31 Aug 2026 05:15:00 GMT; HttpOnly; Secure`,
+            "set-cookie": `orbit_admin_session=${handle}; Domain=api.orbit.example; Path=/v1/admin; SameSite=None; Max-Age=900; Expires=Sat, 05 Sep 2026 05:15:00 GMT; HttpOnly; Secure`,
             "x-private-upstream": "must-not-leak",
           },
         },
@@ -102,7 +102,7 @@ describe("admin verification route", () => {
     const headers = new Headers();
     headers.append(
       "set-cookie",
-      `orbit_admin_session=${handle}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900; Expires=Mon, 31 Aug 2026 05:15:00 GMT`,
+      `orbit_admin_session=${handle}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900; Expires=Sat, 05 Sep 2026 05:15:00 GMT`,
     );
     headers.append("set-cookie", "worker_debug=secret; Path=/");
     vi.stubGlobal(
@@ -142,7 +142,7 @@ describe("admin verification route", () => {
           },
           {
             headers: {
-              "set-cookie": `orbit_admin_session=${handle}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900; Expires=Mon, 31 Aug 2026 05:15:00 GMT`,
+              "set-cookie": `orbit_admin_session=${handle}; Path=/; HttpOnly; SameSite=Strict; Max-Age=900; Expires=Sat, 05 Sep 2026 05:15:00 GMT`,
             },
           },
         ),

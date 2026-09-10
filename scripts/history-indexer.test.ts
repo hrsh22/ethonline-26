@@ -6,7 +6,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import { decodeProtocolDeploymentManifest } from "@orbit/config/deployment-manifest";
+import {
+  decodeProtocolDeploymentManifest,
+  type ProtocolDeploymentManifestV3,
+} from "@orbit/config/deployment-manifest";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -44,6 +47,77 @@ import { createViemHistoryPublicClient } from "./history-indexer/viem-client.ts"
 
 const fixtureManifest = decodeProtocolDeploymentManifest(
   JSON.parse(readFileSync("deployments/31337.json", "utf8")) as unknown,
+);
+const requireCcaManifest = (
+  manifest: ReturnType<typeof decodeProtocolDeploymentManifest>,
+): ProtocolDeploymentManifestV3 => {
+  if (manifest.schemaVersion !== 3)
+    throw new TypeError("Expected CCA manifest");
+  return manifest;
+};
+const ccaFixtureContracts: Record<string, string> = {
+  ...fixtureManifest.contracts,
+};
+delete ccaFixtureContracts.genesisLiquidityVault;
+const ccaFixtureManifest = requireCcaManifest(
+  decodeProtocolDeploymentManifest({
+    ...fixtureManifest,
+    schemaVersion: 3,
+    phase: "cca",
+    contracts: {
+      ...ccaFixtureContracts,
+      ccaBidEscrowFactory: "0x000000000000000000000000000000000000a001",
+      ccaBidValidationHook: "0x000000000000000000000000000000000000a002",
+      ccaCanonicalLaunchReadiness: "0x000000000000000000000000000000000000a003",
+      ccaLaunchCoordinator: "0x000000000000000000000000000000000000a004",
+      ccaRecoverySeeder: "0x000000000000000000000000000000000000a005",
+      ccaStrategy: "0x000000000000000000000000000000000000a006",
+      continuousClearingAuction: "0x000000000000000000000000000000000000a007",
+      continuousClearingAuctionFactory:
+        "0x000000000000000000000000000000000000a008",
+      permanentPositionRecipient: "0x000000000000000000000000000000000000a009",
+      permit2: "0x000000000000000000000000000000000000a00a",
+      uniswapV4PositionManager: "0x000000000000000000000000000000000000a00b",
+      ccaCreate2Deployer: "0x000000000000000000000000000000000000a00c",
+      ccaLaunchFunding: "0x000000000000000000000000000000000000a00d",
+      liquidityLauncher: "0x000000000000000000000000000000000000a00e",
+    },
+    canonicalPool: {
+      ...fixtureManifest.canonicalPool,
+      seedSqrtPriceX96: "0",
+      activeLiquidity: "0",
+    },
+    cca: {
+      provenance: {
+        continuousClearingAuction: {
+          commit: "a56d42231e7bf048136d9d88fa61e8518c10c5ff",
+          version: "v2.1.0",
+        },
+        liquidityLauncher: {
+          commit: "873cbb23c5019a795193c5ad561edff2f78ba5a3",
+          version: "v3.0.0",
+        },
+        lbpStrategy: {
+          commit: "873cbb23c5019a795193c5ad561edff2f78ba5a3",
+          version: "v3.1.0",
+        },
+      },
+      economics: {
+        totalFuelSupply: "4444000000000000000000",
+        auctionSupply: "3000000000000000000000",
+        liquidityReserve: "1444000000000000000000",
+        minimumRaise: "1000000000000000000",
+        floorPriceQ96: "9903520314283042199192993792",
+        tickSpacingQ96: "618970019642690137449562112",
+      },
+      lifecycle: {
+        startBlock: "100",
+        endBlock: "110",
+        claimBlock: "111",
+        migrationBlock: "111",
+      },
+    },
+  }),
 );
 const historyCredentialFixture = (label: string): string =>
   Buffer.from(`base-quotron-test:${label}`.padEnd(32, ".")).toString(
@@ -265,6 +339,43 @@ describe("history index configuration", () => {
     });
     expect(result.manifestFingerprint).toMatch(/^0x[0-9a-f]{64}$/);
   });
+
+  it("derives CCA sources and lifecycle blocks only for a v3 manifest", () => {
+    const result = deriveHistoryIndexConfiguration(ccaFixtureManifest);
+
+    expect(result.cca).toEqual({
+      startBlock: 100n,
+      endBlock: 110n,
+      claimBlock: 111n,
+      migrationBlock: 111n,
+    });
+    expect(result.sources.cca).toEqual({
+      auction: ccaFixtureManifest.contracts.continuousClearingAuction,
+      bidEscrowFactory: ccaFixtureManifest.contracts.ccaBidEscrowFactory,
+      launchCoordinator: ccaFixtureManifest.contracts.ccaLaunchCoordinator,
+      strategy: ccaFixtureManifest.contracts.ccaStrategy,
+    });
+    expect(
+      deriveHistoryIndexConfiguration(fixtureManifest).cca,
+    ).toBeUndefined();
+    expect(
+      historyEventDefinitions(result)
+        .filter(
+          (definition) =>
+            definition.eventName.startsWith("auction-") ||
+            definition.eventName.startsWith("cca-"),
+        )
+        .map((definition) => [definition.eventName, definition.startBlock]),
+    ).toEqual([
+      ["auction-bid-submitted", 100n],
+      ["auction-bid-exited", 100n],
+      ["auction-tokens-claimed", 111n],
+      ["cca-migration-succeeded", 111n],
+      ["cca-migration-failed", 111n],
+      ["cca-funds-recovered", 111n],
+      ["cca-activated", 111n],
+    ]);
+  });
 });
 
 describe("canonical RPC event source", () => {
@@ -295,13 +406,22 @@ describe("canonical RPC event source", () => {
       getLogs: async (request) => {
         active += 1;
         maximumActive = Math.max(maximumActive, active);
-        calls.push(request);
+        const address = Array.isArray(request.address)
+          ? request.address[0]!
+          : request.address;
+        calls.push({
+          address,
+          eventName: request.eventName,
+          ...(request.indexedArguments === undefined
+            ? {}
+            : { indexedArguments: request.indexedArguments }),
+        });
         const logIndex = calls.length;
         await new Promise((resolve) => setTimeout(resolve, 1));
         active -= 1;
         return [
           {
-            address: request.address,
+            address,
             blockHash: hash(12n),
             blockNumber: 12n,
             transactionHash: hash(1_200n),
@@ -336,6 +456,82 @@ describe("canonical RPC event source", () => {
     expect(
       calls.find((call) => call.eventName === "swap")?.indexedArguments,
     ).toEqual({ id: config.canonicalPool.poolId });
+  });
+
+  it("indexes v3 lifecycle events and withdrawals only from factory-created escrows", async () => {
+    const config = {
+      ...deriveHistoryIndexConfiguration(ccaFixtureManifest),
+      rpcConcurrency: 2,
+    };
+    const escrow = "0x000000000000000000000000000000000000b001" as const;
+    const requests: Array<{
+      name: string;
+      address: unknown;
+      fromBlock: bigint;
+    }> = [];
+    const client: HistoryPublicClient = {
+      getChainId: async () => config.chainId,
+      getBlock: async ({ blockNumber } = {}) => header(blockNumber ?? 110n),
+      getLogs: async (request) => {
+        requests.push({
+          name: request.event.name,
+          address: request.address,
+          fromBlock: request.fromBlock,
+        });
+        if (request.event.name === "EscrowDeployed") {
+          return [
+            {
+              address: config.sources.cca!.bidEscrowFactory,
+              blockHash: hash(99n),
+              blockNumber: 99n,
+              transactionHash: hash(9_900n),
+              transactionIndex: 0,
+              logIndex: 0,
+              args: { beneficiary: escrow, escrow },
+            },
+          ];
+        }
+        if (request.event.name === "Withdrawal") {
+          return [
+            {
+              address: escrow,
+              blockHash: hash(110n),
+              blockNumber: 110n,
+              transactionHash: hash(11_000n),
+              transactionIndex: 0,
+              logIndex: 1,
+              args: {
+                token: ccaFixtureManifest.contracts.weth,
+                beneficiary: escrow,
+                amount: 12n,
+              },
+            },
+          ];
+        }
+        return [];
+      },
+    };
+
+    const events = await Effect.runPromise(
+      createHistoryChainSource(client, config).getEvents(90n, 110n),
+    );
+
+    expect(events).toMatchObject([
+      {
+        eventName: "cca-escrow-withdrawal",
+        sourceAddress: escrow,
+        payload: { amount: "12" },
+      },
+    ]);
+    expect(
+      requests.find((request) => request.name === "TokensClaimed")?.fromBlock,
+    ).toBeUndefined();
+    expect(
+      requests.find((request) => request.name === "Withdrawal")?.fromBlock,
+    ).toBe(110n);
+    expect(
+      requests.find((request) => request.name === "Withdrawal")?.address,
+    ).toEqual([escrow]);
   });
 
   it.each([
@@ -794,6 +990,62 @@ describe("SQLite history store", () => {
 });
 
 describe("history HTTP boundary", () => {
+  it("serves explicit CCA lifecycle routes with manifest-bound source evidence", async () => {
+    const config = {
+      ...deriveHistoryIndexConfiguration(ccaFixtureManifest),
+      launchBlock: 90n,
+      confirmationBlocks: 0n,
+    };
+    const store = openHistoryStore(temporaryDatabasePath(), config);
+    const availability = createHistoryAvailability();
+    availability.markReady();
+    store.replaceCanonicalRange({
+      fromBlock: config.launchBlock,
+      through: header(111n),
+      observedHead: header(111n),
+      retainedHeaders: [header(111n)],
+      events: [
+        {
+          ...event({ blockNumber: 111n, eventName: "cca-activated" }),
+          sourceAddress: config.sources.cca!.launchCoordinator,
+          payload: { governanceOwner: ccaFixtureManifest.roles.owner },
+        },
+      ],
+    });
+
+    await Effect.runPromise(
+      Effect.scoped(
+        Effect.gen(function* () {
+          const server = yield* acquireHistoryHttpServer({
+            readApiToken: HISTORY_READ_API_TOKEN,
+            ingestApiToken: undefined,
+            availability,
+            configuration: config,
+            host: "127.0.0.1",
+            port: 0,
+            store,
+          });
+          const response = yield* Effect.promise(() =>
+            fetch(`${server.url}/v1/protocol/cca-activations`, {
+              headers: {
+                authorization: `Bearer ${HISTORY_READ_API_TOKEN}`,
+              },
+            }),
+          );
+          expect(response.status).toBe(200);
+          expect(yield* Effect.promise(() => response.json())).toMatchObject({
+            manifest: {
+              cca: ccaFixtureManifest.cca.lifecycle,
+              sources: { cca: config.sources.cca },
+            },
+            items: [{ eventName: "cca-activated" }],
+          });
+        }),
+      ),
+    );
+    store.close();
+  });
+
   it("serves authenticated domain pages with explicit coverage and no secret", async () => {
     const config = configuration();
     const store = openHistoryStore(temporaryDatabasePath(), config);

@@ -125,9 +125,13 @@ complete, partial, or error. It is authoritative for historical presentation; di
 RPC reads remain authoritative for current balances, roles, pauses, quotes, and pool state.
 _Avoid_: Browser cache, bounded event window, public DEX website as source of truth
 
-**Genesis Liquidity**:
-The permanently locked, initially one-sided Canonical Market position containing all 4,444 Liquid Tokens and no WETH. Buyers supply its WETH as tokens enter circulation; there is no presale, treasury token allocation, or NFT mint sale.
-_Avoid_: Team allocation, token sale, redeemable treasury inventory
+**FUEL Auction**:
+The fresh-deployment Continuous Clearing Auction that distributes the auction allocation of Liquid Tokens for WETH and discovers the price used to seed the Canonical Market. Purchased Liquid Tokens and unused bid funds settle through bidder-bound escrows; auction activity is distinct from secondary-market trading.
+_Avoid_: Launch, NFT mint sale, Canonical Market swap
+
+**Auction-to-Market Handoff**:
+The one-way operation after a successful FUEL Auction that combines its net WETH with the reserved Liquid Tokens, initializes the exact hooked Canonical Market at the discovered price, and sends the resulting position to permanent custody before trading opens.
+_Avoid_: Old-deployment migration, treasury withdrawal, receipt-only readiness
 
 **Protocol-Owned Liquidity**:
 A permanently locked liquidity position owned by the protocol that deepens the Canonical Market and accrues its swap fees. Each liquidity cycle deposits queued WETH into a one-sided market range without first buying Liquid Tokens; the position cannot be removed or withdrawn.

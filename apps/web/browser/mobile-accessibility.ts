@@ -93,9 +93,9 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
   await assertNoOverflow(page, "Relics at 200% root text");
   const navigation = page.locator("[data-mobile-navigation]");
   for (const [name, path] of [
-    ["Fleet", "/fleet"],
+    ["My Fleet", "/fleet"],
     ["Trade", "/exchange"],
-    ["Rewards", "/rewards"],
+    ["Explore", "/explore"],
   ] as const) {
     await navigation.getByRole("link", { name, exact: true }).click();
     await page.waitForURL(`${origin}${path}`);
@@ -127,6 +127,10 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     .getByRole("link", { name: "ORBIT 4444: Protocol overview", exact: true })
     .click();
   await page.waitForURL(`${origin}/`);
+  await page
+    .getByRole("link", { name: "Explore the collection", exact: true })
+    .click();
+  await page.waitForURL(`${origin}/explore`);
   await page
     .getByRole("region", { name: "Explore the collection" })
     .scrollIntoViewIfNeeded();

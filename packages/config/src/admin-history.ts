@@ -26,6 +26,18 @@ export interface AdminHistoryManifestDto {
     readonly poolManager: Address;
     readonly protocolLiquidityVault: Address;
     readonly rewardLedger: Address;
+    readonly cca?: {
+      readonly auction: Address;
+      readonly bidEscrowFactory: Address;
+      readonly launchCoordinator: Address;
+      readonly strategy: Address;
+    };
+  };
+  readonly cca?: {
+    readonly startBlock: string;
+    readonly endBlock: string;
+    readonly claimBlock: string;
+    readonly migrationBlock: string;
   };
 }
 
@@ -214,6 +226,19 @@ const manifestFrom = (
   const input = record(value, "history manifest");
   const canonicalPool = record(input.canonicalPool, "history canonical pool");
   const sources = record(input.sources, "history sources");
+  const ccaSources =
+    sources.cca === undefined
+      ? undefined
+      : record(sources.cca, "history CCA sources");
+  const cca =
+    input.cca === undefined
+      ? undefined
+      : record(input.cca, "history CCA lifecycle");
+  if ((ccaSources === undefined) !== (cca === undefined)) {
+    throw new TypeError(
+      "History CCA sources and lifecycle must appear together",
+    );
+  }
   const fingerprint = hex(input.fingerprint, "history fingerprint", 64);
   if (fingerprint !== expectedFingerprint) {
     throw new TypeError(
@@ -231,6 +256,19 @@ const manifestFrom = (
     fingerprint,
     launchBlock: decimal(input.launchBlock, "history launch block"),
     network: string(input.network, "history network", 128),
+    ...(cca === undefined
+      ? {}
+      : {
+          cca: {
+            startBlock: decimal(cca.startBlock, "history CCA start block"),
+            endBlock: decimal(cca.endBlock, "history CCA end block"),
+            claimBlock: decimal(cca.claimBlock, "history CCA claim block"),
+            migrationBlock: decimal(
+              cca.migrationBlock,
+              "history CCA migration block",
+            ),
+          },
+        }),
     sources: {
       canonicalFeeHook: address(
         sources.canonicalFeeHook,
@@ -247,6 +285,22 @@ const manifestFrom = (
         "history liquidity vault",
       ),
       rewardLedger: address(sources.rewardLedger, "history reward ledger"),
+      ...(ccaSources === undefined
+        ? {}
+        : {
+            cca: {
+              auction: address(ccaSources.auction, "history CCA auction"),
+              bidEscrowFactory: address(
+                ccaSources.bidEscrowFactory,
+                "history CCA bid escrow factory",
+              ),
+              launchCoordinator: address(
+                ccaSources.launchCoordinator,
+                "history CCA launch coordinator",
+              ),
+              strategy: address(ccaSources.strategy, "history CCA strategy"),
+            },
+          }),
     },
   };
 };

@@ -34,7 +34,7 @@ describe("admin challenge route", () => {
       return Response.json({
         apiVersion: 1,
         challenge: {
-          expiresAt: "2026-08-31T05:05:00.000Z",
+          expiresAt: "2026-09-05T05:05:00.000Z",
           message:
             "app.orbit.example wants you to sign in with your Ethereum account",
         },
@@ -50,7 +50,7 @@ describe("admin challenge route", () => {
     expect(await response.json()).toEqual({
       apiVersion: 1,
       challenge: {
-        expiresAt: "2026-08-31T05:05:00.000Z",
+        expiresAt: "2026-09-05T05:05:00.000Z",
         message:
           "app.orbit.example wants you to sign in with your Ethereum account",
       },

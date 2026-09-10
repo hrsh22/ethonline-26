@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { protocolDeploymentManifest } from "@/lib/deployment";
+
 import LearnPage from "./(collector)/learn/page";
 
 describe("Learn and verify route", () => {
@@ -21,12 +23,15 @@ describe("Learn and verify route", () => {
     expect(html).not.toContain("no units have accrued");
     expect(html).toContain("sepolia.basescan.org/address/");
     expect(html).toContain("github.com/hrsh22/ethonline-26/issues");
-    expect(html).toContain("All 27 deployed contracts");
+    const contractCount = Object.keys(
+      protocolDeploymentManifest?.contracts ?? {},
+    ).length;
+    expect(html).toContain(`All ${contractCount} deployed contracts`);
     expect(html).toContain(
       "Private security reporting is not currently published",
     );
     expect(
       html.match(/sepolia\.basescan\.org\/address\//gu) ?? [],
-    ).toHaveLength(27);
+    ).toHaveLength(contractCount);
   });
 });

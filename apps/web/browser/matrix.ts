@@ -7,8 +7,8 @@ export interface Viewport {
 }
 
 /**
- * The release widths, plus focused shell regressions: 320px compact, 781px
- * just above tablet, and 1161/1200px around the formerly colliding wide nav.
+ * Focused shell regressions around compact, navigation, and promoted funding
+ * breakpoints. The 1279/1280 pair guards the two-row to one-row handoff.
  */
 export const RELEASE_VIEWPORTS: readonly Viewport[] = [
   { height: 780, label: "375", width: 375 },
@@ -19,9 +19,15 @@ export const RELEASE_VIEWPORTS: readonly Viewport[] = [
 
 export const SHELL_VIEWPORTS: readonly Viewport[] = [
   { height: 720, label: "320", width: 320 },
-  { height: 900, label: "781", width: 781 },
-  { height: 820, label: "1161", width: 1161 },
+  { height: 844, label: "390", width: 390 },
+  { height: 1024, label: "768", width: 768 },
+  { height: 900, label: "900", width: 900 },
+  { height: 900, label: "901", width: 901 },
+  { height: 768, label: "1024", width: 1024 },
   { height: 838, label: "1200", width: 1200 },
+  { height: 838, label: "1279", width: 1279 },
+  { height: 800, label: "1280", width: 1280 },
+  { height: 900, label: "1440", width: 1440 },
 ];
 
 export interface RouteCase {
@@ -37,7 +43,14 @@ export interface RouteCase {
 /** Every public route, both craft-detail outcomes, and both 404 shapes. */
 export const ROUTE_CASES: readonly RouteCase[] = [
   { axe: true, label: "home", path: "/", screenshot: true },
-  { axe: true, label: "start", path: "/start", screenshot: true },
+  { axe: true, label: "explore", path: "/explore", screenshot: true },
+  {
+    axe: true,
+    label: "start",
+    path: "/start",
+    finalPath: "/fleet",
+    status: 307,
+  },
   { axe: true, label: "faucet", path: "/faucet", screenshot: true },
   { axe: true, label: "exchange", path: "/exchange", screenshot: true },
   { axe: true, label: "market", path: "/market", screenshot: true },
@@ -61,7 +74,19 @@ export const ROUTE_CASES: readonly RouteCase[] = [
     path: "/fleet/0042",
     status: 404,
   },
-  { axe: true, label: "rewards", path: "/rewards", screenshot: true },
+  {
+    axe: true,
+    label: "rewards",
+    path: "/fleet?view=rewards",
+    screenshot: true,
+  },
+  {
+    axe: true,
+    label: "rewards-legacy",
+    path: "/rewards",
+    finalPath: "/fleet?view=rewards",
+    status: 307,
+  },
   { axe: true, label: "relics", path: "/relics" },
   { axe: true, label: "status", path: "/status", screenshot: true },
   { axe: true, label: "learn", path: "/learn", screenshot: true },
@@ -128,6 +153,13 @@ export const STATE_CASES: readonly StateCase[] = [
   },
   {
     data: "stubbed",
+    label: "wallet-reload-disconnect",
+    path: "/faucet",
+    heading: "Connect a wallet to check eligibility",
+    wallet: "ordinary",
+  },
+  {
+    data: "stubbed",
     label: "wrong-network",
     path: "/faucet",
     heading: "Switch to Base Sepolia",
@@ -165,7 +197,7 @@ export const STATE_CASES: readonly StateCase[] = [
     data: "funded",
     label: "funded",
     path: "/faucet",
-    heading: "Wallet funded for the test journey",
+    heading: "Test wallet funded",
     wallet: "ordinary",
   },
   {

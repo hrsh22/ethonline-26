@@ -44,7 +44,7 @@ export function PublicGallery() {
           return (
             <Link
               key={id}
-              href={`/fleet/${id}`}
+              href={`/fleet/${id}?from=explore`}
               prefetch={false}
               className="flex min-w-0 flex-col items-center gap-2 rounded-[var(--radius-surface)] border border-line bg-surface-1 p-3 hover:border-[var(--accent-border)] focus-visible:ring-3 focus-visible:ring-ring"
             >
@@ -86,7 +86,7 @@ export function PublicGallery() {
             return;
           }
           setError("");
-          router.push(`/fleet/${id}`);
+          router.push(`/fleet/${id}?from=explore`);
         }}
       >
         <label className="flex flex-col gap-2 text-body-sm">

@@ -21,6 +21,7 @@ vi.mock("@/providers/protocol-client-provider", () => ({
 
 import { AccessNotice } from "./access-notice";
 import { FleetPanel } from "./fleet/fleet-panel";
+import { WalletSessionContext } from "@/providers/wallet-session";
 
 const failedProtocol = () => ({
   accessState: "ready" as const,
@@ -146,7 +147,7 @@ describe("wallet read states", () => {
     },
   );
 
-  it("shows what the Fleet contains before asking for a wallet", async () => {
+  it("opens directly on wallet access without a global collection tutorial", async () => {
     testState.protocol = {
       ...failedProtocol(),
       accessState: "disconnected",
@@ -156,11 +157,10 @@ describe("wallet read states", () => {
 
     await act(async () => root.render(<FleetPanel />));
 
-    expect(container.textContent).toContain("4,444");
-    expect(container.textContent).toContain("Grounded Craft");
-    expect(container.textContent).toContain("Orbiter");
+    expect(container.textContent).toContain("Connect a wallet");
+    expect(container.textContent).not.toContain("4,444");
     expect(container.querySelectorAll("[data-public-fleet-mark]")).toHaveLength(
-      3,
+      0,
     );
     expect(
       container.querySelector('[aria-label="Collection summary"]'),
@@ -181,4 +181,38 @@ describe("wallet read states", () => {
     await act(async () => retry?.click());
     expect(testState.refreshWallet).toHaveBeenCalledOnce();
   });
+
+  it.each([FleetPanel, AccessNotice])(
+    "does not contradict a pending wallet connection",
+    async (Content) => {
+      testState.protocol = {
+        ...failedProtocol(),
+        accessState: "disconnected",
+        connected: false,
+        walletRead: { status: "blocked", accessState: "disconnected" },
+      };
+      await act(async () =>
+        root.render(
+          <WalletSessionContext.Provider
+            value={{
+              ready: false,
+              connecting: true,
+              rejected: false,
+              modalOpen: false,
+              disconnectStatus: "idle",
+              connect: vi.fn(),
+              disconnect: vi.fn(),
+            }}
+          >
+            <Content />
+          </WalletSessionContext.Provider>,
+        ),
+      );
+      expect(container.textContent).toContain("Connecting wallet");
+      expect(container.textContent).not.toContain("Wallet not connected");
+      expect(container.querySelectorAll('[data-state="loading"]')).toHaveLength(
+        1,
+      );
+    },
+  );
 });

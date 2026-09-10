@@ -8,15 +8,15 @@ pnpm --dir apps/web test:browser --only=collector-journey:launch-reload
 pnpm --dir apps/web test:browser --only=public-collection:explore-and-share
 ```
 
-| Case suffix         | Visible acceptance                                                                                                                                                     |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `funding-discovery` | One top-up request survives a service outage and page reload; funded wallet buys; delayed Discovery remains visible until the craft arrives.                           |
-| `launch-reload`     | One Launch survives reload; the Orbiter remains in Fleet while indexing lags, and completed activity survives dismissal and another reload.                            |
-| `receipt-recovery`  | A submitted hash survives receipt RPC failure, then confirms automatically with one wallet submission.                                                                 |
-| `trade-stages`      | Wallet cancellation does not submit; native ETH buy, WETH approval/buy, and FUEL sell send the reviewed direction and exact input.                                     |
-| `approval-reload`   | Reload after approval submission confirms only that approval; a swap occurs only after a fresh explicit review.                                                        |
-| `partial-rewards`   | Unavailable rewards remain explicit; claim review includes only known identities and separate token amounts; its submitted ABI batch matches that review and confirms. |
-| `quote-recovery`    | Editing cancels an outstanding quote transport; a 429 recovers to the latest amount with at most four quote HTTP requests, then navigation works.                      |
+| Case suffix         | Visible acceptance                                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `funding-discovery` | One top-up request survives a service outage and page reload; funded wallet buys; delayed Discovery remains visible until the craft arrives.                                |
+| `launch-reload`     | One Launch survives reload; the Orbiter remains in Fleet while indexing lags, and the success notice retires on navigation, and completed activity survives another reload. |
+| `receipt-recovery`  | A submitted hash survives receipt RPC failure, then confirms automatically with one wallet submission.                                                                      |
+| `trade-stages`      | Wallet cancellation does not submit; native ETH buy, WETH approval/buy, and FUEL sell send the reviewed direction and exact input.                                          |
+| `approval-reload`   | Reload after approval submission confirms only that approval; a swap occurs only after a fresh explicit review.                                                             |
+| `partial-rewards`   | Unavailable rewards remain explicit; claim review includes only known identities and separate token amounts; its submitted ABI batch matches that review and confirms.      |
+| `quote-recovery`    | Editing cancels an outstanding quote transport; a 429 recovers to the latest amount with at most four quote HTTP requests, then navigation works.                           |
 
 The opt-in `transacting` wallet is an isolated EIP-1193 fixture. It returns dummy
 proof bytes and sends transaction payloads only to a reserved `.invalid` URL

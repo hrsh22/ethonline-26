@@ -1,7 +1,5 @@
 # QUOTRONS rarity and Relic distribution provenance
 
-Research date: 2026-08-26
-
 This note separates V1 launch mechanics from V2 migration. It uses only QUOTRONS' official repository and website, verified contract source, and Robinhood Chain explorer records.
 
 ## Conclusion

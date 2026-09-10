@@ -36,7 +36,12 @@ describe("blocked alternative-venue inventory", () => {
       contracts: Record<string, string>;
     };
     const reachable = new Set(
-      Object.values(manifest.contracts).map((address) => address.toLowerCase()),
+      Object.entries(manifest.contracts)
+        // The public launcher is used to create and migrate the canonical pool
+        // before Fuel transfers begin, then deliberately blocked as an
+        // alternative venue after launch.
+        .filter(([name]) => name !== "liquidityLauncher")
+        .map(([, address]) => address.toLowerCase()),
     );
     for (const entry of inventory.entries) {
       expect(reachable.has(entry.address.toLowerCase())).toBe(false);

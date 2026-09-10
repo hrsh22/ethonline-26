@@ -15,8 +15,6 @@ const shellState = vi.hoisted(() => ({
   switchChain: { isError: false, isPending: false, mutate: vi.fn() },
 }));
 
-// The live readout needs the protocol provider; the shell tests exercise
-// navigation and wallet states, not protocol reads.
 // Activity has its own provider and browser journeys; these checks isolate shell navigation.
 vi.mock("@/components/shell/collector-activity", () => ({
   CollectorActivity: () => null,
@@ -24,15 +22,12 @@ vi.mock("@/components/shell/collector-activity", () => ({
 vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => ({ transaction: { status: "idle" } }),
 }));
-vi.mock("@/components/shell/live-pulse", () => ({ LivePulse: () => null }));
 vi.mock("next/navigation", () => ({
   usePathname: () => shellState.pathname,
 }));
 
-vi.mock("@reown/appkit/react", () => ({ modal: { open: vi.fn() } }));
-
 vi.mock("@/lib/wagmi", () => ({
-  get isReownConfigured() {
+  get isWalletConfigured() {
     return shellState.configured;
   },
   protocolChain: { id: 84_532 },
@@ -75,7 +70,7 @@ describe("collector shell wallet states", () => {
     expect(html).toContain("Connect wallet");
   });
 
-  it("lets an unconfigured wallet notice shrink without collapsing the menu target", () => {
+  it("lets an unconfigured wallet notice shrink inside the compact header", () => {
     shellState.configured = false;
 
     const html = renderShell();
@@ -84,18 +79,14 @@ describe("collector shell wallet states", () => {
       "Wallet connection is not configured for this deployment.",
     );
     expect(html).toMatch(/class="wallet-session wallet-control-state[^"]*"/u);
-    const actionClasses =
-      /class="(?<classes>flex min-w-0[^"]*items-center[^"]*gap-2[^"]*)"/u
-        .exec(html)
-        ?.groups?.classes?.split(" ");
+    const actionClasses = /class="(?<classes>[^"]*wallet-control-state[^"]*)"/u
+      .exec(html)
+      ?.groups?.classes?.split(" ");
     expect(actionClasses).toEqual(
       expect.arrayContaining(["flex", "min-w-0", "items-center", "gap-2"]),
     );
-    const toggleClasses =
-      /<button[^>]*aria-controls="collector-navigation"[^>]*class="(?<classes>[^"]+)"/u.exec(
-        html,
-      )?.groups?.classes;
-    expect(toggleClasses).toContain("shrink-0");
+    expect(html).toContain("disabled-reason");
+    expect(html).toContain('aria-label="Mobile collector navigation"');
   });
 
   it("reports an in-progress connection without a second notice", () => {
@@ -153,7 +144,7 @@ describe("collector shell wallet states", () => {
     expect(navigationIndex).toBeLessThan(walletIndex);
   });
 
-  it("keeps the menu toggle available in every wallet state", () => {
+  it("keeps all four mobile destinations and sticky funding available in every wallet state", () => {
     for (const status of [
       "disconnected",
       "connecting",
@@ -165,7 +156,13 @@ describe("collector shell wallet states", () => {
         chainId: 84_532,
         status,
       };
-      expect(renderShell()).toContain('aria-controls="collector-navigation"');
+      const html = renderShell();
+      expect(html).toContain('aria-label="Mobile collector navigation"');
+      expect(html).toContain('href="/explore"');
+      expect(html).toContain('href="/auction"');
+      expect(html).toContain('href="/exchange"');
+      expect(html).toContain('href="/fleet"');
+      expect(html.match(/>Get test funds</gu)).toHaveLength(2);
     }
   });
 });

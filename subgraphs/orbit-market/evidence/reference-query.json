@@ -1,0 +1,13 @@
+{
+  "reference": "Messari SushiSwap Ethereum",
+  "subgraphId": "77jZ9KWeyi3CJ96zkkj5s1CojKPHt6XJKjLFzsDCd8Fd",
+  "queriedAt": "2026-09-07T22:32:32.201Z",
+  "httpStatus": 200,
+  "result": {
+    "errors": [
+      {
+        "message": "bad indexers: {0x2f09092aacd80196fc984908c5a9a7ab3ee4f1ce: Timeout, 0x4e5c87772c29381bcabc58c3f182b6633b5a274a: Unavailable(too far behind), 0x6f9bb7e454f5b3eb2310343f0e99269dc2bb8a1d: Unavailable(too far behind), 0x9da1017766bfeb2835db4f811516eea68996538b: Unavailable(too far behind), 0xe13840a2e92e0cb17a246609b432d0fa2e418774: Timeout, 0xf92f430dd8567b0d466358c79594ab58d919a6d4: BadResponse(expected value at line 1 column 1)}"
+      }
+    ]
+  }
+}

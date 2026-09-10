@@ -1,0 +1,211 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum/contract
+    name: PoolManager
+    network: base-sepolia
+    source:
+      address: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
+      abi: PoolManager
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [LiquidityPool, Swap, RewardFundingSummary]
+      abis:
+        - name: PoolManager
+          file: ./abis/PoolManager.json
+      eventHandlers:
+        - event: Swap(indexed bytes32,indexed address,int128,int128,uint160,uint128,int24,uint24)
+          handler: handleSwap
+        - event: ModifyLiquidity(indexed bytes32,indexed address,int24,int24,int256,bytes32)
+          handler: handleModifyLiquidity
+        - event: Donate(indexed bytes32,indexed address,uint256,uint256)
+          handler: handleDonate
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: CanonicalFeeHook
+    network: base-sepolia
+    source:
+      address: "0xA1e0baEb5B433Fe80521FF736E46F5C0b70520Cc"
+      abi: CanonicalFeeHook
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [LiquidityPool, Swap, RewardFundingSummary]
+      abis:
+        - name: CanonicalFeeHook
+          file: ./abis/CanonicalFeeHook.json
+      eventHandlers:
+        - event: FeeAccrued(indexed address,uint256,uint256,uint256,uint256,uint256)
+          handler: handleFee
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: EpochConverter
+    network: base-sepolia
+    source:
+      address: "0x6c8FE1106DA91C16dBa3bD28E3D43e5aA2a3C33f"
+      abi: EpochConverter
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [LiquidityPool, Swap, RewardFundingSummary]
+      abis:
+        - name: EpochConverter
+          file: ./abis/EpochConverter.json
+      eventHandlers:
+        - event: RewardEpochOpened(indexed uint256,uint256,uint256,uint256)
+          handler: handleEpoch
+        - event: TrackExecuted(indexed uint8,uint256,uint256,uint256)
+          handler: handleConversion
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: RewardLedger
+    network: base-sepolia
+    source:
+      address: "0x74AF45929F1acb47b36Da85C725648c307F73f5f"
+      abi: RewardLedger
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [LiquidityPool, Swap, RewardFundingSummary]
+      abis:
+        - name: RewardLedger
+          file: ./abis/RewardLedger.json
+      eventHandlers:
+        - event: RewardNotified(indexed uint8,indexed address,uint256,uint256,uint256,uint256)
+          handler: handleDistribution
+        - event: RewardClaimed(indexed address,indexed uint16,indexed uint8,uint256)
+          handler: handleClaim
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: ProtocolLiquidityVault
+    network: base-sepolia
+    source:
+      address: "0x7D47D7979CaD6b0de08968AE564c32E982c32Cec"
+      abi: ProtocolLiquidityVault
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [LiquidityPool, Swap, RewardFundingSummary]
+      abis:
+        - name: ProtocolLiquidityVault
+          file: ./abis/ProtocolLiquidityVault.json
+      eventHandlers:
+        - event: ProtocolLiquidityAdded(indexed uint256,indexed bytes32,uint256,uint256,uint256,uint256,int24,int24,uint128)
+          handler: handleLiquidity
+      file: ./src/mapping.ts
+  - kind: ethereum/contract
+    name: ContinuousClearingAuction
+    network: base-sepolia
+    source:
+      address: "0x69C48DFee7be220376dF269740Fe943e24D50ab9"
+      abi: ContinuousClearingAuction
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [AuctionBidSubmission, AuctionBidExit, AuctionTokenClaim]
+      abis:
+        - name: ContinuousClearingAuction
+          file: ./abis/ContinuousClearingAuction.json
+      eventHandlers:
+        - event: BidSubmitted(indexed uint256,indexed address,uint256,uint128)
+          handler: handleBidSubmitted
+        - event: BidExited(indexed uint256,indexed address,uint256,uint256)
+          handler: handleBidExited
+        - event: TokensClaimed(indexed uint256,indexed address,uint256)
+          handler: handleTokensClaimed
+      file: ./src/cca-mapping.ts
+  - kind: ethereum/contract
+    name: CcaStrategy
+    network: base-sepolia
+    source:
+      address: "0xB06428b62c259eE982cE3D9BED47391dC9A5E000"
+      abi: CcaStrategy
+      startBlock: 46607192
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [CcaMigration, CcaMigrationFailure, CcaFundsRecovery]
+      abis:
+        - name: CcaStrategy
+          file: ./abis/CcaStrategy.json
+      eventHandlers:
+        - event: Migrated(indexed address,(indexed address,address,uint24,int24,address),uint160,bytes)
+          handler: handleMigrated
+        - event: MigrationFailed(indexed address,bytes)
+          handler: handleMigrationFailed
+        - event: FundsRecovered(indexed address,indexed address,uint256)
+          handler: handleFundsRecovered
+      file: ./src/cca-mapping.ts
+  - kind: ethereum/contract
+    name: CcaLaunchCoordinator
+    network: base-sepolia
+    source:
+      address: "0x56d073811e6bAD3A587635654cAfc278668179d4"
+      abi: CcaLaunchCoordinator
+      startBlock: 46607192
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [CcaActivation]
+      abis:
+        - name: CcaLaunchCoordinator
+          file: ./abis/CcaLaunchCoordinator.json
+      eventHandlers:
+        - event: FuelActivated(indexed address)
+          handler: handleFuelActivated
+      file: ./src/cca-mapping.ts
+  - kind: ethereum/contract
+    name: CcaBidEscrowFactory
+    network: base-sepolia
+    source:
+      address: "0x051646c4aC4cA17c878A640fD497F11B9502113C"
+      abi: CcaBidEscrowFactory
+      startBlock: 46563991
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [CcaEscrow]
+      abis:
+        - name: CcaBidEscrowFactory
+          file: ./abis/CcaBidEscrowFactory.json
+      eventHandlers:
+        - event: EscrowDeployed(indexed address,indexed address)
+          handler: handleEscrowDeployed
+      file: ./src/cca-mapping.ts
+templates:
+  - kind: ethereum/contract
+    name: CcaBidEscrow
+    network: base-sepolia
+    source:
+      abi: CcaBidEscrow
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [CcaEscrow, CcaEscrowWithdrawal]
+      abis:
+        - name: CcaBidEscrow
+          file: ./abis/CcaBidEscrow.json
+      eventHandlers:
+        - event: Withdrawal(indexed address,indexed address,uint256)
+          handler: handleEscrowWithdrawal
+      file: ./src/escrow-mapping.ts

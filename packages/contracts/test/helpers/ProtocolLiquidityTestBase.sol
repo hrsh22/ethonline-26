@@ -151,6 +151,7 @@ abstract contract ProtocolLiquidityTestBase is CanonicalHookMining {
         GenesisLiquidityVault genesis = new GenesisLiquidityVault(
             ICanonicalMarketRegistry(address(fixture.registry)), address(this)
         );
+        fixture.hook.configureInitializer(address(genesis));
         fixture.fuel.setDiscoveryExempt(address(fixture.manager), true);
         fixture.fuel.setDiscoveryExempt(address(genesis), true);
         require(

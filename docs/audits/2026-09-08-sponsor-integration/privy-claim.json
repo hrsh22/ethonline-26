@@ -1,0 +1,18 @@
+{
+  "transactionHash": "0xa87d862898cdec0756530d37d784109ceafed2d023b8e78ee77d743335134198",
+  "blockNumber": "46526494",
+  "status": "success",
+  "from": "0xd86df743ee66906981e34beecfd5f7afd89caac9",
+  "to": "0xe70e620e5a280e87923c6c2466986ae5c4326c13",
+  "events": [
+    {
+      "eventName": "RewardClaimed",
+      "args": {
+        "currentOwner": "0xD86DF743ee66906981e34BeECfd5F7AfD89cAAc9",
+        "identityId": 3444,
+        "track": 1,
+        "amount": "996651576817566284"
+      }
+    }
+  ]
+}

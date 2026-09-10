@@ -1,10 +1,5 @@
-import { JetBrains_Mono } from "next/font/google";
+import { Barlow, IBM_Plex_Mono, JetBrains_Mono } from "next/font/google";
 
-/* One face for both applications: JetBrains Mono carries headings, labels,
- * numerals and body alike, so a column of values and the label above it share
- * a rhythm. The semantic variables (`--font-sans`, `--font-mono`,
- * `--font-display`) are bound in foundations.css; this is only the loaded
- * family. */
 const jetBrainsMono = JetBrains_Mono({
   // Next's adjusted Arial fallback widens uppercase controls enough to wrap
   // the mobile header. Use fixed-width fallback advances like the loaded face.
@@ -15,4 +10,21 @@ const jetBrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains",
 });
 
-export const applicationFontVariables = jetBrainsMono.variable;
+const barlow = Barlow({
+  fallback: ["Arial Narrow", "Arial", "sans-serif"],
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-barlow",
+});
+
+const plexMono = IBM_Plex_Mono({
+  adjustFontFallback: false,
+  fallback: ["Courier New", "Courier", "monospace"],
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
+});
+
+/* The root keeps JetBrains Mono for the operator console. The collector shell
+ * opts into Barlow through its scoped token map in foundations.css. */
+export const applicationFontVariables = `${jetBrainsMono.variable} ${barlow.variable} ${plexMono.variable}`;

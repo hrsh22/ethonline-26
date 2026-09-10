@@ -27,19 +27,13 @@ export const readLaunchedBaseSepoliaManifest = (
       () => readFileSync(manifestPath, "utf8"),
     );
     return yield* validate(
-      "A launched Base Sepolia schema-v2 manifest is required",
+      "A Base Sepolia deployment manifest is required",
       () => {
         const manifest = decodeProtocolDeploymentManifest(
           JSON.parse(serialized) as unknown,
         );
-        if (
-          manifest.schemaVersion !== 2 ||
-          manifest.chainId !== 84_532 ||
-          manifest.phase !== "launched"
-        ) {
-          throw new Error(
-            "A launched Base Sepolia schema-v2 manifest is required",
-          );
+        if (manifest.chainId !== 84_532) {
+          throw new Error("A Base Sepolia deployment manifest is required");
         }
         return manifest;
       },

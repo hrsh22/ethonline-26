@@ -1,0 +1,375 @@
+/* The approved B · Hangar composition, scoped to the personal collection. */
+.fleet-page {
+  --font-mono: var(--font-plex-mono);
+  --text-secondary: #a8b0b8;
+  --border-subtle: rgba(236, 235, 230, 0.13);
+  max-width: 85rem;
+  padding: 2.125rem 2rem 5.625rem;
+}
+.fleet-page-heading {
+  padding: 0;
+  margin-bottom: 1.125rem;
+  border: 0;
+}
+.fleet-page-heading h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 4.5vw, 4.3rem);
+  line-height: 0.92;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.fleet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+.fleet-tab,
+.fleet-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border-bottom: 1px solid transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  line-height: 1.1;
+}
+.fleet-tab[aria-current="page"],
+.fleet-filter[aria-pressed="true"] {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-text);
+}
+.fleet-balance {
+  margin-left: auto;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-family: var(--font-mono);
+}
+.fleet-panel {
+  margin-top: 1rem;
+}
+.fleet-empty {
+  min-height: 15rem;
+  padding: 0.875rem 0;
+}
+.fleet-empty h2 {
+  margin: 1rem 0;
+  font-size: clamp(1.7rem, 3vw, 2.7rem);
+  line-height: 1;
+  font-weight: 500;
+}
+.fleet-empty p {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.fleet-reward-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.375rem;
+  padding: 0.75rem 0;
+  margin-bottom: 1rem;
+  border-block: 1px solid var(--border-subtle);
+}
+.fleet-reward-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+.fleet-reward-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+}
+.fleet-reward-values > span > span,
+.fleet-balance > span > span {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  margin-left: 0.4em;
+}
+.fleet-page
+  :is(.fleet-reward-strip, .fleet-page-heading)
+  [data-slot="button-link"] {
+  min-height: 2.875rem;
+  border-color: var(--border-subtle);
+  border-radius: 3px;
+  padding: 0 1.125rem;
+  font-weight: 500;
+}
+.fleet-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.fleet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.fleet-advanced-filters {
+  min-width: 0;
+  margin-left: auto;
+}
+.fleet-advanced-filters[open] {
+  flex-basis: 100%;
+}
+.fleet-advanced-filters summary {
+  text-align: right;
+}
+.fleet-hangar {
+  display: grid;
+  grid-template-columns: minmax(11.25rem, 16.25rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 1.75rem;
+  min-width: 0;
+  margin-top: 0.875rem;
+}
+.fleet-selector {
+  display: grid;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.2rem;
+  margin: -0.2rem;
+}
+.fleet-selector-button {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  min-height: 5.75rem;
+  padding: 0.625rem;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  text-align: left;
+}
+.fleet-selector-button.is-selected {
+  border-color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 4%, transparent);
+}
+.fleet-selector-art {
+  flex: 0 0 auto;
+  width: 4.75rem;
+  height: 5.375rem;
+}
+.fleet-selector-number {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+.fleet-selector-caption {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.fleet-featured {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12.5rem;
+  align-items: center;
+  gap: 1.75rem;
+  min-width: 0;
+}
+.fleet-art-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 30.625rem;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: radial-gradient(
+    circle at 50% 54%,
+    #303841 0,
+    #1d2228 28%,
+    #121519 65%
+  );
+}
+.fleet-art-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 48%,
+    rgba(255, 255, 255, 0.025) 49%,
+    transparent 50%
+  );
+}
+.fleet-featured-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 25px 22px rgba(0, 0, 0, 0.48));
+}
+.fleet-featured-info {
+  min-width: 0;
+}
+.fleet-featured-info h2 {
+  margin: 1.375rem 0 0.75rem;
+  font-size: clamp(1.7rem, 3vw, 2.7rem);
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.fleet-featured-info p {
+  margin-bottom: 1rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.fleet-state-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.fleet-featured[data-permanent] .fleet-state-badge {
+  color: #92d6b0;
+  border-color: rgba(146, 214, 176, 0.35);
+}
+.fleet-view-craft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  min-height: 2.875rem;
+  margin-top: 0.75rem;
+  padding: 0 1.125rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  font-weight: 500;
+}
+.fleet-view-craft:hover {
+  background: var(--surface-2);
+}
+.fleet-read-notice {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+@media (max-width: 1050px) {
+  .fleet-hangar {
+    grid-template-columns: 10.625rem minmax(0, 1fr);
+  }
+  .fleet-featured {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .fleet-art-stage {
+    height: 23.75rem;
+  }
+  .fleet-featured-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .fleet-featured-info :is(h2, p, .fleet-view-craft) {
+    margin: 0;
+  }
+}
+@media (max-width: 560px) {
+  .fleet-page {
+    padding: 1.25rem 1rem 7.5rem;
+  }
+  .fleet-page-heading {
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .fleet-panel {
+    margin-top: 0.625rem;
+  }
+  .fleet-reward-strip {
+    gap: 0.5rem;
+    padding: 0.625rem 0;
+    margin-bottom: 0.625rem;
+  }
+  .fleet-reward-values {
+    gap: 0.25rem;
+    font-size: 0.75rem;
+  }
+  .fleet-reward-values > span {
+    width: 100%;
+  }
+  .fleet-tab,
+  .fleet-filter {
+    padding-inline: 0.75rem;
+  }
+  .fleet-filters {
+    gap: 0;
+  }
+  .fleet-toolbar {
+    margin-bottom: 0.75rem;
+  }
+  .fleet-advanced-filters {
+    width: 100%;
+    margin-left: 0;
+  }
+  .fleet-advanced-filters > div {
+    width: 100%;
+  }
+  .fleet-advanced-filters summary {
+    margin-left: auto;
+  }
+  .fleet-page
+    :is(.fleet-reward-strip, .fleet-page-heading)
+    [data-slot="button-link"] {
+    padding-inline: 0.75rem;
+  }
+  .fleet-hangar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .fleet-selector {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.5rem;
+    scroll-snap-type: x proximity;
+  }
+  .fleet-selector-item {
+    flex: 0 0 6.75rem;
+    scroll-snap-align: start;
+  }
+  .fleet-selector-button {
+    min-height: 7.875rem;
+    height: 100%;
+    flex-direction: column;
+    align-items: start;
+    gap: 0.125rem;
+    padding: 0.5rem;
+  }
+  .fleet-selector-art {
+    width: 4.5rem;
+    height: 4rem;
+  }
+  .fleet-selector-caption {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+  }
+  .fleet-selector-number {
+    font-size: 0.8125rem;
+  }
+  .fleet-art-stage {
+    height: 18.75rem;
+  }
+  .fleet-balance {
+    font-size: 0.75rem;
+  }
+}

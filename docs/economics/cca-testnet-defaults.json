@@ -1,0 +1,27 @@
+{
+  "$schema": "./cca-testnet-defaults.schema.json",
+  "schemaVersion": 1,
+  "status": "testnet-demo-defaults",
+  "totalFuelWei": "4444000000000000000000",
+  "auctionFuelWei": "4000000000000000000000",
+  "liquidityReserveFuelWei": "444000000000000000000",
+  "floorPriceQ96": "396140812571321687967719750",
+  "floorWethPerFuel": "0.005",
+  "priceTickSpacingQ96": "79228162514264337593543950",
+  "minimumWethRaisedWei": "10000000000000000000",
+  "startDelayBlocks": 300,
+  "claimDelayBlocks": 1,
+  "migrationDelayBlocks": 1,
+  "issuanceSteps": [
+    { "mpsPerBlock": 232, "blockCount": 20800 },
+    { "mpsPerBlock": 231, "blockCount": 22400 }
+  ],
+  "secondaryMarket": {
+    "fee": 8388608,
+    "tickSpacing": 60,
+    "tradingFeeBps": 300,
+    "rewardFeeBps": 200,
+    "protocolLiquidityFeeBps": 85,
+    "creatorFeeBps": 15
+  }
+}

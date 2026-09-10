@@ -5,7 +5,7 @@ import type { TestnetFundingResponse } from "@orbit/config/testnet-funding";
 import { CollectorReturnLink } from "@/components/start/collector-return-link";
 import type { StateFeedbackTone } from "@/components/state-feedback";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Metric, MetricGroup } from "@/components/ui/metric";
@@ -200,11 +200,7 @@ function FaucetAction({
         </Button>
       );
     case "trade":
-      return (
-        <ButtonLink href="/exchange">
-          {applicationCopy.faucet.actions.trade}
-        </ButtonLink>
-      );
+      return <CollectorReturnLink fallbackToTrade primary />;
     case "none":
       return null;
   }

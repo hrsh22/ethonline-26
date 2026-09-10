@@ -150,7 +150,7 @@ const orbitIdentityInput: unknown = {
        onto an airfield. And this destination is not a place: it lists all 4,444
        identities in every state, which is what a fleet is. */
     collection: "Fleet",
-    collectionTask: "My Collection",
+    collectionTask: "My Fleet",
     commitment: "Launch",
     rewards: "Reward Stocks",
     basketRelics: "Stations",
@@ -176,8 +176,8 @@ const orbitIdentityInput: unknown = {
   },
   copy: {
     homeIntroduction:
-      "Use no-value test assets to buy $FUEL. Every whole $FUEL reveals a random Grounded Craft; Launch later burns one $FUEL forever and makes it a permanent Orbiter.",
-    applicationTagline: "Collect. Launch. Stay in orbit.",
+      "A collection of liquid craft and permanent Orbiters, powered by $FUEL.",
+    applicationTagline: "Find the craft worth keeping.",
     metadataDescription:
       "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept.",
     protocolPending:
@@ -464,8 +464,8 @@ export const createIdentityApplicationCopy = (
           body: "This attempt did not request a top-up or send assets. Try again to sign a new wallet proof.",
         },
         funded: {
-          title: "Wallet funded for the test journey",
-          body: `Gas ETH and test WETH targets are met; the next step is buying ${identity.liquidToken.displayName} on Trade.`,
+          title: "Test wallet funded",
+          body: "Gas ETH and test WETH targets are met. These are valueless test assets.",
         },
         "funded-not-retained": {
           title: "Top-up confirmed, but this wallet did not keep it",
@@ -514,85 +514,6 @@ export const createIdentityApplicationCopy = (
         "Top-ups come from a pre-funded inventory and stop at fixed per-wallet targets. Requesting one signs a message that proves you control this address; no secret leaves your wallet, and nothing on this page can move protocol funds.",
       inventoryEvidence:
         "Technical detail: the funding service holds its own signer and runs outside the browser; this site only reads its public status and submits a signed request.",
-    },
-    onboarding: {
-      eyebrow: "BASE SEPOLIA COLLECTOR JOURNEY",
-      title: `Get your first ${identity.terms.permanentCollectible}`,
-      introduction: `Three phases take a test wallet from bounded test assets to a random ${identity.terms.transientCollectible}, then an optional irreversible ${identity.terms.commitment} creates its first permanent ${identity.terms.permanentCollectible}.`,
-      /* One line. The three-step explanation this route used to open with now
-       * lives on the home page, where it belongs; what is unique here is the
-       * live position in the journey and the single next action. */
-      lede: `Where this wallet is in the journey, and the one action to take next.`,
-      phases: {
-        fund: {
-          title: "Fund",
-          current: `Get gas ETH and test WETH from Faucet, then buy ${identity.liquidToken.displayName} on Trade.`,
-          trade: `Buy enough ${identity.liquidToken.displayName} to cross the next whole-unit boundary; that Trade triggers a random ${identity.terms.discoveryDraw}.`,
-          complete: `Test assets and the ${identity.liquidToken.displayName} boundary needed for ${identity.terms.discoveryDraw} are complete.`,
-        },
-        discover: {
-          title: "Discover",
-          current: `${identity.terms.discoveryDraw} is being processed; check ${identity.navigation.collectionTask} for its current stage and the assigned ${identity.terms.transientCollectible}.`,
-          complete: `A ${identity.terms.transientCollectible} was assigned to this wallet.`,
-        },
-        launch: {
-          title: identity.terms.commitment,
-          current: `Choose the discovered ${identity.terms.transientCollectible} only if you want to make it a permanent ${identity.terms.permanentCollectible}.`,
-          complete: `A permanent ${identity.terms.permanentCollectible} is held by this wallet.`,
-        },
-      },
-      access: {
-        disconnected: "Connect a wallet to begin.",
-        "wrong-network": "Switch to Base Sepolia before continuing.",
-        "deployment-pending": identity.copy.protocolPending,
-      },
-      waiting: "Available after the previous phase.",
-      complete: "Complete",
-      current: "Current",
-      waitingLabel: "Waiting",
-      phase: "Phase",
-      phaseOf: (index: number, total: number) => `${index} of ${total}`,
-      journeyDone: "Done",
-      actions: {
-        faucet: "Open Faucet",
-        trade: `Buy ${identity.liquidToken.displayName} on Trade`,
-        collection: `Check ${identity.terms.discoveryDraw} in ${identity.navigation.collectionTask}`,
-        launch: (identityId: number) =>
-          `Review ${identity.terms.commitment} · ${identity.terms.transientCollectible} #${identityId}`,
-      },
-      launchWarning: `Burns exactly one ${identity.liquidToken.displayName} forever and makes the selected ${identity.terms.transientCollectible} a permanent ${identity.terms.permanentCollectible}.`,
-      launchWarningLabel: "Irreversible",
-      discoveryDisclosure: `On Base Sepolia, each whole-unit ${identity.terms.discoveryDraw} requests a verifiable random draw from Chainlink VRF after the acquisition is confirmed. The wallet cannot preview the identity: a ${identity.terms.pendingDiscovery} appears first, and the ${identity.terms.transientCollectible} is assigned after verified randomness arrives and the delivery service completes the onchain result.`,
-      lossDisclosure: `Selling a whole ${identity.liquidToken.displayName} first cancels the latest ${identity.terms.pendingDiscovery}, then dissolves the latest ${identity.terms.transientCollectible}. Transferring liquid tokens has the same whole-unit boundary effect. Permanent ${identity.terms.permanentCollectible}s are not dissolved.`,
-      details: `How ${identity.terms.discoveryDraw} and whole-token boundaries work`,
-      nextStepEyebrow: "YOUR NEXT STEP",
-      nextStepLabel: "Current step",
-      progressEyebrow: "LIVE WALLET PROGRESS",
-      progressLabel: "Live collector progress",
-      balance: `${identity.liquidToken.displayName} balance`,
-      nextThreshold: `Next ${identity.terms.discoveryDraw} threshold (${identity.liquidToken.displayName})`,
-      remaining: `${identity.liquidToken.displayName} still needed`,
-      collectionProgress: "Collection progress",
-      noCraft: `No ${identity.terms.transientCollectible} yet`,
-      pending: `1 ${identity.terms.pendingDiscovery}`,
-      transientCount: (count: number) =>
-        `${count} ${identity.terms.transientCollectible}${count === 1 ? "" : "s"}`,
-      permanentCount: (count: number) =>
-        `${count} ${identity.terms.permanentCollectible}${count === 1 ? "" : "s"}`,
-      progressUnavailable:
-        "Live wallet progress appears after a successful Base Sepolia read.",
-      progressLoadingTitle: "Reading live wallet progress",
-      progressLoadingBody:
-        "Balances and collection progress appear when the Base Sepolia read completes.",
-      progressUnavailableTitle: "Live wallet progress unavailable",
-      walletActionInHeader:
-        "Use the wallet control in the header to continue; its status is shown there.",
-      journeyCompleteTitle: (identityId: number) =>
-        `${identity.terms.permanentCollectible} #${identityId} is permanent`,
-      journeyCompleteBody: `Funding, ${identity.terms.discoveryDraw}, and ${identity.terms.commitment} are complete; a permanent ${identity.terms.permanentCollectible} is never dissolved by later ${identity.liquidToken.displayName} balance changes.`,
-      journeyCompleteAction: (identityId: number) =>
-        `Open ${identity.terms.permanentCollectible} #${identityId}`,
-      completedJourneyDetails: "Review completed phases",
     },
     publicStatus: {
       eyebrow: "PUBLIC ONCHAIN HEALTH",
@@ -784,7 +705,7 @@ export const createIdentityApplicationCopy = (
       eyebrow: `BASE SEPOLIA / ${identity.brand.toUpperCase()}`,
       title: identity.copy.applicationTagline,
       introduction: identity.copy.homeIntroduction,
-      primaryAction: "Start collecting",
+      primaryAction: `Trade ${identity.liquidToken.displayName}`,
       secondaryAction: `Trade ${identity.liquidToken.displayName}`,
       heroAlt: `${identity.terms.transientCollectible} resting inside an orbital maintenance bay at sunrise`,
       heroAsset: identity.applicationAssets.homeHero,
@@ -797,28 +718,6 @@ export const createIdentityApplicationCopy = (
       launched: "Launched",
       notLaunched: "Not launched",
       observedBlock: "Observed block",
-      /* The three steps, stated once on the home page.
-       *
-       * The audited home page opened with a hero and then jumped straight to
-       * protocol telemetry, so how the product actually works was only
-       * explained on a separate onboarding tab whose content also duplicated
-       * the collection surface. */
-      stepsTitle: "How collecting works",
-      stepsDescription: `Three steps take a test wallet from bounded test assets to a permanent ${identity.terms.permanentCollectible} that bears a ${identity.terms.stockReward}.`,
-      steps: [
-        {
-          title: "Fund",
-          body: `Take bounded gas ETH and test WETH from the faucet, then buy ${identity.liquidToken.displayName}.`,
-        },
-        {
-          title: "Discover",
-          body: `Crossing a whole ${identity.liquidToken.displayName} triggers one ${identity.terms.discoveryDraw}. The identity is drawn for you and cannot be chosen.`,
-        },
-        {
-          title: identity.terms.commitment,
-          body: `Optionally surrender that whole unit forever to make the ${identity.terms.transientCollectible} permanent and reward-eligible.`,
-        },
-      ],
       specimenLabel: "Every craft is drawn from its own identity number",
       specimenGrounded: `${identity.terms.transientCollectible} · backed by one whole ${identity.liquidToken.displayName}`,
       specimenLaunched: `${identity.terms.permanentCollectible} · ${identity.terms.commitment} burned that ${identity.liquidToken.displayName} forever`,
@@ -1080,7 +979,7 @@ export const createIdentityApplicationCopy = (
     },
     fleet: {
       eyebrow: "CONNECTED COLLECTION",
-      title: identity.navigation.collection,
+      title: identity.navigation.collectionTask,
       introduction: `Inspect every ${identity.terms.transientCollectible} and ${identity.terms.permanentCollectible} held by the connected wallet.`,
       tokenBalance: `${identity.liquidToken.displayName} balance`,
       nextThreshold: `Next ${identity.terms.discoveryDraw} threshold`,
@@ -1096,6 +995,7 @@ export const createIdentityApplicationCopy = (
       connectAction: "Start collecting",
       filterLabel: "Filter collection",
       filterAll: "All",
+      filterGrounded: "Grounded",
       summaryLabel: "Collection summary",
       /* The disconnected route shows what the collection is — its public
        * model — rather than six unreadable metrics. */

@@ -212,6 +212,7 @@ abstract contract ProtocolSystemTestBase is Test, CanonicalHookMining {
         fixture.genesisVault = new GenesisLiquidityVault(
             ICanonicalMarketRegistry(address(fixture.marketRegistry)), address(this)
         );
+        fixture.feeHook.configureInitializer(address(fixture.genesisVault));
 
         _configureOwnership(fixture);
         _configureRewards(fixture);

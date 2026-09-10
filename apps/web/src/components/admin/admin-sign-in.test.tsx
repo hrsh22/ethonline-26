@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   },
   currentConnection: vi.fn(),
   modalOpen: vi.fn(),
+  rejected: false,
   logout: vi.fn(),
   modalSubscriber: undefined as
     ((event: { readonly data: unknown }) => void) | undefined,
@@ -29,8 +30,16 @@ const state = vi.hoisted(() => ({
   verify: vi.fn(),
 }));
 
-vi.mock("@reown/appkit/react", () => ({
-  modal: { open: state.modalOpen, subscribeEvents: state.modalSubscribe },
+vi.mock("@/providers/wallet-session", () => ({
+  useWalletSession: () => ({
+    ready: true,
+    connecting: false,
+    rejected: state.rejected,
+    modalOpen: false,
+    connect: state.modalOpen,
+    disconnect: vi.fn(),
+    disconnectStatus: "idle",
+  }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -49,7 +58,7 @@ vi.mock("wagmi", () => ({
 
 vi.mock("@/lib/wagmi", () => ({
   currentWalletConnection: () => state.currentConnection(),
-  isReownConfigured: true,
+  isWalletConfigured: true,
   protocolChain: { id: 84_532 },
 }));
 
@@ -76,8 +85,8 @@ const session = {
   chainId: 84_532,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: `0x${"f".repeat(64)}`,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: { hash: `0x${"a".repeat(64)}`, number: "31000000" },
   roles: ["keeper"],
 };
@@ -126,6 +135,7 @@ describe("public admin sign-in", () => {
       .mockImplementation(() => state.connection);
     state.switchError = false;
     state.switchPending = false;
+    state.rejected = false;
     state.modalSubscriber = undefined;
     state.modalSubscribe
       .mockReset()
@@ -236,17 +246,9 @@ describe("public admin sign-in", () => {
       candidate.textContent?.includes("Connect wallet"),
     );
     await act(async () => button?.click());
-    await act(async () =>
-      state.modalSubscriber?.({
-        data: {
-          event: "USER_REJECTED",
-          properties: { message: "User declined connection" },
-        },
-      }),
-    );
-
-    expect(document.activeElement).toBe(button);
-    expect(state.modalOpen).toHaveBeenCalledWith({ view: "Connect" });
+    state.rejected = true;
+    await render();
+    expect(state.modalOpen).toHaveBeenCalledOnce();
     expect(
       container.querySelector("[data-wallet-state='rejected']"),
     ).not.toBeNull();

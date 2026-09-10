@@ -52,7 +52,7 @@ describe("admin authentication", () => {
       authorityReader: unusedAuthorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => Uint8Array.from({ length: 32 }, () => 0xab),
       sessionTtlMilliseconds: 900_000,
       store,
@@ -77,7 +77,7 @@ describe("admin authentication", () => {
       authorityReader: unusedAuthorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => Uint8Array.from({ length: 32 }, () => 0xab),
       sessionTtlMilliseconds: 900_000,
       store,
@@ -85,7 +85,7 @@ describe("admin authentication", () => {
 
     try {
       expect(service.issueChallenge(address)).toEqual({
-        expiresAt: "2026-08-31T08:05:00.000Z",
+        expiresAt: "2026-09-05T08:05:00.000Z",
         message: `${
           "https://admin.orbit.example wants you to sign in with your Ethereum account:\n" +
           "0x8D01188806aA960F95A3fe4A343DFC26A8a7e6B5\n\n" +
@@ -94,8 +94,8 @@ describe("admin authentication", () => {
           "Version: 1\n" +
           "Chain ID: 84532\n" +
           `Nonce: ${"ab".repeat(32)}\n` +
-          "Issued At: 2026-08-31T08:00:00.000Z\n" +
-          "Expiration Time: 2026-08-31T08:05:00.000Z\n" +
+          "Issued At: 2026-09-05T08:00:00.000Z\n" +
+          "Expiration Time: 2026-09-05T08:05:00.000Z\n" +
           `Request ID: ${deploymentFingerprint}\n` +
           "Resources:\n" +
           `- urn:orbit:deployment:${"11".repeat(32)}`
@@ -127,7 +127,7 @@ describe("admin authentication", () => {
       },
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => Uint8Array.from({ length: 32 }, () => 0xab),
       sessionTtlMilliseconds: 900_000,
       store,
@@ -162,7 +162,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift();
         if (value === undefined) throw new Error("Random sequence exhausted");
@@ -185,8 +185,8 @@ describe("admin authentication", () => {
           csrfToken:
             "e905df9e476a4d74b01b6bd25a13b5ef8f57be83f7bf907ea531581101242672",
           deploymentFingerprint,
-          expiresAt: "2026-08-31T08:15:00.000Z",
-          issuedAt: "2026-08-31T08:00:00.000Z",
+          expiresAt: "2026-09-05T08:15:00.000Z",
+          issuedAt: "2026-09-05T08:00:00.000Z",
           observedBlock,
           roles: ["keeper"],
         },
@@ -220,7 +220,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -260,7 +260,7 @@ describe("admin authentication", () => {
     "fails closed when concurrent %s invalidates a session during a live role read",
     async (invalidation) => {
       const store = openAdminAuthStore(":memory:", { deploymentFingerprint });
-      let currentTime = new Date("2026-08-31T08:00:00.000Z");
+      let currentTime = new Date("2026-09-05T08:00:00.000Z");
       let readCount = 0;
       let signalRoleReadStarted = (): void => undefined;
       let releaseRoleRead = (): void => undefined;
@@ -382,7 +382,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -451,7 +451,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -508,7 +508,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -549,7 +549,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -575,12 +575,12 @@ describe("admin authentication", () => {
           "0x0000000000000000000000000000000000000001",
         ),
         challenge.message.replace(
-          "Issued At: 2026-08-31T08:00:00.000Z",
-          "Issued At: 2026-08-31T08:00:01.000Z",
+          "Issued At: 2026-09-05T08:00:00.000Z",
+          "Issued At: 2026-09-05T08:00:01.000Z",
         ),
         challenge.message.replace(
-          "Expiration Time: 2026-08-31T08:05:00.000Z",
-          "Expiration Time: 2026-08-31T08:06:00.000Z",
+          "Expiration Time: 2026-09-05T08:05:00.000Z",
+          "Expiration Time: 2026-09-05T08:06:00.000Z",
         ),
         challenge.message.replace(
           `Nonce: ${"ab".repeat(32)}`,
@@ -642,7 +642,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -686,7 +686,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);
@@ -742,7 +742,7 @@ describe("admin authentication", () => {
       authorityReader,
       challengeTtlMilliseconds: 300_000,
       deploymentFingerprint,
-      now: () => new Date("2026-08-31T08:00:00.000Z"),
+      now: () => new Date("2026-09-05T08:00:00.000Z"),
       randomBytes: () => {
         const value = values.shift() ?? 0;
         return Uint8Array.from({ length: 32 }, () => value);

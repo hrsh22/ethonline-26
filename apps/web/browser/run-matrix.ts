@@ -9,6 +9,7 @@ import {
   checkFundingDiscoveryJourney,
 } from "./collector-journeys.ts";
 import { checkPublicCollection } from "./public-collection.ts";
+import { checkHangarSelection } from "./hangar-selection.ts";
 import { checkMobileAccessibility } from "./mobile-accessibility.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,6 +21,7 @@ import { ADMIN_FIXTURE_COOKIE } from "./admin-fixture.ts";
 
 import {
   collectorHeaderCollisionFailure,
+  collectorFundingVisibilityFailure,
   focusFailure,
   idleRequestFailure,
   observeApplicationRequests,
@@ -86,11 +88,7 @@ export const awaitHydration = async (page: Page): Promise<void> => {
   const connect = page
     .getByRole("button", { name: "Connect wallet", exact: true })
     .first();
-  const dialog = page
-    .getByRole("button", { name: "Continue with a wallet", exact: true })
-    .or(page.getByText("Browser Matrix Wallet", { exact: true }))
-    .or(page.getByText("Connect Wallet", { exact: true }))
-    .first();
+  const dialog = page.getByRole("dialog").getByRole("heading").first();
   const deadline = Date.now() + 15_000;
   while (!(await dialog.isVisible())) {
     // A click before hydration is discarded by the browser. Retry the user
@@ -104,8 +102,26 @@ export const awaitHydration = async (page: Page): Promise<void> => {
         if (Date.now() >= deadline) throw error;
       });
   }
-  await page.keyboard.press("Escape");
-  await dialog.waitFor({ state: "hidden" });
+  const close = page.getByRole("button", {
+    name: "close modal",
+    exact: true,
+  });
+  const closeDeadline = Date.now() + 15_000;
+  while (await dialog.isVisible()) {
+    // Privy's dialog can rerender once after becoming visible. A close click
+    // aimed at the replaced button is discarded, so retry the real user
+    // action until the dialog itself confirms that it closed.
+    await close.click({ timeout: 1_000 }).catch((error) => {
+      if (Date.now() >= closeDeadline) throw error;
+    });
+    await dialog.waitFor({ state: "hidden", timeout: 1_000 }).catch((error) => {
+      if (Date.now() >= closeDeadline) throw error;
+      // Some embedded-wallet builds retain focus through the first close
+      // click while replacing the dialog. Escape is the equivalent keyboard
+      // dismissal and keeps the hydration proof deterministic under load.
+      return page.keyboard.press("Escape");
+    });
+  }
 };
 
 const connectWallet = async (
@@ -156,12 +172,29 @@ const connectWallet = async (
     .first()
     .waitFor({ state: "visible", timeout: 15_000 });
   if (wallet === "connecting") {
-    await page.getByRole("button", { name: "Close", exact: true }).click();
     await page
-      .locator('[data-wallet-state="connecting"]')
+      .getByRole("button", { name: "close modal", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("heading")
+      .first()
+      .waitFor({ state: "hidden" });
+    // Closing an unfinished Privy connection must release the pending state.
+    await page
+      .locator('[data-wallet-state="disconnected"]')
+      .first()
+      .waitFor({ state: "visible" });
+    await page
+      .getByRole("button", { name: "Connect wallet", exact: true })
       .first()
       .waitFor({ state: "visible" });
   } else {
+    await page
+      .getByRole("dialog")
+      .getByRole("heading")
+      .first()
+      .waitFor({ state: "hidden", timeout: 15_000 });
     const chainId = await page.evaluate(async () => {
       const ethereum = (
         window as unknown as {
@@ -181,43 +214,53 @@ const connectWallet = async (
 const runAxe = async (
   page: Page,
   label: string,
+  excludeBaseUiFocusGuards = false,
 ): Promise<readonly BrowserFailure[]> => {
   await page.addScriptTag({ content: axe.source });
-  const violations = await page.evaluate(async (options) => {
-    const runner = (
-      window as unknown as {
-        readonly axe: {
-          readonly run: (
-            context: Document,
-            options: unknown,
-          ) => Promise<{
-            readonly violations: readonly {
-              readonly help: string;
-              readonly id: string;
-              readonly impact: string | null;
-              readonly nodes: readonly unknown[];
-            }[];
-          }>;
-        };
-      }
-    ).axe;
-    const result = await runner.run(document, options);
-    return result.violations.map((violation) => ({
-      help: violation.help,
-      id: violation.id,
-      impact: violation.impact,
-      nodes: violation.nodes.length,
-      // The failing selector is what makes a violation actionable.
-      targets: violation.nodes
-        .slice(0, 3)
-        .map((node) =>
-          String(
-            (node as { readonly target?: readonly unknown[] }).target?.[0] ??
-              "unknown",
+  const violations = await page.evaluate(
+    async ({ options, excludeFocusGuards }) => {
+      const runner = (
+        window as unknown as {
+          readonly axe: {
+            readonly run: (
+              context: unknown,
+              options: unknown,
+            ) => Promise<{
+              readonly violations: readonly {
+                readonly help: string;
+                readonly id: string;
+                readonly impact: string | null;
+                readonly nodes: readonly unknown[];
+              }[];
+            }>;
+          };
+        }
+      ).axe;
+      // Base UI's portalled popovers use intentionally focusable, aria-hidden
+      // sentinels to preserve tab order. Test the application surface, excluding
+      // only those implementation-only focus guards from axe's aria-hidden rule.
+      const context = excludeFocusGuards
+        ? { exclude: [["[data-base-ui-focus-guard]"]] }
+        : document;
+      const result = await runner.run(context, options);
+      return result.violations.map((violation) => ({
+        help: violation.help,
+        id: violation.id,
+        impact: violation.impact,
+        nodes: violation.nodes.length,
+        // The failing selector is what makes a violation actionable.
+        targets: violation.nodes
+          .slice(0, 3)
+          .map((node) =>
+            String(
+              (node as { readonly target?: readonly unknown[] }).target?.[0] ??
+                "unknown",
+            ),
           ),
-        ),
-    }));
-  }, AXE_OPTIONS);
+      }));
+    },
+    { excludeFocusGuards: excludeBaseUiFocusGuards, options: AXE_OPTIONS },
+  );
   return violations.map((violation) => ({
     detail: `${label}: ${violation.id} (${violation.impact ?? "unknown"}) ${violation.help} on ${violation.nodes} node(s) at ${violation.targets.join(", ")}`,
     kind: "accessibility" as const,
@@ -231,7 +274,11 @@ const captureScreenshot = async (
 ): Promise<void> => {
   const target = join(directory, `${name}.png`);
   mkdirSync(dirname(target), { recursive: true });
-  await page.screenshot({ fullPage: false, path: target });
+  await page.screenshot({
+    animations: "disabled",
+    fullPage: false,
+    path: target,
+  });
 };
 
 interface VisitInput {
@@ -376,6 +423,11 @@ const inspectPage = async (
   if (overflow !== undefined) failures.push(overflow);
   const collision = await collectorHeaderCollisionFailure(page, input.label);
   if (collision !== undefined) failures.push(collision);
+  const fundingVisibility = await collectorFundingVisibilityFailure(
+    page,
+    input.label,
+  );
+  if (fundingVisibility !== undefined) failures.push(fundingVisibility);
   const focus = await focusFailure(page, input.label);
   if (focus !== undefined) failures.push(focus);
   failures.push(...(await renderedStyleFailures(page, input.label)));
@@ -478,7 +530,11 @@ const visit = async (
   try {
     await installWalletFixture(page, input.wallet);
     await installDataFixture(page, input.data);
-    if (collector !== undefined && input.label.endsWith("partial-rewards")) {
+    if (
+      collector !== undefined &&
+      (input.label.endsWith("partial-rewards") ||
+        input.label.includes("hangar-selection"))
+    ) {
       collector.permanent = true;
       collector.indexed = true;
       collector.partialRewards = true;
@@ -503,8 +559,33 @@ const visit = async (
       await awaitHydration(page);
     }
     await connectWallet(page, input.wallet);
+    if (input.label.startsWith("state:wallet-reload-disconnect/")) {
+      await page.reload();
+      await page.locator('[data-wallet-state="connected"]').first().waitFor();
+      await page
+        .getByRole("button", { name: "Disconnect", exact: true })
+        .first()
+        .click();
+      await page
+        .getByRole("button", { name: "Connect wallet", exact: true })
+        .first()
+        .waitFor();
+      await page.reload();
+      await page
+        .getByRole("button", { name: "Connect wallet", exact: true })
+        .first()
+        .waitFor();
+      // An extension can retain its grant: the application must honor the user's
+      // disconnect across reload despite those still-authorized accounts.
+      await page
+        .locator('[data-wallet-state="disconnected"]')
+        .first()
+        .waitFor();
+    }
     if (collector !== undefined) {
-      if (input.label.endsWith("partial-rewards"))
+      if (input.label.includes("hangar-selection"))
+        await checkHangarSelection(page, collector);
+      else if (input.label.endsWith("partial-rewards"))
         await checkPartialRewardsJourney(page, collector);
       else if (input.label.endsWith("receipt-recovery"))
         await checkReceiptRecoveryJourney(page, collector);
@@ -572,6 +653,29 @@ const visit = async (
       if (failure !== undefined) failures.push(failure);
     }
     failures.push(...(await inspectPage(page, input)));
+    if (input.label === "collector-journey:launch-reload") {
+      await page.getByRole("button", { name: /^Notifications/ }).click();
+      await page
+        .locator('[data-slot="popover-content"]')
+        .evaluate(async (element) =>
+          Promise.all(
+            element
+              .getAnimations()
+              .map((animation) => animation.finished.catch(() => undefined)),
+          ),
+        );
+      failures.push(
+        ...(await runAxe(page, "notifications:completed-history", true)),
+      );
+      if (input.options.screenshotDirectory !== undefined) {
+        await captureScreenshot(
+          page,
+          input.options.screenshotDirectory,
+          "notifications-completed-history",
+        );
+      }
+      await page.keyboard.press("Escape");
+    }
   } catch (error) {
     const visibleState = await page
       .locator("body")
@@ -751,6 +855,18 @@ export const runBrowserMatrix = async (
     ...adminPlan(options),
     ...adminInputPlan(options),
     ...idleTrafficPlan(options),
+    ...[...RELEASE_VIEWPORTS, { height: 800, label: "1280", width: 1280 }].map(
+      (viewport) => ({
+        axe: true,
+        data: "stubbed" as const,
+        label: `collector-journey:hangar-selection@${viewport.label}`,
+        options,
+        path: "/fleet",
+        viewport,
+        wallet: "transacting" as const,
+        screenshot: true,
+      }),
+    ),
     {
       axe: true,
       data: "stubbed" as const,
@@ -822,7 +938,7 @@ export const runBrowserMatrix = async (
     {
       axe: true,
       data: "stubbed" as const,
-      expectFinalPath: "/fleet/42",
+      expectFinalPath: "/fleet/42?from=explore",
       label: "public-collection:explore-and-share",
       options,
       path: "/",
@@ -832,7 +948,7 @@ export const runBrowserMatrix = async (
     {
       axe: true,
       data: "stubbed" as const,
-      expectFinalPath: "/",
+      expectFinalPath: "/explore",
       label: "mobile-accessibility:back-text-motion",
       options,
       path: "/relics",

@@ -14,7 +14,7 @@ const address = "0x1111111111111111111111111111111111111111";
 const challenge = {
   apiVersion: 1,
   challenge: {
-    expiresAt: "2026-08-31T05:05:00.000Z",
+    expiresAt: "2026-09-05T05:05:00.000Z",
     message: "EIP-4361 challenge",
   },
 } as const;
@@ -23,8 +23,8 @@ const session = {
   chainId: 84_532,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: `0x${"f".repeat(64)}`,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: { hash: `0x${"a".repeat(64)}`, number: "31000000" },
   roles: ["keeper"],
 };

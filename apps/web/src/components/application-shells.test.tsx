@@ -3,8 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const routeState = vi.hoisted(() => ({ pathname: "/" }));
 
-// The live readout needs the protocol provider; the shell tests exercise
-// navigation and wallet states, not protocol reads.
 // Activity has its own provider and browser journeys; these checks isolate shell navigation.
 vi.mock("@/components/shell/collector-activity", () => ({
   CollectorActivity: () => null,
@@ -12,7 +10,6 @@ vi.mock("@/components/shell/collector-activity", () => ({
 vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => ({ transaction: { status: "idle" } }),
 }));
-vi.mock("@/components/shell/live-pulse", () => ({ LivePulse: () => null }));
 vi.mock("next/navigation", () => ({
   usePathname: () => routeState.pathname,
 }));
@@ -20,8 +17,6 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/components/wallet-control", () => ({
   WalletControl: () => <button type="button">Test wallet</button>,
 }));
-
-import { applicationCopy } from "@/lib/identity";
 
 import { AdminShell } from "./admin/admin-shell";
 import { CollectorShell } from "./shell/collector-shell";
@@ -31,8 +26,8 @@ const adminSession = {
   chainId: 84_532 as const,
   csrfToken: "c".repeat(32),
   deploymentFingerprint: `0x${"f".repeat(64)}` as const,
-  expiresAt: "2026-08-31T05:15:00.000Z",
-  issuedAt: "2026-08-31T05:00:00.000Z",
+  expiresAt: "2026-09-05T05:15:00.000Z",
+  issuedAt: "2026-09-05T05:00:00.000Z",
   observedBlock: {
     hash: `0x${"a".repeat(64)}` as const,
     number: "31000000",
@@ -45,7 +40,7 @@ describe("application route shells", () => {
     routeState.pathname = "/";
   });
 
-  it("renders collector tasks without promoting admin controls", () => {
+  it("renders the compact collector header without promoting admin controls", () => {
     routeState.pathname = "/exchange";
 
     const html = renderToStaticMarkup(
@@ -55,19 +50,35 @@ describe("application route shells", () => {
     );
 
     expect(html).toContain('aria-label="Collector navigation"');
-    /* The collecting loop, named as consistent nouns. The collection is the one
-       destination an identity names for itself, so it is asserted through the
-       copy rather than as a literal. */
+    expect(html).toContain('href="/"');
+    expect(html).toContain("Explore");
     expect(html).toContain("Trade");
-    expect(html).toContain(applicationCopy.navigation.collection);
-    expect(html).toContain("Rewards");
-    // Public evidence, reachable but quieter.
-    expect(html).toContain("Market");
-    expect(html).toContain("Status");
-    // Onboarding is a call to action, not a permanent destination.
-    expect(html).toContain('href="/start"');
+    expect(html).toContain("My Fleet");
+    expect(html).toContain("Protocol status");
+    expect(html).toContain("No-value test assets.");
+    expect(html).toContain("BASE SEPOLIA");
+    expect(html.match(/>Get test funds</gu)).toHaveLength(2);
+    expect(html).toContain('href="/faucet"');
+    expect(html).toContain("data-collector-funding-row");
+    expect(html).toContain("data-collector-wallet-actions");
+    expect(html).not.toContain('href="/start"');
+    expect(html).not.toContain("Live at block");
     expect(html).not.toContain('href="/admin"');
     expect(html).not.toContain(">Admin<");
+  });
+
+  it("marks the sticky funding destination current on the faucet", () => {
+    routeState.pathname = "/faucet";
+
+    const html = renderToStaticMarkup(
+      <CollectorShell>
+        <main>Faucet content</main>
+      </CollectorShell>,
+    );
+
+    expect(
+      html.match(/aria-current="page"[^>]*href="\/faucet"/gu),
+    ).toHaveLength(3);
   });
 
   it("renders a separate operator context with a collector escape route", () => {

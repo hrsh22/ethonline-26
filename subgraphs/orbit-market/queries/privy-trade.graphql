@@ -1,0 +1,50 @@
+query PrivyTrade($hash: String!) {
+  _meta {
+    block {
+      number
+      hash
+      timestamp
+    }
+    hasIndexingErrors
+    deployment
+  }
+  swaps(where: { hash: $hash }) {
+    id
+    hash
+    logIndex
+    blockNumber
+    timestamp
+    amountIn
+    amountOut
+    tokenIn {
+      id
+      symbol
+      decimals
+    }
+    tokenOut {
+      id
+      symbol
+      decimals
+    }
+    pool {
+      id
+      feeBasisToken {
+        id
+        symbol
+      }
+    }
+  }
+  hookFeeAccruals(where: { hash: $hash }) {
+    id
+    hash
+    logIndex
+    blockNumber
+    timestamp
+    trader
+    wethVolume
+    feesWeth
+    rewardsWeth
+    liquidityWeth
+    creatorWeth
+  }
+}

@@ -3,22 +3,14 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 
-const events = vi.hoisted(
-  () => new Set<(event: { data: { event: string } }) => void>(),
-);
-vi.mock("@reown/appkit/react", () => ({
-  modal: {
-    subscribeEvents: (
-      listener: (event: { data: { event: string } }) => void,
-    ) => {
-      events.add(listener);
-      return () => events.delete(listener);
-    },
-  },
+const session = vi.hoisted(() => ({ modalOpen: false }));
+vi.mock("@/providers/wallet-session", () => ({
+  useWalletSession: () => session,
 }));
 import { WalletConnectionAction } from "./wallet-connection-action";
 
 beforeEach(() => {
+  session.modalOpen = false;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
 });
 const roots: ReturnType<typeof createRoot>[] = [];
@@ -41,29 +33,27 @@ it.each(["return", "other-focus", "unmounted"] as const)(
     document.body.append(container);
     const root = createRoot(container);
     roots.push(root);
-    await act(() =>
-      root.render(
-        <>
-          <WalletConnectionAction onContinue={() => undefined}>
-            Connect wallet
-          </WalletConnectionAction>
-          <button>Other control</button>
-        </>,
-      ),
+    const content = () => (
+      <>
+        <WalletConnectionAction onContinue={() => undefined}>
+          Connect wallet
+        </WalletConnectionAction>
+        <button>Other control</button>
+      </>
     );
+    await act(() => root.render(content()));
     const trigger = container.querySelectorAll("button")[0]!;
     const other = container.querySelectorAll("button")[1]!;
     trigger.focus();
     await act(() => trigger.click());
+    session.modalOpen = true;
+    await act(() => root.render(content()));
     trigger.blur();
     if (scenario === "other-focus") other.focus();
     if (scenario === "unmounted") await act(() => root.render(null));
-    await act(() => {
-      events.forEach((listener) =>
-        listener({ data: { event: "MODAL_CLOSE" } }),
-      );
-      frame.forEach((callback) => callback(0));
-    });
+    session.modalOpen = false;
+    if (scenario !== "unmounted") await act(() => root.render(content()));
+    await act(() => frame.forEach((callback) => callback(0)));
     expect(document.activeElement).toBe(
       scenario === "return"
         ? trigger
@@ -85,27 +75,27 @@ it("returns to the latest initiator when an earlier connect attempt never opened
   document.body.append(container);
   const root = createRoot(container);
   roots.push(root);
-  await act(() =>
-    root.render(
-      <>
-        <WalletConnectionAction onContinue={() => undefined}>
-          Header connect
-        </WalletConnectionAction>
-        <WalletConnectionAction onContinue={() => undefined}>
-          Page connect
-        </WalletConnectionAction>
-      </>,
-    ),
+  const content = () => (
+    <>
+      <WalletConnectionAction onContinue={() => undefined}>
+        Header connect
+      </WalletConnectionAction>
+      <WalletConnectionAction onContinue={() => undefined}>
+        Page connect
+      </WalletConnectionAction>
+    </>
   );
+  await act(() => root.render(content()));
   const [first, latest] = container.querySelectorAll("button");
   first!.focus();
   await act(() => first!.click());
   latest!.focus();
   await act(() => latest!.click());
+  session.modalOpen = true;
+  await act(() => root.render(content()));
   latest!.blur();
-  await act(() => {
-    events.forEach((listener) => listener({ data: { event: "MODAL_CLOSE" } }));
-    frames.forEach((callback) => callback(0));
-  });
+  session.modalOpen = false;
+  await act(() => root.render(content()));
+  await act(() => frames.forEach((callback) => callback(0)));
   expect(document.activeElement).toBe(latest);
 });

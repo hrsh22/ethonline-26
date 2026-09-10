@@ -132,8 +132,6 @@ runMain(
         "src/market/CanonicalHookDeployer.sol:CanonicalHookDeployer",
       canonicalFeeHook: "src/market/CanonicalFeeHook.sol:CanonicalFeeHook",
       canonicalRouter: "src/market/CanonicalRouter.sol:CanonicalRouter",
-      genesisLiquidityVault:
-        "src/liquidity/GenesisLiquidityVault.sol:GenesisLiquidityVault",
       metadataRenderer:
         "src/metadata/PlaceholderMetadataRenderer.sol:PlaceholderMetadataRenderer",
       aaplcConversionAdapter:
@@ -144,6 +142,33 @@ runMain(
         "src/conversion/SepoliaV4ConversionAdapter.sol:SepoliaV4ConversionAdapter",
       nvdacConversionAdapter:
         "src/conversion/SepoliaV4ConversionAdapter.sol:SepoliaV4ConversionAdapter",
+      ...(manifest.schemaVersion === 2
+        ? {
+            genesisLiquidityVault:
+              "src/liquidity/GenesisLiquidityVault.sol:GenesisLiquidityVault",
+          }
+        : {
+            ...("ccaCreate2Deployer" in manifest.contracts
+              ? {
+                  ccaCreate2Deployer:
+                    "src/deployment/CcaCreate2Deployer.sol:CcaCreate2Deployer",
+                }
+              : {}),
+            ccaLaunchFunding:
+              "src/deployment/CcaLaunchFunding.sol:CcaLaunchFunding",
+            ccaBidEscrowFactory:
+              "src/launch/CcaBidEscrowFactory.sol:CcaBidEscrowFactory",
+            ccaBidValidationHook:
+              "src/launch/CcaBidValidationHook.sol:CcaBidValidationHook",
+            ccaCanonicalLaunchReadiness:
+              "src/launch/CcaCanonicalLaunchReadiness.sol:CcaCanonicalLaunchReadiness",
+            ccaLaunchCoordinator:
+              "src/launch/CcaLaunchCoordinator.sol:CcaLaunchCoordinator",
+            ccaRecoverySeeder:
+              "src/launch/CcaRecoverySeeder.sol:CcaRecoverySeeder",
+            permanentPositionRecipient:
+              "src/launch/PermanentPositionRecipient.sol:PermanentPositionRecipient",
+          }),
     };
 
     const contractsRoot = resolve(repositoryRoot, "packages/contracts");
@@ -151,6 +176,46 @@ runMain(
       Effect.gen(function* () {
         const address = manifest.contracts[name];
         const checkedAddress = address;
+        const repositoryUrl = `https://sourcify.dev/server/v2/contract/84532/${checkedAddress}`;
+        const existingExactMatch = yield* Effect.promise(async () => {
+          try {
+            const response = await fetch(repositoryUrl);
+            if (!response.ok) return undefined;
+            const result = (await response.json()) as {
+              readonly runtimeMatch?: string | undefined;
+              readonly verifiedAt?: string | undefined;
+            };
+            return result.runtimeMatch === "exact_match" ? result : undefined;
+          } catch {
+            return undefined;
+          }
+        });
+        const priorBaseScanEvidence = previousBaseScanEvidence.get(
+          checkedAddress.toLowerCase(),
+        );
+        if (existingExactMatch !== undefined) {
+          return {
+            name,
+            address: checkedAddress,
+            source,
+            status: "exact_match" as const,
+            repositoryUrl,
+            sourcifyCheckedAt: existingExactMatch.verifiedAt,
+            ...(priorBaseScanEvidence === undefined
+              ? {}
+              : {
+                  baseScanStatus: priorBaseScanEvidence.baseScanStatus,
+                  baseScanUrl: priorBaseScanEvidence.baseScanUrl,
+                  ...(typeof priorBaseScanEvidence.baseScanCheckedAt ===
+                  "string"
+                    ? {
+                        baseScanCheckedAt:
+                          priorBaseScanEvidence.baseScanCheckedAt,
+                      }
+                    : {}),
+                }),
+          };
+        }
         const verification = yield* subprocess(
           `Could not start source verification for ${name}`,
           () =>
@@ -162,6 +227,8 @@ runMain(
                 "84532",
                 "--verifier",
                 "sourcify",
+                "--compilation-profile",
+                manifest.schemaVersion === 3 ? "cca_via_ir" : "default",
                 "--watch",
                 checkedAddress,
                 source,
@@ -188,9 +255,6 @@ runMain(
         yield* ensure(exactMatch, `Source verification failed for ${name}`);
         const jobId = output.match(/Verification Job ID: `([^`]+)`/)?.[1];
         const jobUrl = output.match(/URL: (https:\/\/\S+)/)?.[1];
-        const priorBaseScanEvidence = previousBaseScanEvidence.get(
-          checkedAddress.toLowerCase(),
-        );
         return {
           name,
           address: checkedAddress,
@@ -198,7 +262,7 @@ runMain(
           status: "exact_match" as const,
           jobId,
           jobUrl,
-          repositoryUrl: `https://repo.sourcify.dev/contracts/full_match/84532/${checkedAddress}/`,
+          repositoryUrl,
           ...(priorBaseScanEvidence === undefined
             ? {}
             : {

@@ -37,6 +37,9 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const nextConfig: NextConfig = {
+  // The collaborative preview reaches this development machine over the LAN.
+  // Next otherwise rejects its hydration chunks, fonts, and HMR requests.
+  allowedDevOrigins: ["192.168.1.5"],
   // The floating badge covers wallet controls or mobile navigation.
   devIndicators: false,
   experimental: {

@@ -1,32 +1,71 @@
 import { describe, expect, it } from "vitest";
 
-import { createShellNavigation } from "./navigation";
+import {
+  collectorReturnDestination,
+  createShellNavigation,
+} from "./navigation";
+
+describe("collector return destinations", () => {
+  it("allows only known collector origins and keeps legacy Fleet returns", () => {
+    expect(collectorReturnDestination("/auction")).toEqual({
+      href: "/auction",
+      label: "Auction",
+    });
+    expect(collectorReturnDestination("/exchange")).toEqual({
+      href: "/exchange",
+      label: "Trade",
+    });
+    expect(collectorReturnDestination("/start")).toEqual({
+      href: "/fleet",
+      label: "Fleet",
+    });
+    expect(collectorReturnDestination("/fleet")).toEqual({
+      href: "/fleet",
+      label: "Fleet",
+    });
+    expect(collectorReturnDestination("https://example.com")).toBeUndefined();
+    expect(collectorReturnDestination("//example.com")).toBeUndefined();
+    expect(collectorReturnDestination("/auction/other")).toBeUndefined();
+  });
+});
 
 describe("collector navigation", () => {
-  it("lists the collecting loop before the public evidence", () => {
+  it("exposes the collector destinations and secondary utilities", () => {
     const navigation = createShellNavigation("collector", "/exchange");
 
     expect(navigation.primary.map((entry) => entry.href)).toEqual([
-      "/start",
+      "/explore",
+      "/auction",
       "/exchange",
       "/fleet",
-      "/relics",
-      "/rewards",
+    ]);
+    expect(navigation.primary.map((entry) => entry.label)).toEqual([
+      "Explore",
+      "Auction",
+      "Trade",
+      "My Fleet",
     ]);
     expect(navigation.utility.map((entry) => entry.href)).toEqual([
-      "/market",
-      "/status",
       "/learn",
+      "/status",
       "/faucet",
+    ]);
+    expect(navigation.utility.map((entry) => entry.label)).toEqual([
+      "Learn",
+      "Protocol status",
+      "Faucet",
     ]);
   });
 
   it("marks exactly one destination active, including on a detail page", () => {
     for (const [pathname, expected] of [
+      ["/explore", "/explore"],
+      ["/auction", "/auction"],
       ["/exchange", "/exchange"],
+      ["/market", "/exchange"],
+      ["/relics", "/explore"],
       ["/fleet", "/fleet"],
       ["/fleet/1204", "/fleet"],
-      ["/relics", "/relics"],
       ["/faucet", "/faucet"],
     ] as const) {
       const navigation = createShellNavigation("collector", pathname);

@@ -233,6 +233,157 @@
   --radius-card: var(--radius-surface);
 }
 
+/* Hangar typography is collector-scoped: the operator console keeps its
+ * established mono density, while collector prose and headings use Barlow.
+ * Explicit `font-mono` values remain JetBrains Mono in both applications. */
+[data-shell="collector"] {
+  --font-sans: var(--font-barlow);
+  --font-display: var(--font-barlow);
+
+  font-family: var(--font-sans), "Arial Narrow", Arial, sans-serif;
+  font-size: 1rem;
+  background:
+    radial-gradient(
+      circle at 72% 18%,
+      rgba(255, 106, 31, 0.055),
+      transparent 27rem
+    ),
+    var(--canvas);
+}
+
+.collector-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  white-space: nowrap;
+}
+.collector-orbit-mark {
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--text-primary);
+  border-radius: 50%;
+}
+.collector-orbit-mark::after {
+  content: "";
+  position: absolute;
+  top: 0.625rem;
+  left: -0.25rem;
+  width: 1.875rem;
+  border-top: 1px solid var(--accent-fill);
+  transform: rotate(-18deg);
+}
+@media (max-width: 560px) {
+  .collector-brand-link {
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+[data-shell="collector"] :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--font-display), "Arial Narrow", Arial, sans-serif;
+}
+
+[data-shell="collector"] :is([data-slot="button"], [data-slot="button-link"]) {
+  font-family: var(--font-sans), "Arial Narrow", Arial, sans-serif;
+  font-size: 1rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* WalletControl also serves the vertical admin rail. In the collector top bar
+ * it stays horizontal; exceptional explanations float below the bar instead
+ * of turning routine chrome into a second row. */
+[data-shell="collector"] [data-collector-wallet-actions] .wallet-control-state {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+}
+
+[data-shell="collector"]
+  [data-collector-wallet-actions]
+  .wallet-control-state
+  > :is(.disabled-reason, .state-feedback) {
+  position: absolute;
+  z-index: 60;
+  /* Below 1280px the funding utility occupies a second header row. Clear the
+   * entire sticky header so transient wallet notices cannot cover its link. */
+  top: calc(100% + 4.5rem);
+  right: 0;
+  width: min(22rem, calc(100vw - 2rem));
+  margin: 0;
+}
+
+@media (min-width: 80rem) {
+  [data-shell="collector"]
+    [data-collector-wallet-actions]
+    .wallet-control-state
+    > :is(.disabled-reason, .state-feedback) {
+    top: calc(100% + 1.5rem);
+  }
+}
+
+[data-shell="collector"]
+  [data-collector-wallet-actions]
+  .wallet-control-state
+  > .disabled-reason {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-1);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-overlay);
+}
+
+/* The shared connection explainer opens above the desktop rail wallet. This
+ * collector-only override places it below the sticky top header. */
+[data-shell="collector"] [data-collector-wallet-actions] details > p {
+  position-anchor: --collector-wallet-help;
+  position: fixed;
+  top: calc(anchor(bottom, 4.75rem) + 0.5rem);
+  right: 0.75rem;
+  bottom: auto;
+  left: 0.75rem;
+  width: auto;
+  max-width: 20rem;
+  margin-top: 0;
+  margin-left: auto;
+  margin-bottom: 0;
+}
+
+[data-shell="collector"] [data-collector-wallet-actions] details {
+  anchor-name: --collector-wallet-help;
+}
+
+.collector-notifications,
+.collector-completion-toast {
+  font-family: var(--font-barlow), "Arial Narrow", Arial, sans-serif;
+}
+.collector-completion-toast {
+  position: fixed;
+  z-index: 45;
+  right: 1rem;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  width: min(24rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-surface);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-overlay);
+}
+@media (min-width: 768px) {
+  .collector-completion-toast {
+    bottom: 1rem;
+  }
+}
+
 /* Element defaults live in `base` so component utilities can override them.
  *
  * Unlayered, these would outrank every `@layer` — including Tailwind's

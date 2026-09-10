@@ -1,0 +1,63 @@
+{
+  "endpoint": "https://api.studio.thegraph.com/query/85163/orbit-market/0.1.3",
+  "queriedAt": "2026-09-07T22:38:28.239Z",
+  "variables": {
+    "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928"
+  },
+  "result": {
+    "data": {
+      "swaps": [
+        {
+          "id": "swap-0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928-166",
+          "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
+          "logIndex": 166,
+          "blockNumber": "46526067",
+          "timestamp": "1788820422",
+          "amountIn": "6790000000000000",
+          "amountOut": "1171360501692246067",
+          "tokenIn": {
+            "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+            "symbol": "MOCK-WETH-TEST",
+            "decimals": 18
+          },
+          "tokenOut": {
+            "id": "0x3ded7308789f311d435f013de681d0f08c961081",
+            "symbol": "FUEL",
+            "decimals": 18
+          },
+          "pool": {
+            "id": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d",
+            "feeBasisToken": {
+              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
+              "symbol": "MOCK-WETH-TEST"
+            }
+          }
+        }
+      ],
+      "hookFeeAccruals": [
+        {
+          "id": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928-165",
+          "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
+          "logIndex": 165,
+          "blockNumber": "46526067",
+          "timestamp": "1788820422",
+          "trader": "0xd86df743ee66906981e34beecfd5f7afd89caac9",
+          "wethVolume": "7000000000000000",
+          "feesWeth": "210000000000000",
+          "rewardsWeth": "140000000000000",
+          "liquidityWeth": "59500000000000",
+          "creatorWeth": "10500000000000"
+        }
+      ],
+      "_meta": {
+        "block": {
+          "number": 46526208,
+          "hash": "0x489493130fb7b513b16dc07b7df7933d1405ae477a75f6550df28f14d5437926",
+          "timestamp": 1788820704
+        },
+        "hasIndexingErrors": false,
+        "deployment": "QmXBGqF3KLdY1P9osp4xVZ8e3eaAQNKHGuEmfE2MhtvnbC"
+      }
+    }
+  }
+}

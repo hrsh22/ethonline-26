@@ -1,0 +1,19 @@
+{
+  "name": "orbit-market-subgraph",
+  "private": true,
+  "version": "0.1.3",
+  "scripts": {
+    "generate": "node scripts/generate-manifest-config.mjs",
+    "check:manifest": "node scripts/generate-manifest-config.mjs --check",
+    "codegen": "node scripts/generate-manifest-config.mjs && graph codegen",
+    "build": "node scripts/generate-manifest-config.mjs --check && graph build",
+    "test": "node --test scripts/schema-compatibility.test.mjs && graph test --version 0.6.0",
+    "deploy:studio": "node scripts/deploy-studio.mjs"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "0.98.1",
+    "@graphprotocol/graph-ts": "0.38.2",
+    "matchstick-as": "0.6.0",
+    "graphql": "16.11.0"
+  }
+}

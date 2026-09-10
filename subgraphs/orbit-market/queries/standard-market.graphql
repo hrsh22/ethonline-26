@@ -1,0 +1,38 @@
+query StandardMarket($block: Block_height) {
+  dexAmmProtocols(first: 1, block: $block) {
+    id
+    name
+    schemaVersion
+    network
+    cumulativeUniqueUsers
+    totalValueLockedUSD
+  }
+  liquidityPools(
+    block: $block
+    first: 1
+    orderBy: createdTimestamp
+    orderDirection: asc
+  ) {
+    id
+    inputTokens {
+      id
+      name
+      symbol
+      decimals
+    }
+    swaps(first: 3, orderBy: timestamp, orderDirection: desc) {
+      hash
+      timestamp
+      tokenIn {
+        symbol
+        decimals
+      }
+      amountIn
+      tokenOut {
+        symbol
+        decimals
+      }
+      amountOut
+    }
+  }
+}

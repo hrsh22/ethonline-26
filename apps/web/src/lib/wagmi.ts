@@ -1,10 +1,8 @@
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import type { AppKitNetwork } from "@reown/appkit/networks";
-import { createPublicClient, http } from "viem";
+import { createConfig as createPrivyConfig } from "@privy-io/wagmi";
+import { createPublicClient } from "viem";
 import { base, baseSepolia, foundry } from "viem/chains";
 import { createConfig } from "wagmi";
 import { getConnection } from "wagmi/actions";
-import { injected } from "wagmi/connectors/injected";
 import { bindReadSignal } from "@orbit/protocol/read-lifetime";
 
 import { deploymentEnvironment } from "@/lib/deployment";
@@ -13,43 +11,12 @@ import {
   createWebTransactionRpcTransport,
 } from "@/lib/web-rpc-policy";
 
-type ProtocolTransport = ReturnType<typeof http>;
-
-const webChainAdapters = {
-  development: {
-    chain: foundry,
-    createFallbackConfig: (transport: ProtocolTransport) =>
-      createConfig({
-        chains: [foundry],
-        connectors: [injected()],
-        ssr: true,
-        transports: { [foundry.id]: transport },
-      }),
-  },
-  staging: {
-    chain: baseSepolia,
-    createFallbackConfig: (transport: ProtocolTransport) =>
-      createConfig({
-        chains: [baseSepolia],
-        connectors: [injected()],
-        ssr: true,
-        transports: { [baseSepolia.id]: transport },
-      }),
-  },
-  production: {
-    chain: base,
-    createFallbackConfig: (transport: ProtocolTransport) =>
-      createConfig({
-        chains: [base],
-        connectors: [injected()],
-        ssr: true,
-        transports: { [base.id]: transport },
-      }),
-  },
+const webChains = {
+  development: foundry,
+  staging: baseSepolia,
+  production: base,
 } as const;
-
-const webChainAdapter = webChainAdapters[deploymentEnvironment.name];
-export const protocolChain = webChainAdapter.chain;
+export const protocolChain = webChains[deploymentEnvironment.name];
 
 const configuredRpcUrl =
   process.env.NEXT_PUBLIC_RPC_URL ??
@@ -79,27 +46,21 @@ export const protocolTransactionClient = createPublicClient({
   transport: protocolTransactionTransport,
 });
 
-export const reownProjectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID?.trim();
-export const isReownConfigured =
-  reownProjectId !== undefined && reownProjectId.length > 0;
+export const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
+export const isWalletConfigured = Boolean(privyAppId);
 
-export const appKitNetworks: [AppKitNetwork, ...AppKitNetwork[]] = [
-  protocolChain,
-];
-
-export const wagmiAdapter = reownProjectId
-  ? new WagmiAdapter({
-      networks: appKitNetworks,
-      projectId: reownProjectId,
-      ssr: true,
-      transports: {
-        [protocolChain.id]: protocolTransactionTransport,
-      },
-    })
-  : undefined;
-
-export const wagmiConfig =
-  wagmiAdapter?.wagmiConfig ??
-  webChainAdapter.createFallbackConfig(protocolTransactionTransport);
+// Privy owns connector discovery and reconnect ordering. The unconfigured
+// provider supports public reads, but offers no unusable wallet action.
+export const wagmiConfig = (
+  isWalletConfigured ? createPrivyConfig : createConfig
+)({
+  chains: [protocolChain],
+  ssr: true,
+  transports: {
+    [foundry.id]: protocolTransactionTransport,
+    [baseSepolia.id]: protocolTransactionTransport,
+    [base.id]: protocolTransactionTransport,
+  },
+});
 
 export const currentWalletConnection = () => getConnection(wagmiConfig);

@@ -63,6 +63,40 @@ const keeperAttempts = {
 } as const;
 
 describe("admin history response contracts", () => {
+  it("accepts paired CCA lifecycle and source evidence", () => {
+    const ccaManifest = {
+      ...manifest,
+      cca: {
+        startBlock: "100",
+        endBlock: "110",
+        claimBlock: "111",
+        migrationBlock: "111",
+      },
+      sources: {
+        ...manifest.sources,
+        cca: {
+          auction: "0x0000000000000000000000000000000000000011",
+          bidEscrowFactory: "0x0000000000000000000000000000000000000012",
+          launchCoordinator: "0x0000000000000000000000000000000000000013",
+          strategy: "0x0000000000000000000000000000000000000014",
+        },
+      },
+    } as const;
+
+    expect(
+      decodeAdminOperationsHistoryResponse(
+        { ...operations, manifest: ccaManifest },
+        fingerprint,
+      ).manifest,
+    ).toEqual(ccaManifest);
+    expect(() =>
+      decodeAdminOperationsHistoryResponse(
+        { ...operations, manifest: { ...manifest, cca: ccaManifest.cca } },
+        fingerprint,
+      ),
+    ).toThrow(/appear together/u);
+  });
+
   it("exports path-specific bounded decoders that strip unknown fields", () => {
     expect(ADMIN_HISTORY_RESPONSE_BODY_LIMIT_BYTES).toBe(1_048_576);
     expect(

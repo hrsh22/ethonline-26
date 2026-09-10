@@ -30,16 +30,16 @@ import HomePage from "./(collector)/page";
 import MarketPage from "./(collector)/market/page";
 
 describe("collector trade and market routes", () => {
-  it("starts a new collector in the guided journey and keeps Trade secondary", () => {
+  it("offers direct Trade and Explore without an onboarding ladder", () => {
     const html = renderToStaticMarkup(<HomePage />);
 
-    const start = html.indexOf('href="/start"');
-    const trade = html.indexOf('href="/exchange"');
-    expect(start).toBeGreaterThan(-1);
-    expect(trade).toBeGreaterThan(start);
-    expect(html).toContain('href="/start">Start collecting</a>');
+    expect(html).not.toContain('href="/start"');
+    expect(html).not.toContain("How collecting works");
+    expect(html).toContain('href="/explore"');
     expect(html).toContain('href="/exchange">Trade $FUEL</a>');
-    expect(html).toContain("Every whole $FUEL reveals a random Grounded Craft");
+    expect(html).toContain("Find the craft worth keeping.");
+    expect(html).toContain("Editorial artwork");
+    expect(html).not.toContain("Public collection signal");
   });
 
   it("keeps the Exchange route focused on the trade task", () => {

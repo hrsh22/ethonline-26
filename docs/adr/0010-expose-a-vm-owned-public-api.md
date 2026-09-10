@@ -1,8 +1,8 @@
 # Expose a VM-owned public API
 
-Status: accepted on 30 August 2026 for the Base Sepolia proof of concept.
+Status: accepted for the Base Sepolia proof of concept.
 
-Amended on 31 August 2026: funding status accepts no recipient for service-only inventory state and
+Amended: funding status accepts no recipient for service-only inventory state and
 an optional recipient for wallet-specific eligibility. The exact query-parameter name allowlist
 remains unchanged.
 
