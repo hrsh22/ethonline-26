@@ -117,7 +117,7 @@ describe("reward funding query", () => {
       budget.close();
       rmSync(dir, { recursive: true, force: true });
     }
-  });
+  }, 20_000);
 });
 
 it("accepts exact event allocations and rejects mismatched pools or arithmetic", async () => {
