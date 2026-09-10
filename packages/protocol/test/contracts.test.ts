@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -60,7 +60,10 @@ describe("manifest-bound contract clients", () => {
       ccaRecoverySeeder: "CcaRecoverySeeder.sol/CcaRecoverySeeder.json",
       permanentPositionRecipient:
         "PermanentPositionRecipient.sol/PermanentPositionRecipient.json",
-      permit2: "IAllowanceTransfer.sol/IAllowanceTransfer.json",
+      permit2: [
+        "IAllowanceTransfer.sol/IAllowanceTransfer.json",
+        "interfaces/IAllowanceTransfer.sol/IAllowanceTransfer.json",
+      ],
       uniswapV4PoolManager: "PoolManager.sol/PoolManager.json",
       metadataRenderer:
         "PlaceholderMetadataRenderer.sol/PlaceholderMetadataRenderer.json",
@@ -89,11 +92,17 @@ describe("manifest-bound contract clients", () => {
 
     for (const [name, abi] of Object.entries(protocolAbis)) {
       if (abi.length === 0) continue;
+      const configuredArtifact = artifacts[name as keyof typeof artifacts];
+      const artifactPaths =
+        typeof configuredArtifact === "string"
+          ? [configuredArtifact]
+          : configuredArtifact;
+      const artifactPath =
+        artifactPaths.find((candidate) =>
+          existsSync(`../contracts/out/${candidate}`),
+        ) ?? artifactPaths[0];
       const artifact = JSON.parse(
-        readFileSync(
-          `../contracts/out/${artifacts[name as keyof typeof artifacts]}`,
-          "utf8",
-        ),
+        readFileSync(`../contracts/out/${artifactPath}`, "utf8"),
       ) as {
         abi: Array<{
           type: string;
