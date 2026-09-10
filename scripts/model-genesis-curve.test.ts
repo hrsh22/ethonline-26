@@ -47,7 +47,7 @@ describe("Genesis Liquidity curve modeling command", () => {
     expect(decoded.sensitivity).toHaveLength(5);
   });
 
-  it("cross-checks the modeled seed against the checked Base Sepolia manifest", async () => {
+  it("identifies the pre-CCA seed model as different from the pending CCA pool", async () => {
     const decoded = await Effect.runPromise(
       decodeGenesisCurveConfiguration(configuration),
     );
@@ -61,15 +61,14 @@ describe("Genesis Liquidity curve modeling command", () => {
       poolId: manifest.canonicalPool.poolId,
       currencyOrderMatches: true,
       tickSpacingMatches: true,
-      openingSqrtPriceMatches: true,
-      activeLiquidityMatches: true,
+      openingSqrtPriceMatches: false,
+      activeLiquidityMatches: false,
     });
     expect(() =>
       assertGenesisCurveManifestCrossCheck(report.manifestCrossCheck),
-    ).not.toThrow();
-    expect(report.model.openingSqrtPriceX96).toBe(
-      BigInt(manifest.canonicalPool.seedSqrtPriceX96),
-    );
+    ).toThrow(/does not match/iu);
+    expect(BigInt(manifest.canonicalPool.seedSqrtPriceX96)).toBe(0n);
+    expect(report.model.openingSqrtPriceX96).toBeGreaterThan(0n);
     expect(report.sensitivity).toHaveLength(5);
   });
 
@@ -89,8 +88,9 @@ describe("Genesis Liquidity curve modeling command", () => {
     expect(human).toContain("Curve slippage");
     expect(human).toContain("Total fee-inclusive impact");
     expect(human).toContain("Sensitivity (human decision inputs)");
+    expect(human).toContain("scenario differs from the checked deployment");
     expect(json).toContain(
-      `"openingSqrtPriceX96": "${manifest.canonicalPool.seedSqrtPriceX96}"`,
+      `"openingSqrtPriceX96": "${report.model.openingSqrtPriceX96}"`,
     );
     expect(json).not.toContain("[object Object]");
   });
