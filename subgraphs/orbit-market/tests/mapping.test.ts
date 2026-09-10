@@ -9,9 +9,9 @@ import {
 import { Address, BigInt, Bytes, ethereum } from "@graphprotocol/graph-ts";
 import { FeeAccrued } from "../generated/CanonicalFeeHook/CanonicalFeeHook";
 import { Swap, Donate } from "../generated/PoolManager/PoolManager";
-import { GenesisLiquiditySeeded } from "../generated/GenesisLiquidityVault/GenesisLiquidityVault";
 import { TrackExecuted } from "../generated/EpochConverter/EpochConverter";
 import {
+  GenesisLiquiditySeeded,
   handleFee,
   handleSwap,
   handleGenesis,

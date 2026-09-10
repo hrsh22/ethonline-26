@@ -20,7 +20,6 @@ import {
   RewardNotified,
   RewardClaimed,
 } from "../generated/RewardLedger/RewardLedger";
-import { GenesisLiquiditySeeded } from "../generated/GenesisLiquidityVault/GenesisLiquidityVault";
 import { ProtocolLiquidityAdded } from "../generated/ProtocolLiquidityVault/ProtocolLiquidityVault";
 import {
   Token,
@@ -51,6 +50,32 @@ import {
 } from "./constants";
 const ZERO = BigInt.zero();
 const DZERO = BigDecimal.zero();
+
+// Schema-v3 deployments do not register the retired genesis vault, so Graph
+// no longer generates its event class. Keep the legacy handler structurally
+// compatible without making current builds depend on that removed data source.
+export class GenesisLiquiditySeeded extends ethereum.Event {
+  get params(): GenesisLiquiditySeededParams {
+    return new GenesisLiquiditySeededParams(this);
+  }
+}
+
+export class GenesisLiquiditySeededParams {
+  private event: GenesisLiquiditySeeded;
+
+  constructor(event: GenesisLiquiditySeeded) {
+    this.event = event;
+  }
+
+  get poolId(): Bytes {
+    return this.event.parameters[0].value.toBytes();
+  }
+
+  get liquidTokenAmount(): BigInt {
+    return this.event.parameters[2].value.toBigInt();
+  }
+}
+
 export function eventId(event: ethereum.Event): string {
   return event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
 }
