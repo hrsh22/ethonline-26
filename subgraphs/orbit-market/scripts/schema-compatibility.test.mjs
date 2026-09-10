@@ -48,8 +48,10 @@ test("canonical addresses and pool match the checked deployment manifest", () =>
     manifest.contracts.fuelCore,
     manifest.contracts.weth,
     manifest.contracts.canonicalMarketRegistry,
-    manifest.contracts.genesisLiquidityVault,
     manifest.contracts.protocolLiquidityVault,
+    ...(manifest.contracts.genesisLiquidityVault === undefined
+      ? []
+      : [manifest.contracts.genesisLiquidityVault]),
   ])
     assert.ok(source.includes(value.toLowerCase()));
   const yaml = read("../subgraph.yaml").toLowerCase();
@@ -57,8 +59,18 @@ test("canonical addresses and pool match the checked deployment manifest", () =>
     "canonicalFeeHook",
     "epochConverter",
     "rewardLedger",
-    "genesisLiquidityVault",
     "protocolLiquidityVault",
+    ...(manifest.contracts.genesisLiquidityVault === undefined
+      ? []
+      : ["genesisLiquidityVault"]),
+    ...(manifest.schemaVersion === 3
+      ? [
+          "continuousClearingAuction",
+          "ccaStrategy",
+          "ccaLaunchCoordinator",
+          "ccaBidEscrowFactory",
+        ]
+      : []),
   ])
     assert.ok(yaml.includes(manifest.contracts[key].toLowerCase()));
 });
