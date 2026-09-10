@@ -18,6 +18,12 @@ git -C packages/contracts/lib/continuous-clearing-auction submodule update --ini
   lib/solady \
   lib/v4-periphery
 
+# Upstream pins this public repository with an SSH URL. CI has no deploy key,
+# so use the equivalent HTTPS transport for the nested checkout.
+git -C packages/contracts/lib/liquidity-launcher config \
+  submodule.lib/openzeppelin-contracts.url \
+  https://github.com/OpenZeppelin/openzeppelin-contracts.git
+
 git -C packages/contracts/lib/liquidity-launcher submodule update --init --depth 1 -- \
   lib/blocknumberish \
   lib/forge-std \
