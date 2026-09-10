@@ -1,9 +1,40 @@
 import { isAbsolute, resolve } from "node:path";
 
+import { Schema } from "effect";
 import { getAddress, parseEther, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-type EnvironmentVariables = Readonly<Record<string, string | undefined>>;
+type EnvironmentSource = Readonly<Record<string, string | undefined>>;
+
+const EnvironmentSchema = Schema.Struct({
+  BASE_SEPOLIA_RPC_URL: Schema.optional(Schema.String),
+  RPC_URL: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_DAILY_ETH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_DAILY_WETH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_DATABASE_PATH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_ENABLED: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_INTERVAL_SECONDS: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_MINIMUM_ETH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_MINIMUM_WETH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_TOPUP_ETH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_REPLENISH_TOPUP_WETH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_SIGNER_ADDRESS: Schema.optional(Schema.String),
+  TESTNET_FUNDING_TREASURY_ADDRESS: Schema.optional(Schema.String),
+  TESTNET_FUNDING_TREASURY_PRIVATE_KEY: Schema.optional(Schema.String),
+});
+
+type EnvironmentVariables = typeof EnvironmentSchema.Type;
+type EnvironmentName = keyof EnvironmentVariables;
+
+const decodeEnvironment = (
+  environment: EnvironmentSource,
+): EnvironmentVariables => {
+  try {
+    return Schema.decodeUnknownSync(EnvironmentSchema)(environment);
+  } catch {
+    throw new Error("Replenisher environment must contain only string values");
+  }
+};
 
 export interface ReplenishAmounts {
   readonly wethWei: bigint;
@@ -39,7 +70,10 @@ export interface ReplenisherEnvironment {
 export type ReplenisherConfiguration =
   { readonly enabled: false } | ReplenisherEnvironment;
 
-const required = (environment: EnvironmentVariables, name: string): string => {
+const required = (
+  environment: EnvironmentVariables,
+  name: EnvironmentName,
+): string => {
   const value = environment[name]?.trim();
   if (value === undefined || value.length === 0) {
     throw new Error(`${name} is required`);
@@ -49,7 +83,7 @@ const required = (environment: EnvironmentVariables, name: string): string => {
 
 const optional = (
   environment: EnvironmentVariables,
-  name: string,
+  name: EnvironmentName,
 ): string | undefined => {
   const value = environment[name]?.trim();
   return value === undefined || value.length === 0 ? undefined : value;
@@ -80,7 +114,12 @@ const rpcUrl = (environment: EnvironmentVariables): string => {
   if (value === undefined) {
     throw new Error("RPC_URL or BASE_SEPOLIA_RPC_URL is required");
   }
-  const parsed = new URL(value);
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Replenisher RPC URL must use HTTP or HTTPS");
+  }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     throw new Error("Replenisher RPC URL must use HTTP or HTTPS");
   }
@@ -89,7 +128,7 @@ const rpcUrl = (environment: EnvironmentVariables): string => {
 
 const positiveEther = (
   environment: EnvironmentVariables,
-  name: string,
+  name: EnvironmentName,
   fallback: string,
 ): bigint => {
   const parsed = parseEther(optional(environment, name) ?? fallback);
@@ -99,7 +138,7 @@ const positiveEther = (
 
 const amounts = (
   environment: EnvironmentVariables,
-  suffix: string,
+  suffix: "DAILY" | "MINIMUM" | "TOPUP",
   fallback: { readonly weth: string; readonly eth: string },
 ): ReplenishAmounts => ({
   ethWei: positiveEther(
@@ -180,9 +219,10 @@ const validatePolicy = (policy: ReplenishPolicy): void => {
 };
 
 export const resolveReplenisherEnvironment = (
-  environment: EnvironmentVariables,
+  source: EnvironmentSource,
   repositoryRoot: string,
 ): ReplenisherConfiguration => {
+  const environment = decodeEnvironment(source);
   // Everything below is required, because an armed replenisher that cannot
   // read its own bounds would move funds on a guess.
   if (

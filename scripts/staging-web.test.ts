@@ -415,23 +415,59 @@ export default {};
         );
       });
 
+      const startupDeadline = Date.now() + 10_000;
       await Promise.race([
         ready,
         exited,
-        wait(10_000).then(() => {
+        wait(startupDeadline - Date.now()).then(() => {
           throw new Error("The isolated Next.js test child did not start");
         }),
       ]);
 
-      const readProbe = async () => {
+      const requestProbe = async () => {
         const response = await fetch(`http://127.0.0.1:${port}/probe`);
-        expect(response.ok).toBe(true);
-        return (await response.json()) as {
+        const body = await response.text();
+        return { body, response };
+      };
+      const redacted = (value: string): string =>
+        value
+          .replaceAll("sentinel-deployer-value", "[REDACTED]")
+          .replaceAll("sentinel-public-value", "[REDACTED]");
+      const parseProbe = (
+        body: string,
+        response: Response,
+        stage: "initial" | "after reload",
+      ) => {
+        expect({
+          body: redacted(body),
+          stage,
+          status: response.status,
+        }).toMatchObject({ status: 200 });
+        return JSON.parse(body) as {
           readonly privateBinding: string | null;
           readonly publicBinding: string | null;
         };
       };
-      expect(await readProbe()).toEqual({
+      const waitForInitialProbe = async () => {
+        let lastObservation = "no HTTP response";
+        while (Date.now() < startupDeadline) {
+          try {
+            const { body, response } = await requestProbe();
+            lastObservation = `HTTP ${String(response.status)}: ${redacted(body)}`;
+            if (response.ok) return parseProbe(body, response, "initial");
+          } catch (cause) {
+            lastObservation =
+              cause instanceof Error ? cause.message : String(cause);
+          }
+          await wait(50);
+        }
+        throw new Error(
+          `The isolated Next.js probe route did not become ready. Last observation: ${lastObservation}. Child output: ${redacted(
+            output,
+          )}`,
+        );
+      };
+      expect(await waitForInitialProbe()).toEqual({
         privateBinding: null,
         publicBinding: null,
       });
@@ -449,7 +485,8 @@ export default {};
           );
         }),
       ]);
-      expect(await readProbe()).toEqual({
+      const { body, response } = await requestProbe();
+      expect(parseProbe(body, response, "after reload")).toEqual({
         privateBinding: null,
         publicBinding: null,
       });

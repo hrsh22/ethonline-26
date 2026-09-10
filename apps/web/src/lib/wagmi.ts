@@ -6,6 +6,7 @@ import { getConnection } from "wagmi/actions";
 import { bindReadSignal } from "@orbit/protocol/read-lifetime";
 
 import { deploymentEnvironment } from "@/lib/deployment";
+import { webPublicConfiguration } from "@/lib/browser-public-configuration";
 import {
   createWebReadRpcTransport,
   createWebTransactionRpcTransport,
@@ -18,11 +19,7 @@ const webChains = {
 } as const;
 export const protocolChain = webChains[deploymentEnvironment.name];
 
-const configuredRpcUrl =
-  process.env.NEXT_PUBLIC_RPC_URL ??
-  (deploymentEnvironment.name === "staging"
-    ? process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL
-    : undefined);
+const configuredRpcUrl = webPublicConfiguration.rpcUrl;
 const protocolTransactionTransport =
   createWebTransactionRpcTransport(configuredRpcUrl);
 
@@ -46,7 +43,7 @@ export const protocolTransactionClient = createPublicClient({
   transport: protocolTransactionTransport,
 });
 
-export const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
+export const privyAppId = webPublicConfiguration.privyAppId;
 export const isWalletConfigured = Boolean(privyAppId);
 
 // Privy owns connector discovery and reconnect ordering. The unconfigured

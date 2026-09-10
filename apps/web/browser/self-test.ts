@@ -167,6 +167,61 @@ export const runHarnessSelfTest = async (
     }),
   );
 
+  // The hydration probe may reload once when Privy's disposable modal gets
+  // stuck under sustained context churn. The replacement document must pass
+  // the same client-interaction proof; server-rendered markup is insufficient.
+  outcomes.push(
+    await withPage(origin, "/", async (page) => {
+      await page.addInitScript(() => {
+        if (location.origin === "null") return;
+        const key = "orbit-hydration-recovery-self-test";
+        const load = Number(sessionStorage.getItem(key) ?? "0") + 1;
+        sessionStorage.setItem(key, String(load));
+        if (load !== 1) return;
+
+        const blockClose = (event: Event): void => {
+          const button =
+            event.target instanceof Element
+              ? event.target.closest("button")
+              : null;
+          if (button?.getAttribute("aria-label") !== "close modal") return;
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        };
+        for (const type of ["click", "mousedown", "pointerdown"]) {
+          document.addEventListener(type, blockClose, true);
+        }
+        document.addEventListener(
+          "keydown",
+          (event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+          },
+          true,
+        );
+      });
+      await page.goto(`${origin}/`, { waitUntil: "commit" });
+      await awaitHydration(page);
+      const loads = await page.evaluate(() =>
+        Number(
+          sessionStorage.getItem("orbit-hydration-recovery-self-test") ?? "0",
+        ),
+      );
+      const dialogVisible = await page
+        .getByRole("dialog")
+        .getByRole("heading")
+        .first()
+        .isVisible();
+      return {
+        detected: loads === 2 && !dialogVisible,
+        expected: "none" as const,
+        name: "hydration reload repeats the client interaction proof",
+        observed: [],
+      };
+    }),
+  );
+
   // 2. Real page-level horizontal overflow.
   outcomes.push(
     await withPage(origin, "/", async (page) => {

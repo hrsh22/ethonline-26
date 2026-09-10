@@ -10,6 +10,7 @@ import {
   parseHistoryCredential,
   parseHistoryLoopbackUrl,
 } from "@orbit/config/history-runtime";
+import { Schema } from "effect";
 
 export interface PublicApiConfiguration {
   readonly graphAnalytics?: {
@@ -48,17 +49,56 @@ export interface PublicApiConfiguration {
   readonly upstreamTimeoutMilliseconds: number;
 }
 
-type Environment = Readonly<Record<string, string | undefined>>;
+type EnvironmentSource = Readonly<Record<string, string | undefined>>;
+
+const EnvironmentSchema = Schema.Struct({
+  ADMIN_AUTH_APP_ORIGIN: Schema.optional(Schema.String),
+  ADMIN_AUTH_CHALLENGE_TTL_SECONDS: Schema.optional(Schema.String),
+  ADMIN_AUTH_DATABASE_PATH: Schema.optional(Schema.String),
+  ADMIN_AUTH_MANIFEST_PATH: Schema.optional(Schema.String),
+  ADMIN_AUTH_RPC_URL: Schema.optional(Schema.String),
+  ADMIN_AUTH_SESSION_TTL_SECONDS: Schema.optional(Schema.String),
+  GRAPH_API_KEY: Schema.optional(Schema.String),
+  GRAPH_STUDIO_QUERY_URL: Schema.optional(Schema.String),
+  HISTORY_INDEX_URL: Schema.optional(Schema.String),
+  HISTORY_READ_API_TOKEN: Schema.optional(Schema.String),
+  OPERATOR_CONTROL_API_TOKEN: Schema.optional(Schema.String),
+  OPERATOR_CONTROL_URL: Schema.optional(Schema.String),
+  PUBLIC_API_ALLOWED_ORIGINS: Schema.optional(Schema.String),
+  PUBLIC_API_HOST: Schema.optional(Schema.String),
+  PUBLIC_API_MAXIMUM_REQUEST_BODY_BYTES: Schema.optional(Schema.String),
+  PUBLIC_API_PORT: Schema.optional(Schema.String),
+  PUBLIC_API_RATE_LIMIT_MAXIMUM_CLIENTS: Schema.optional(Schema.String),
+  PUBLIC_API_RATE_LIMIT_MAXIMUM_REQUESTS: Schema.optional(Schema.String),
+  PUBLIC_API_RATE_LIMIT_WINDOW_SECONDS: Schema.optional(Schema.String),
+  PUBLIC_API_TRUST_PROXY: Schema.optional(Schema.String),
+  PUBLIC_API_UPSTREAM_TIMEOUT_MILLISECONDS: Schema.optional(Schema.String),
+  TESTNET_FUNDING_API_TOKEN: Schema.optional(Schema.String),
+  TESTNET_FUNDING_SERVICE_URL: Schema.optional(Schema.String),
+});
+
+type Environment = typeof EnvironmentSchema.Type;
+type EnvironmentName = keyof Environment;
+
+const decodeEnvironment = (environment: EnvironmentSource): Environment => {
+  try {
+    return Schema.decodeUnknownSync(EnvironmentSchema)(environment);
+  } catch {
+    // Effect's default parse tree includes rejected values. Configuration can
+    // contain credentials, so only the value-free contract crosses this seam.
+    throw new Error("Public API environment must contain only string values");
+  }
+};
 
 const optional = (
   environment: Environment,
-  name: string,
+  name: EnvironmentName,
 ): string | undefined => {
   const value = environment[name]?.trim();
   return value === undefined || value.length === 0 ? undefined : value;
 };
 
-const required = (environment: Environment, name: string): string => {
+const required = (environment: Environment, name: EnvironmentName): string => {
   const value = optional(environment, name);
   if (value === undefined) throw new Error(`${name} is required`);
   return value;
@@ -188,7 +228,7 @@ const adminDatabasePath = (value: string): string => {
   return normalized;
 };
 
-const secret = (environment: Environment, name: string): string => {
+const secret = (environment: Environment, name: EnvironmentName): string => {
   const value = required(environment, name);
   if (value.length < 32)
     throw new Error(`${name} must contain at least 32 characters`);
@@ -225,8 +265,9 @@ const operatorControl = (
 };
 
 export const resolvePublicApiConfiguration = (
-  environment: Environment,
+  source: EnvironmentSource,
 ): PublicApiConfiguration => {
+  const environment = decodeEnvironment(source);
   const host = optional(environment, "PUBLIC_API_HOST") ?? "127.0.0.1";
   if (host !== "127.0.0.1") {
     throw new Error("PUBLIC_API_HOST must be 127.0.0.1");

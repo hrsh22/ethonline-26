@@ -9,16 +9,16 @@ import {
 } from "@orbit/config/deployment-manifest";
 
 import { protocolDeploymentManifests } from "@/generated/deployment-manifests";
+import { webPublicConfiguration } from "@/lib/browser-public-configuration";
 
 type SelectedDeployment = {
   readonly environment: DeploymentEnvironmentConfiguration;
   readonly manifest: ProtocolDeploymentManifest | undefined;
 };
 
-export const selectProtocolDeployment = (
-  input: unknown,
+const protocolDeploymentForEnvironment = (
+  environment: DeploymentEnvironmentConfiguration,
 ): SelectedDeployment => {
-  const environment = selectDeploymentEnvironment(input);
   if (environment.status !== "configured") {
     return { environment, manifest: undefined };
   }
@@ -28,8 +28,11 @@ export const selectProtocolDeployment = (
   });
 };
 
-const selectedDeployment = selectProtocolDeployment(
-  process.env.NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT,
+export const selectProtocolDeployment = (input: unknown): SelectedDeployment =>
+  protocolDeploymentForEnvironment(selectDeploymentEnvironment(input));
+
+const selectedDeployment = protocolDeploymentForEnvironment(
+  selectDeploymentEnvironment(webPublicConfiguration.deploymentEnvironment),
 );
 
 /**
@@ -37,15 +40,7 @@ const selectedDeployment = selectProtocolDeployment(
  * and social-card routes to absolute URLs, which social and wallet consumers
  * require, and binds the wallet-control proof domain.
  */
-export const applicationUrl: string | undefined = (() => {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured === undefined || configured === "") return undefined;
-  try {
-    return new URL(configured).origin;
-  } catch {
-    return undefined;
-  }
-})();
+export const applicationUrl = webPublicConfiguration.applicationUrl;
 
 export const deploymentEnvironment = selectedDeployment.environment;
 export const protocolDeploymentManifest = selectedDeployment.manifest;

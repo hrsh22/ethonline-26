@@ -3,14 +3,13 @@
 .env
 .env.*
 !.env.example
-!.env.testnet-funding.example
-!.env.testnet-funding-treasury.example
 node_modules/
 .next/
 out/
 dist/
 coverage/
 cache/
+*.tsbuildinfo
 broadcast/
 deployments/.local-deployment-test-*/
 deployments/.fork-deployment-*/

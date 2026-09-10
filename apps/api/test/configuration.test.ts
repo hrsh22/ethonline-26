@@ -10,6 +10,15 @@ const historyCredentialFixture = (label: string): string =>
   );
 const HISTORY_READ_API_TOKEN = historyCredentialFixture("read-v1");
 
+const thrownMessage = (operation: () => unknown): string => {
+  try {
+    operation();
+    return "";
+  } catch (cause) {
+    return cause instanceof Error ? cause.message : String(cause);
+  }
+};
+
 const validEnvironment = () => ({
   ADMIN_AUTH_APP_ORIGIN: "https://orbit.example",
   ADMIN_AUTH_DATABASE_PATH: "/var/lib/orbit/admin-auth/admin-auth.sqlite",
@@ -247,5 +256,46 @@ describe("public API configuration", () => {
         ADMIN_AUTH_DATABASE_PATH: "/var/lib/orbit/auth/../auth/admin.sqlite",
       }).adminAuth.databasePath,
     ).toBe(databasePath);
+  });
+
+  it("decodes an explicit keyed record without exposing rejected values", () => {
+    const secret = "schema-rejected-api-secret";
+    const malformed = {
+      ...validEnvironment(),
+      PUBLIC_API_PORT: { secret },
+    } as unknown as Readonly<Record<string, string | undefined>>;
+    const message = thrownMessage(() =>
+      resolvePublicApiConfiguration(malformed),
+    );
+
+    expect(message).toBe(
+      "Public API environment must contain only string values",
+    );
+    expect(message).not.toContain(secret);
+  });
+
+  it.each([
+    [
+      "ADMIN_AUTH_RPC_URL",
+      "https://api-user:credential-in-url@sepolia.base.org",
+    ],
+    [
+      "TESTNET_FUNDING_SERVICE_URL",
+      "http://api-user:credential-in-url@127.0.0.1:8790",
+    ],
+    [
+      "GRAPH_STUDIO_QUERY_URL",
+      "https://api-user:credential-in-url@api.studio.thegraph.com/query/1/orbit/v1",
+    ],
+  ])("does not echo a credential-bearing %s", (name, value) => {
+    const message = thrownMessage(() =>
+      resolvePublicApiConfiguration({
+        ...validEnvironment(),
+        [name]: value,
+      }),
+    );
+
+    expect(message).not.toContain("credential-in-url");
+    expect(message).not.toContain(value);
   });
 });

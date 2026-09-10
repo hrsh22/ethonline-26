@@ -120,7 +120,7 @@ arrived, with `stderr` marked, so five children sharing one terminal stay readab
 only on a TTY and never under `CI`, `NO_COLOR`, or `TERM=dumb`. Run exactly one copy; `OPERATOR_EXECUTE=true` permits the included operator
 to sign eligible Base Sepolia transactions. Start the web separately with `pnpm dev`.
 
-`pnpm funding:replenisher` is the separate bounded process that tops the funding signer up from a dedicated treasury when its inventory falls below a configured minimum. It is deliberately not part of the worker: the worker is the internet-reachable component, so it must not be able to pull more funds. The treasury key lives only in the ignored `.env.testnet-funding-treasury`, each top-up is a fixed amount under a persisted per-window ceiling, and startup refuses a treasury that holds any protocol role. `pnpm backend` supervises it and it idles when no treasury is configured. See [`docs/operations/testnet-funding.md`](docs/operations/testnet-funding.md).
+`pnpm funding:replenisher` is the separate bounded process that tops the funding signer up from a dedicated treasury when its inventory falls below a configured minimum. It is deliberately not part of the worker: the worker is the internet-reachable component, so it must not be able to pull more funds. The treasury key lives only in the ignored `.env.testnet-funding-treasury`, created from [`config/env/replenisher.env.example`](config/env/replenisher.env.example); each top-up is a fixed amount under a persisted per-window ceiling, and startup refuses a treasury that holds any protocol role. `pnpm backend` supervises it and it idles when no treasury is configured. See [`docs/operations/testnet-funding.md`](docs/operations/testnet-funding.md).
 
 `pnpm deploy:protocol` is the fail-closed composition entry point for chain IDs `31337` and `84532`. On an empty Anvil chain it deploys local infrastructure and the complete protocol, seeds all six pools, seals every immutable boundary, launches, records confirmed transaction hashes in `deployments/31337.json`, and verifies an idempotent rerun without broadcasting. Base Sepolia reuses the confirmed self-funded WETH-like/USDC-like venue and official v4 PoolManager, then deploys the complete protocol. A single development wallet may hold the deployer, guardian, keeper, liquidity-executor, and creator roles for this valueless POC; threshold recovery still requires a distinct cosigner, and the four mutable modules are owned by a governance Safe after the scripted handover in [docs/operations/module-governance.md](docs/operations/module-governance.md). The command never prints the deployment private key.
 
@@ -128,7 +128,7 @@ to sign eligible Base Sepolia transactions. Start the web separately with `pnpm 
 
 Public contract addresses live in checked deployment configuration, never in `.env`: `development` selects `deployments/31337.json`, `staging` selects `deployments/84532.json`, and `production` has no address manifest until a reviewed Base mainnet deployment is published. CLI deployments derive the environment from the RPC chain and use `DEPLOYMENT_ENVIRONMENT` only as an optional fail-closed cross-check. `pnpm dev` explicitly selects the staging binding and Base Sepolia network; use `pnpm dev:local` only when running against Anvil. This deployment target is independent of Next.js development mode. Selecting production fails closed instead of borrowing mock addresses. RPC URLs, signing keys, and connector credentials remain in the ignored root or service-specific environment files described below; do not create an `apps/web/.env*` file.
 
-`pnpm funding:worker` starts the separate loopback-only self-service funding service used by the public `/start` route through `apps/api`. A minimal launcher gives the signer process only variables from the dedicated ignored `.env.testnet-funding`; deployer and operator keys from the shared environment are not inherited. The service uses a finite, inventory-only signer that transfers existing valueless test WETH and Base Sepolia gas; it cannot mint or hold any protocol role. Signed transactions are persisted before broadcast, while cooldowns, lifetime limits, pending recovery, and receipts survive restarts in a private SQLite ledger. `pnpm dev` never starts this worker. See [`docs/operations/testnet-funding.md`](docs/operations/testnet-funding.md) before provisioning inventory or enabling it.
+`pnpm funding:worker` starts the separate loopback-only self-service funding service used by the public `/start` route through `apps/api`. A minimal launcher gives the signer process only variables from the dedicated ignored `.env.testnet-funding`, created from [`config/env/funding.env.example`](config/env/funding.env.example); deployer and operator keys from the shared environment are not inherited. The service uses a finite, inventory-only signer that transfers existing valueless test WETH and Base Sepolia gas; it cannot mint or hold any protocol role. Signed transactions are persisted before broadcast, while cooldowns, lifetime limits, pending recovery, and receipts survive restarts in a private SQLite ledger. `pnpm dev` never starts this worker. See [`docs/operations/testnet-funding.md`](docs/operations/testnet-funding.md) before provisioning inventory or enabling it.
 
 ## Identity and collection assignment
 
@@ -138,23 +138,32 @@ The selected product identity is the single `selectedIdentityKey` input in `pack
 
 ## Environment
 
-Copy only the templates you need and provide values locally:
+For the combined local stack, copy the slim integration template plus the two isolated signer
+templates:
 
 ```bash
 cp .env.example .env
-cp .env.testnet-funding.example .env.testnet-funding
+cp config/env/funding.env.example .env.testnet-funding
+cp config/env/replenisher.env.example .env.testnet-funding-treasury
 ```
 
-Templates contain variable names only. Never commit funded keys or credential-bearing RPC URLs.
-Local launchers project exact API, history, funding, operator, and web allowlists before starting a
-child. Use the root `.env` for local browser-public bindings; `apps/web/.env.example` is reference
-documentation only. Every official Next.js lifecycle rejects `apps/web/.env*` files because Next
-would otherwise reload them after environment projection. The guarded child also denies app-root
-`.env*` reads, so development hot reload cannot introduce a file after the startup check. The web
-receives only reviewed browser-public values; server bearer tokens stay on the VM.
-For deployment, use separate service users or containers and owner-only `0600` environment files,
-then remove `DEPLOYER_PRIVATE_KEY` and the combined deployment environment from the runtime host.
-See [Runtime environment isolation](docs/operations/runtime-environments.md).
+The authoritative per-process templates are in [`config/env/`](config/env/): web, API, history,
+operator, funding, replenisher, and one-shot deployment. They document defaults and advanced knobs;
+the root example intentionally contains only the cross-service values needed for local integration.
+Never commit funded keys or credential-bearing RPC URLs.
+
+Local launchers preserve explicit-shell-over-root-file precedence and project exact API, history,
+funding, operator, replenisher, and web allowlists before starting a child. Funding and replenisher
+dedicated files then override the combined root values for their respective child. Do not create
+any `apps/web/.env*` file: every official Next.js lifecycle rejects it because Next would otherwise
+reload it after environment projection. The guarded child also denies app-root `.env*` reads, so
+development hot reload cannot introduce a file after the startup check. The web uses Privy and
+receives only reviewed `NEXT_PUBLIC_` values; server bearer tokens stay on the VM.
+
+For deployment, install only the relevant service template as a separate owner-only `0600` file
+for each service user or container. Keep `config/env/deployment.env.example` and populated copies
+away from runtime hosts, then remove `DEPLOYER_PRIVATE_KEY` after the one-shot deployment. See
+[Runtime environment isolation](docs/operations/runtime-environments.md).
 
 ## Base Sepolia infrastructure
 

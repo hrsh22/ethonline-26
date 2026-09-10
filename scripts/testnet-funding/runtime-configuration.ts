@@ -1,18 +1,43 @@
 import { isAbsolute, resolve } from "node:path";
 
+import { Schema } from "effect";
 import { getAddress, parseEther, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 import type { TestnetFundingAbusePolicy } from "./abuse-controls.ts";
 import type { TestnetFundingPolicy } from "./policy.ts";
 
-type EnvironmentVariables = Readonly<Record<string, string | undefined>>;
+type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
-export interface TestnetFundingEnvironment {
-  readonly enabled: boolean;
-  readonly rpcUrl: string | undefined;
+const EnvironmentSchema = Schema.Struct({
+  BASE_SEPOLIA_RPC_URL: Schema.optional(Schema.String),
+  NEXT_PUBLIC_APP_URL: Schema.optional(Schema.String),
+  RPC_URL: Schema.optional(Schema.String),
+  TESTNET_FUNDING_API_TOKEN: Schema.optional(Schema.String),
+  TESTNET_FUNDING_DATABASE_PATH: Schema.optional(Schema.String),
+  TESTNET_FUNDING_ENABLED: Schema.optional(Schema.String),
+  TESTNET_FUNDING_HOST: Schema.optional(Schema.String),
+  TESTNET_FUNDING_PORT: Schema.optional(Schema.String),
+  TESTNET_FUNDING_PROOF_DOMAIN: Schema.optional(Schema.String),
+  TESTNET_FUNDING_SIGNER_ADDRESS: Schema.optional(Schema.String),
+  TESTNET_FUNDING_SIGNER_PRIVATE_KEY: Schema.optional(Schema.String),
+});
+
+type EnvironmentVariables = typeof EnvironmentSchema.Type;
+type EnvironmentName = keyof EnvironmentVariables;
+
+const decodeEnvironment = (
+  environment: EnvironmentSource,
+): EnvironmentVariables => {
+  try {
+    return Schema.decodeUnknownSync(EnvironmentSchema)(environment);
+  } catch {
+    throw new Error("Funding environment must contain only string values");
+  }
+};
+
+interface TestnetFundingEnvironmentBase {
   readonly apiToken: string;
-  readonly privateKey: Hex | undefined;
   readonly signer: Address;
   readonly databasePath: string;
   readonly host: "127.0.0.1";
@@ -22,7 +47,24 @@ export interface TestnetFundingEnvironment {
   readonly proofDomain: string;
 }
 
-const required = (environment: EnvironmentVariables, name: string): string => {
+export type TestnetFundingEnvironment = TestnetFundingEnvironmentBase &
+  (
+    | {
+        readonly enabled: true;
+        readonly privateKey: Hex;
+        readonly rpcUrl: string;
+      }
+    | {
+        readonly enabled: false;
+        readonly privateKey: Hex | undefined;
+        readonly rpcUrl: string | undefined;
+      }
+  );
+
+const required = (
+  environment: EnvironmentVariables,
+  name: EnvironmentName,
+): string => {
   const value = environment[name]?.trim();
   if (value === undefined || value.length === 0) {
     throw new Error(`${name} is required`);
@@ -32,7 +74,7 @@ const required = (environment: EnvironmentVariables, name: string): string => {
 
 const optional = (
   environment: EnvironmentVariables,
-  name: string,
+  name: EnvironmentName,
 ): string | undefined => {
   const value = environment[name]?.trim();
   return value === undefined || value.length === 0 ? undefined : value;
@@ -57,7 +99,12 @@ const privateKey = (value: string): Hex => {
 };
 
 const rpcUrl = (value: string): string => {
-  const parsed = new URL(value);
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Funding RPC URL must use HTTP or HTTPS");
+  }
   if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
     throw new Error("Funding RPC URL must use HTTP or HTTPS");
   }
@@ -166,9 +213,10 @@ const resolveProofDomain = (
 };
 
 export const resolveTestnetFundingEnvironment = (
-  environment: EnvironmentVariables,
+  source: EnvironmentSource,
   repositoryRoot: string,
 ): TestnetFundingEnvironment => {
+  const environment = decodeEnvironment(source);
   const enabled = boolean(
     optional(environment, "TESTNET_FUNDING_ENABLED"),
     "TESTNET_FUNDING_ENABLED",
@@ -180,11 +228,8 @@ export const resolveTestnetFundingEnvironment = (
   const resolvedPrivateKey = resolvePrivateKey(environment, enabled, signer);
   const selectedRpcUrl = resolveRpcUrl(environment, enabled);
   const host = resolveHost(environment);
-  return {
-    enabled,
-    rpcUrl: selectedRpcUrl,
+  const common = {
     apiToken,
-    privateKey: resolvedPrivateKey,
     signer,
     databasePath: databasePath(
       optional(environment, "TESTNET_FUNDING_DATABASE_PATH"),
@@ -220,5 +265,24 @@ export const resolveTestnetFundingEnvironment = (
       criticalUsageRatio: 0.9,
     },
     proofDomain: resolveProofDomain(environment, enabled),
+  };
+  if (enabled) {
+    // Both helpers fail above when these are absent in enabled mode. Keeping
+    // the assertion at the boundary makes downstream signing code total.
+    if (resolvedPrivateKey === undefined || selectedRpcUrl === undefined) {
+      throw new Error("Enabled funding worker credentials were not resolved");
+    }
+    return {
+      ...common,
+      enabled: true,
+      privateKey: resolvedPrivateKey,
+      rpcUrl: selectedRpcUrl,
+    };
+  }
+  return {
+    ...common,
+    enabled: false,
+    privateKey: resolvedPrivateKey,
+    rpcUrl: selectedRpcUrl,
   };
 };

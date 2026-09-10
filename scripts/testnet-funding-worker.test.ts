@@ -1835,6 +1835,13 @@ describe("testnet funding worker configuration", () => {
         typeof value === "bigint" ? value.toString() : value,
       ),
     ).not.toContain("NEXT_PUBLIC");
+    if (!resolved.enabled) throw new Error("Expected enabled configuration");
+    const resolvedPrivateKey: Hex = resolved.privateKey;
+    const resolvedRpcUrl: string = resolved.rpcUrl;
+    expect({ resolvedPrivateKey, resolvedRpcUrl }).toEqual({
+      resolvedPrivateKey: privateKey,
+      resolvedRpcUrl: "https://base-sepolia.invalid",
+    });
   });
 
   it("fails closed for weak credentials, signer mismatches, and non-loopback binding", () => {
@@ -1866,6 +1873,60 @@ describe("testnet funding worker configuration", () => {
         "/repository",
       ),
     ).toThrow(/loopback/iu);
+  });
+
+  it("keeps disabled credentials optional and rejects raw values without echoing them", () => {
+    const disabled = resolveTestnetFundingEnvironment(
+      {
+        TESTNET_FUNDING_API_TOKEN: "a".repeat(32),
+        TESTNET_FUNDING_SIGNER_ADDRESS: signer,
+      },
+      "/repository",
+    );
+    expect(disabled).toMatchObject({
+      enabled: false,
+      privateKey: undefined,
+      rpcUrl: undefined,
+    });
+
+    const secret = "schema-rejected-funding-secret";
+    const malformed = {
+      TESTNET_FUNDING_API_TOKEN: { secret },
+    } as unknown as Readonly<Record<string, string | undefined>>;
+    let message = "";
+    try {
+      resolveTestnetFundingEnvironment(malformed, "/repository");
+    } catch (cause) {
+      message = cause instanceof Error ? cause.message : String(cause);
+    }
+    expect(message).toBe("Funding environment must contain only string values");
+    expect(message).not.toContain(secret);
+  });
+
+  it("does not echo credentials from a malformed RPC URL", () => {
+    const privateKey =
+      "0x0000000000000000000000000000000000000000000000000000000000000001";
+    const credentialUrl = "https://rpc-user:rpc-password@";
+    let message = "";
+    try {
+      resolveTestnetFundingEnvironment(
+        {
+          RPC_URL: credentialUrl,
+          TESTNET_FUNDING_API_TOKEN: "a".repeat(32),
+          TESTNET_FUNDING_ENABLED: "true",
+          TESTNET_FUNDING_PROOF_DOMAIN: "orbit.test",
+          TESTNET_FUNDING_SIGNER_ADDRESS:
+            privateKeyToAccount(privateKey).address,
+          TESTNET_FUNDING_SIGNER_PRIVATE_KEY: privateKey,
+        },
+        "/repository",
+      );
+    } catch (cause) {
+      message = cause instanceof Error ? cause.message : String(cause);
+    }
+    expect(message).toBe("Funding RPC URL must use HTTP or HTTPS");
+    expect(message).not.toContain("rpc-password");
+    expect(message).not.toContain(credentialUrl);
   });
 });
 

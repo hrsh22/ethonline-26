@@ -62,6 +62,49 @@ describe("CI changed-path classification", () => {
     });
   });
 
+  it.each([
+    "config/env/history.env.example",
+    "config/env/operator.env.example",
+    "config/env/funding.env.example",
+    "config/env/replenisher.env.example",
+  ])("routes the %s runtime template to protocol and script tests", (path) => {
+    expect(classifyChangedPaths([path])).toEqual({
+      ...noHeavyGates,
+      code_checks: true,
+      protocol_scripts: true,
+    });
+  });
+
+  it("routes the web environment template to web and template-alignment feedback", () => {
+    expect(classifyChangedPaths(["config/env/web.env.example"])).toEqual({
+      ...noHeavyGates,
+      code_checks: true,
+      protocol_scripts: true,
+      web_unit: true,
+      web_production: true,
+    });
+  });
+
+  it("routes the API environment template to API and template-alignment feedback", () => {
+    expect(classifyChangedPaths(["config/env/api.env.example"])).toEqual({
+      ...noHeavyGates,
+      code_checks: true,
+      protocol_scripts: true,
+      public_api: true,
+    });
+  });
+
+  it("routes the combined local environment through every runtime consumer", () => {
+    expect(classifyChangedPaths([".env.example"])).toEqual({
+      ...noHeavyGates,
+      code_checks: true,
+      web_unit: true,
+      public_api: true,
+      protocol_scripts: true,
+      web_production: true,
+    });
+  });
+
   it("routes API implementation changes only to the API gate", () => {
     expect(classifyChangedPaths(["apps/api/src/http-server.ts"])).toEqual({
       ...noHeavyGates,
@@ -94,6 +137,7 @@ describe("CI changed-path classification", () => {
     "scripts/deploy-protocol.ts",
     "scripts/effect-runtime.ts",
     "scripts/json-rpc.ts",
+    "config/env/deployment.env.example",
     ".github/workflows/ci.yml",
     "pnpm-lock.yaml",
   ])("fails closed through every gate for %s", (path) => {

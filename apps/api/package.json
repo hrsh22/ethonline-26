@@ -15,7 +15,7 @@
     "@orbit/config": "workspace:*",
     "@orbit/protocol": "workspace:*",
     "effect": "3.22.1",
-    "viem": "2.55.19"
+    "viem": "2.55.10"
   },
   "devDependencies": {
     "@types/node": "26.3.0",

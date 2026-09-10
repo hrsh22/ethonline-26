@@ -238,7 +238,7 @@ describe("runtime service process isolation", () => {
       ),
     );
     const example = readFileSync(
-      new URL("../.env.example", import.meta.url),
+      new URL("../config/env/web.env.example", import.meta.url),
       "utf8",
     );
 
@@ -246,8 +246,8 @@ describe("runtime service process isolation", () => {
     for (const name of [...read].sort()) {
       // The launcher projects only allowlisted names, so a binding the web code
       // reads but the allowlist omits is silently undefined in every official
-      // command. An undocumented one is worse: it invites a local
-      // apps/web/.env.local, which the launcher then refuses to start with.
+      // command. The authoritative template must document it without inviting
+      // a local apps/web/.env.local, which the launcher refuses to start with.
       expect(
         createRuntimeServiceEnvironment("web", { [name]: "configured" }),
       ).toMatchObject({ [name]: "configured" });
@@ -261,11 +261,17 @@ describe("runtime service process isolation", () => {
   // how the operator control proxy and the funding signer each shipped
   // unreachable while their runbooks documented them.
   const projectedServices = [
-    { directory: "../apps/api/src/", minimum: 15, service: "api" },
+    {
+      directory: "../apps/api/src/",
+      minimum: 15,
+      service: "api",
+      template: "../config/env/api.env.example",
+    },
     {
       directory: "../scripts/testnet-funding/",
       minimum: 8,
       service: "funding",
+      template: "../config/env/funding.env.example",
     },
   ] as const;
 
@@ -294,6 +300,12 @@ describe("runtime service process isolation", () => {
             ),
             (match) => match.groups?.name ?? "",
           ),
+          ...Array.from(
+            text.matchAll(
+              /^\s+(?<name>[A-Z][A-Z0-9_]+):\s*(?:Schema\.|config\.)/gmu,
+            ),
+            (match) => match.groups?.name ?? "",
+          ),
         ];
       }),
     );
@@ -301,11 +313,12 @@ describe("runtime service process isolation", () => {
 
   it.each(projectedServices)(
     "supplies and documents every environment binding the $service process reads",
-    ({ directory, minimum, service }) => {
+    ({ directory, minimum, service, template }) => {
       const read = environmentNamesRead(directory);
-      const templates = ["../.env.example", "../.env.testnet-funding.example"]
-        .map((path) => readFileSync(new URL(path, import.meta.url), "utf8"))
-        .join("\n");
+      const documented = readFileSync(
+        new URL(template, import.meta.url),
+        "utf8",
+      );
 
       // A floor, so a refactor that stops matching the read patterns fails
       // here instead of quietly asserting nothing.
@@ -314,10 +327,149 @@ describe("runtime service process isolation", () => {
         expect(
           createRuntimeServiceEnvironment(service, { [name]: "configured" }),
         ).toMatchObject({ [name]: "configured" });
-        expect(templates).toMatch(new RegExp(`^${name}=`, "mu"));
+        if (service === "funding" && name === "NEXT_PUBLIC_APP_URL") {
+          expect(documented).toMatch(/# NEXT_PUBLIC_APP_URL;/u);
+        } else {
+          expect(documented).toMatch(new RegExp(`^${name}=`, "mu"));
+        }
       }
     },
   );
+
+  it.each([
+    ["api", "../config/env/api.env.example"],
+    ["funding", "../config/env/funding.env.example"],
+    ["funding-replenisher", "../config/env/replenisher.env.example"],
+    ["history", "../config/env/history.env.example"],
+    ["operator", "../config/env/operator.env.example"],
+    ["web", "../config/env/web.env.example"],
+  ] as const)(
+    "keeps the authoritative %s template aligned with its runtime allowlist",
+    (service, templatePath) => {
+      const runtimeSource = readFileSync(
+        new URL("./runtime-environment.ts", import.meta.url),
+        "utf8",
+      );
+      const candidates = new Set(
+        Array.from(
+          runtimeSource.matchAll(/"(?<name>[A-Z][A-Z0-9_]*)"/gu),
+          (match) => match.groups?.name ?? "",
+        ),
+      );
+      const environment = Object.fromEntries(
+        [...candidates].map((name) => [name, "configured"]),
+      );
+      const projected = new Set(
+        Object.keys(createRuntimeServiceEnvironment(service, environment)),
+      );
+      const template = readFileSync(
+        new URL(templatePath, import.meta.url),
+        "utf8",
+      );
+      const documented = new Set(
+        Array.from(
+          template.matchAll(/^(?<name>[A-Z][A-Z0-9_]*)=/gmu),
+          (match) => match.groups?.name ?? "",
+        ),
+      );
+      const processOwned = new Set([
+        "CI",
+        "LANG",
+        "LC_ALL",
+        "PATH",
+        "TMPDIR",
+        "TZ",
+        ...(service === "funding" ? ["NEXT_PUBLIC_APP_URL"] : []),
+        ...(service === "operator" ? ["OPERATOR_CONTROL_RUN_ID"] : []),
+        ...(service === "web"
+          ? [
+              "HOSTNAME",
+              "NEXT_TELEMETRY_DISABLED",
+              "NODE_ENV",
+              "PORT",
+              "__NEXT_PROCESSED_ENV",
+            ]
+          : []),
+      ]);
+      for (const name of processOwned) projected.delete(name);
+
+      expect([...documented].sort()).toEqual([...projected].sort());
+    },
+  );
+
+  it("keeps every slim local-integration binding documented by a process owner", () => {
+    const variableNames = (path: string): ReadonlySet<string> =>
+      new Set(
+        Array.from(
+          readFileSync(new URL(path, import.meta.url), "utf8").matchAll(
+            /^(?<name>[A-Z][A-Z0-9_]*)=/gmu,
+          ),
+          (match) => match.groups?.name ?? "",
+        ),
+      );
+    const localIntegration = variableNames("../.env.example");
+    const authoritative = new Set(
+      [
+        "api",
+        "deployment",
+        "funding",
+        "history",
+        "operator",
+        "replenisher",
+        "web",
+      ].flatMap((service) => [
+        ...variableNames(`../config/env/${service}.env.example`),
+      ]),
+    );
+
+    expect(localIntegration.size).toBeGreaterThan(10);
+    for (const name of localIntegration) expect(authoritative).toContain(name);
+  });
+
+  it("documents every one-shot deployment and maintenance binding", () => {
+    const templates = [
+      "api",
+      "deployment",
+      "funding",
+      "history",
+      "operator",
+      "replenisher",
+      "web",
+    ]
+      .map((service) =>
+        readFileSync(
+          new URL(`../config/env/${service}.env.example`, import.meta.url),
+          "utf8",
+        ),
+      )
+      .join("\n");
+    const sources = [
+      "./accept-module-governance.ts",
+      "./deploy-cca-protocol.ts",
+      "./deploy-protocol.ts",
+      "./governance-safe.ts",
+      "./health-environment.ts",
+      "./smoke-base-sepolia.ts",
+      "./verify-base-sepolia-sources.ts",
+    ].map((path) => readFileSync(new URL(path, import.meta.url), "utf8"));
+    const read = new Set(
+      sources.flatMap((source) => [
+        ...Array.from(
+          source.matchAll(/^\s+(?<name>[A-Z][A-Z0-9_]+):\s*Schema\./gmu),
+          (match) => match.groups?.name ?? "",
+        ),
+        ...Array.from(
+          source.matchAll(/process\.env\.(?<name>[A-Z][A-Z0-9_]+)/gu),
+          (match) => match.groups?.name ?? "",
+        ),
+      ]),
+    );
+
+    expect(read.size).toBeGreaterThan(15);
+    for (const name of [...read].sort()) {
+      expect(templates).toMatch(new RegExp(`^${name}=`, "mu"));
+    }
+  });
 
   it("keeps standalone API, history, and operator entry points from reloading the root environment", () => {
     const apiMain = readFileSync(

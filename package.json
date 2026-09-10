@@ -15,6 +15,7 @@
     "check": "pnpm check:ci",
     "check:ci": "pnpm format:check && pnpm --filter @orbit/config check:deployment-schema && pnpm build:packages && node scripts/generate-web-deployment-manifest.ts --check && pnpm lint && pnpm typecheck:scripts && pnpm -r --if-present typecheck",
     "check:web-deployment-manifest": "pnpm --filter @orbit/config build && node scripts/generate-web-deployment-manifest.ts --check",
+    "clean:generated": "node scripts/clean-generated.ts",
     "deploy:protocol": "pnpm --filter @orbit/config build && node scripts/deploy-protocol.ts",
     "dev": "pnpm build:packages && node scripts/staging-web.ts dev",
     "dev:local": "pnpm build:packages && node scripts/staging-web.ts dev:local",

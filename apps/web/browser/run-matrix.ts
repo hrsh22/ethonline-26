@@ -83,7 +83,10 @@ const AXE_OPTIONS = {
  * Opening a controlled dialog proves React handled a real user interaction.
  * The server-rendered document alone cannot satisfy this readiness check.
  */
-export const awaitHydration = async (page: Page): Promise<void> => {
+export const awaitHydration = async (
+  page: Page,
+  reloadRecoveryAvailable = true,
+): Promise<void> => {
   await page.waitForLoadState("domcontentloaded");
   const connect = page
     .getByRole("button", { name: "Connect wallet", exact: true })
@@ -108,14 +111,29 @@ export const awaitHydration = async (page: Page): Promise<void> => {
   });
   const closeDeadline = Date.now() + 15_000;
   while (await dialog.isVisible()) {
+    if (Date.now() >= closeDeadline) {
+      if (!reloadRecoveryAvailable) {
+        throw new Error(
+          "Hydration probe modal remained open after one bounded reload recovery",
+        );
+      }
+      // The connection-state cases separately verify that a user can dismiss
+      // Privy's modal. This helper only proves React handled an interaction;
+      // under sustained multi-context load the embedded modal can retain its
+      // internal transition indefinitely. Reload the disposable probe state
+      // instead of making unrelated route coverage depend on that transition,
+      // then prove the replacement document handles a fresh interaction too.
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await awaitHydration(page, false);
+      return;
+    }
     // Privy's dialog can rerender once after becoming visible. A close click
     // aimed at the replaced button is discarded, so retry the real user
     // action until the dialog itself confirms that it closed.
-    await close.click({ timeout: 1_000 }).catch((error) => {
-      if (Date.now() >= closeDeadline) throw error;
+    await close.click({ timeout: 1_000 }).catch(() => {
+      return page.keyboard.press("Escape");
     });
-    await dialog.waitFor({ state: "hidden", timeout: 1_000 }).catch((error) => {
-      if (Date.now() >= closeDeadline) throw error;
+    await dialog.waitFor({ state: "hidden", timeout: 1_000 }).catch(() => {
       // Some embedded-wallet builds retain focus through the first close
       // click while replacing the dialog. Escape is the equivalent keyboard
       // dismissal and keeps the hydration proof deterministic under load.

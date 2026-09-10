@@ -82,9 +82,6 @@ const chainFromInputs = (
 ): TestnetFundingChain => {
   if (!inputs.environment.enabled) return unavailableChain;
   const { privateKey, rpcUrl } = inputs.environment;
-  if (privateKey === undefined || rpcUrl === undefined) {
-    throw new Error("Enabled funding worker credentials were not resolved");
-  }
   return createViemTestnetFundingChain({
     rpcUrl,
     privateKey,

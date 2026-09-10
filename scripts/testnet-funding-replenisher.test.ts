@@ -289,6 +289,43 @@ describe("funding replenisher configuration", () => {
       ),
     ).toThrow(/TOPUP_WETH exceeds its daily limit/u);
   });
+
+  it("rejects raw values and malformed RPC URLs without echoing credentials", () => {
+    const secret = "schema-rejected-replenisher-secret";
+    const malformed = {
+      TESTNET_FUNDING_REPLENISH_ENABLED: { secret },
+    } as unknown as Readonly<Record<string, string | undefined>>;
+    let message = "";
+    try {
+      resolveReplenisherEnvironment(malformed, "/repo");
+    } catch (cause) {
+      message = cause instanceof Error ? cause.message : String(cause);
+    }
+    expect(message).toBe(
+      "Replenisher environment must contain only string values",
+    );
+    expect(message).not.toContain(secret);
+
+    const credentialUrl = "https://treasury-user:treasury-password@";
+    try {
+      resolveReplenisherEnvironment(
+        {
+          RPC_URL: credentialUrl,
+          TESTNET_FUNDING_REPLENISH_ENABLED: "true",
+          TESTNET_FUNDING_SIGNER_ADDRESS: signer,
+          TESTNET_FUNDING_TREASURY_ADDRESS:
+            "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+          TESTNET_FUNDING_TREASURY_PRIVATE_KEY: treasuryKey,
+        },
+        "/repo",
+      );
+    } catch (cause) {
+      message = cause instanceof Error ? cause.message : String(cause);
+    }
+    expect(message).toBe("Replenisher RPC URL must use HTTP or HTTPS");
+    expect(message).not.toContain("treasury-password");
+    expect(message).not.toContain(credentialUrl);
+  });
 });
 
 describe("funding replenisher cycle", () => {

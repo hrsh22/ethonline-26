@@ -108,7 +108,7 @@ protect its parent directory, backups, and host access.
 
 ## Configure
 
-Copy `.env.testnet-funding.example` to the ignored `.env.testnet-funding`, or supply the same
+Copy `config/env/funding.env.example` to the ignored `.env.testnet-funding`, or supply the same
 allowlisted variables through a dedicated process-manager environment:
 
 ```dotenv

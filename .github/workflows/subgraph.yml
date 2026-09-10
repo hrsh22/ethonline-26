@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "subgraphs/orbit-market/**"
+      - "deployments/84532.json"
       - ".github/workflows/subgraph.yml"
   push:
     branches: [main, staging]
     paths:
       - "subgraphs/orbit-market/**"
+      - "deployments/84532.json"
       - ".github/workflows/subgraph.yml"
   workflow_dispatch:
 

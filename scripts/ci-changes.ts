@@ -38,6 +38,11 @@ const webGates: CiClassification = {
   web_production: true,
 };
 
+const webEnvironmentGates: CiClassification = {
+  ...webGates,
+  protocol_scripts: true,
+};
+
 const protocolScriptGates: CiClassification = {
   ...noHeavyGates,
   code_checks: true,
@@ -56,9 +61,23 @@ const publicApiGates: CiClassification = {
   public_api: true,
 };
 
+const publicApiEnvironmentGates: CiClassification = {
+  ...publicApiGates,
+  protocol_scripts: true,
+};
+
 const publicApiContractGates: CiClassification = {
   ...publicApiGates,
   web_unit: true,
+  web_production: true,
+};
+
+const integratedRuntimeEnvironmentGates: CiClassification = {
+  ...noHeavyGates,
+  code_checks: true,
+  web_unit: true,
+  public_api: true,
+  protocol_scripts: true,
   web_production: true,
 };
 
@@ -119,6 +138,22 @@ interface PathRule {
 const pathRules: readonly PathRule[] = [
   { matches: documentationPath, classification: noHeavyGates },
   {
+    matches: (path) => path === "config/env/web.env.example",
+    classification: webEnvironmentGates,
+  },
+  {
+    matches: (path) => path === "config/env/api.env.example",
+    classification: publicApiEnvironmentGates,
+  },
+  {
+    matches: (path) => path === "config/env/deployment.env.example",
+    classification: everyGate,
+  },
+  {
+    matches: (path) => path.startsWith("config/env/"),
+    classification: protocolScriptGates,
+  },
+  {
     matches: (path) => path.startsWith("apps/api/"),
     classification: publicApiGates,
   },
@@ -155,7 +190,7 @@ const pathRules: readonly PathRule[] = [
   },
   {
     matches: (path) => path === ".env.example",
-    classification: protocolScriptGates,
+    classification: integratedRuntimeEnvironmentGates,
   },
 ];
 
