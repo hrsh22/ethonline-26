@@ -71,6 +71,45 @@ const isProtectedRequest = (url: string): boolean =>
 /** Asset classes whose failure breaks a production page. */
 const ASSET_RESOURCE_TYPES = new Set(["script", "stylesheet", "font", "image"]);
 
+interface FailedAssetRequest {
+  readonly errorText: string | undefined;
+  readonly resourceType: string;
+  readonly url: string;
+}
+
+const isOptionalWalletConnectArtworkOrbFailure = ({
+  errorText,
+  resourceType,
+  url,
+}: FailedAssetRequest): boolean => {
+  if (resourceType !== "image" || errorText !== "net::ERR_BLOCKED_BY_ORB") {
+    return false;
+  }
+  const parsed = new URL(url);
+  return (
+    parsed.hostname === "explorer-api.walletconnect.com" &&
+    parsed.pathname.startsWith("/v3/logo/")
+  );
+};
+
+/**
+ * WalletConnect renders optional provider artwork from its explorer service.
+ * Chromium can block that remote response under ORB while the wallet control
+ * remains usable, so do not treat that exact third-party artwork failure as a
+ * broken Orbit asset. Every other script, style, font, and image failure stays
+ * release-blocking.
+ */
+export const failedAssetRequest = (
+  failed: FailedAssetRequest,
+): BrowserFailure | undefined =>
+  !ASSET_RESOURCE_TYPES.has(failed.resourceType) ||
+  isOptionalWalletConnectArtworkOrbFailure(failed)
+    ? undefined
+    : {
+        kind: "asset-failed",
+        detail: `${failed.resourceType} ${failed.url} (${failed.errorText ?? "unknown"})`,
+      };
+
 export interface BrowserObserver {
   readonly failures: readonly BrowserFailure[];
   /** Allows a fixture to permit protected requests once auth is established. */
@@ -170,13 +209,12 @@ export const observePage = (page: Page): BrowserObserver => {
   });
 
   page.on("requestfailed", (request: Request) => {
-    if (!ASSET_RESOURCE_TYPES.has(request.resourceType())) return;
-    record({
-      kind: "asset-failed",
-      detail: `${request.resourceType()} ${request.url()} (${
-        request.failure()?.errorText ?? "unknown"
-      })`,
+    const failure = failedAssetRequest({
+      errorText: request.failure()?.errorText,
+      resourceType: request.resourceType(),
+      url: request.url(),
     });
+    if (failure !== undefined) record(failure);
   });
 
   page.on("response", (response: Response) => {
