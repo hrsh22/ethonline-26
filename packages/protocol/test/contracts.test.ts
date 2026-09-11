@@ -46,8 +46,11 @@ describe("manifest-bound contract clients", () => {
         "ProtocolLiquidityVault.sol/ProtocolLiquidityVault.json",
       genesisLiquidityVault:
         "GenesisLiquidityVault.sol/GenesisLiquidityVault.json",
-      continuousClearingAuction:
+      continuousClearingAuction: [
+        "ContinuousClearingAuction.sol/ContinuousClearingAuction.default.json",
+        "ContinuousClearingAuction.sol/ContinuousClearingAuction.cca_via_ir.json",
         "ContinuousClearingAuction.sol/ContinuousClearingAuction.json",
+      ],
       continuousClearingAuctionFactory:
         "ContinuousClearingAuctionFactory.sol/ContinuousClearingAuctionFactory.json",
       ccaBidEscrowFactory: "CcaBidEscrowFactory.sol/CcaBidEscrowFactory.json",
