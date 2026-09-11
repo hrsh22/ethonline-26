@@ -22,6 +22,7 @@ import {
   formatAuctionAmount,
   nextBidAction,
   parseAuctionAmount,
+  recommendedAuctionBidAmount,
   type AuctionAction,
   type CollectorAuctionSnapshot,
 } from "@/lib/auction-state";
@@ -57,6 +58,32 @@ const actionLabel = (action: AuctionAction): string => {
     case "deliver-fuel":
       return "Deliver FUEL";
   }
+};
+
+const bidActionLabel = (
+  action: AuctionAction,
+  snapshot: CollectorAuctionSnapshot,
+): string => {
+  if (action.type === "approve-token")
+    return `Approve ${formatAuctionAmount(action.amount, snapshot.currency.decimals)} ${snapshot.currency.symbol} for Permit2`;
+  if (action.type === "approve-auction")
+    return `Allow this auction to spend ${formatAuctionAmount(action.amount, snapshot.currency.decimals)} ${snapshot.currency.symbol}`;
+  if (action.type === "bid")
+    return `Place bid · ${formatAuctionAmount(action.amount, snapshot.currency.decimals)} ${snapshot.currency.symbol}`;
+  return actionLabel(action);
+};
+
+const actionErrorMessage = (action: AuctionAction, cause: unknown): string => {
+  const message = cause instanceof Error ? cause.message : "";
+  if (
+    /internal error|request arguments|insufficient funds|intrinsic transaction cost/iu.test(
+      message,
+    )
+  )
+    return `${actionLabel(action)} could not complete. Confirm the wallet is on Base Sepolia and has Base Sepolia ETH for gas, then retry.`;
+  return message.length > 0
+    ? `${actionLabel(action)} could not complete. ${message}`
+    : `${actionLabel(action)} could not complete. Retry from this step.`;
 };
 
 const fundingCoverage = (committed: bigint, minimum: bigint): string => {
@@ -211,9 +238,11 @@ function AuctionInstrument({
   readonly initialSnapshot: CollectorAuctionSnapshot;
 }) {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(() =>
+    recommendedAuctionBidAmount(initialSnapshot),
+  );
   const [maxPrice, setMaxPrice] = useState(
-    initialSnapshot.clearingPriceFormatted,
+    initialSnapshot.suggestedMaxPriceFormatted,
   );
   const [transaction, setTransaction] = useState(createTransactionState);
   const activeAction = useRef<AuctionAction | undefined>(undefined);
@@ -256,18 +285,25 @@ function AuctionInstrument({
       if (busy) return;
       activeAction.current = action;
       try {
-        await adapter.execute(account, action, (state) =>
+        const result = await adapter.execute(account, action, (state) =>
           remember(action, state),
         );
-        await refresh();
+        try {
+          await refresh();
+        } catch {
+          setTransaction({
+            status: "confirmed",
+            label: actionLabel(action),
+            hash: result.hash,
+            message:
+              "Transaction confirmed; refreshing auction balances failed. Refresh the page before continuing.",
+          });
+        }
       } catch (cause) {
         setTransaction({
           status: "retriable",
           label: actionLabel(action),
-          message:
-            cause instanceof Error
-              ? cause.message
-              : "The auction action could not be completed.",
+          message: actionErrorMessage(action, cause),
         });
       }
     },
@@ -320,6 +356,13 @@ function AuctionInstrument({
     if (action !== undefined) void run(action);
   };
   const bidAction = next.action;
+  const bidStep = !snapshot.escrow.deployed
+    ? 0
+    : parsedAmount === undefined || snapshot.tokenAllowance < parsedAmount
+      ? 1
+      : snapshot.auctionAllowance < parsedAmount
+        ? 2
+        : 3;
   const commitmentCushion = snapshot.currencyCommitted - snapshot.minimumRaise;
   const commitmentGap =
     commitmentCushion >= 0n ? commitmentCushion : -commitmentCushion;
@@ -417,12 +460,35 @@ function AuctionInstrument({
                 label="Auction allowance"
                 value={`${formatAuctionAmount(snapshot.auctionAllowance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
               />
+              <DataRow
+                label="Network fee balance"
+                value={`${formatAuctionAmount(snapshot.walletGasBalance, 18)} ETH`}
+              />
             </DataList>
+            <div aria-label="Bid steps" className="grid gap-2">
+              <p className="font-mono text-label text-ink-faint">Bid steps</p>
+              <ol className="grid gap-1 text-body-sm text-ink-soft">
+                {[
+                  "Prepare delivery account",
+                  `Approve ${amount || "—"} ${snapshot.currency.symbol} for Permit2`,
+                  `Allow auction to spend ${amount || "—"} ${snapshot.currency.symbol}`,
+                  `Place bid at up to ${maxPrice || "—"} ${snapshot.currency.symbol}`,
+                ].map((label, index) => (
+                  <li
+                    className={index === bidStep ? "text-ink" : undefined}
+                    key={label}
+                  >
+                    {index < bidStep ? "✓" : index === bidStep ? "→" : "·"}{" "}
+                    {label}
+                  </li>
+                ))}
+              </ol>
+            </div>
             {bidAction === undefined ? (
               <Button disabled>Place bid</Button>
             ) : (
               <Button disabled={busy} onClick={() => void run(bidAction)}>
-                {actionLabel(bidAction)}
+                {bidActionLabel(bidAction, snapshot)}
               </Button>
             )}
             {bidAction?.type === "approve-token" ||
@@ -443,6 +509,14 @@ function AuctionInstrument({
                     href="/faucet?returnTo=/auction"
                   >
                     Get test WETH
+                  </TestFundsLink>
+                ) : null}
+                {next.state.condition === "insufficient-eth" ? (
+                  <TestFundsLink
+                    className="mt-1"
+                    href="/faucet?returnTo=/auction"
+                  >
+                    Get test ETH
                   </TestFundsLink>
                 ) : null}
               </div>

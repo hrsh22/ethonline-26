@@ -7,6 +7,7 @@ import {
   parseAbi,
   recoverMessageAddress,
   stringToHex,
+  type Address,
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -146,6 +147,25 @@ it("leaves faucet signing disabled by default", async () => {
 });
 
 const recipient = "0x2000000000000000000000000000000000000002";
+const stagingDeployment = decodeProtocolDeploymentManifest(
+  JSON.parse(
+    readFileSync(
+      new URL("../deployments/84532.staging.json", import.meta.url),
+      "utf8",
+    ),
+  ),
+);
+if (stagingDeployment.schemaVersion !== 3) {
+  throw new Error("Staging deployment must use the CCA manifest schema");
+}
+const stagingWeth = getAddress(stagingDeployment.contracts.weth!);
+const stagingPermit2 = getAddress(stagingDeployment.contracts.permit2!);
+const stagingAuction = getAddress(
+  stagingDeployment.contracts.continuousClearingAuction!,
+);
+const stagingEscrowFactory = getAddress(
+  stagingDeployment.contracts.ccaBidEscrowFactory!,
+);
 const mirror = getAddress(
   decodeProtocolDeploymentManifest(
     JSON.parse(
@@ -158,6 +178,19 @@ const mirror = getAddress(
 );
 const transferAbi = parseAbi([
   "function safeTransferFrom(address from,address to,uint256 identityId)",
+]);
+const approvalAbi = parseAbi([
+  "function approve(address spender,uint256 amount) returns (bool)",
+]);
+const approvalData = (spender: Address, amount: bigint) =>
+  encodeFunctionData({
+    abi: approvalAbi,
+    functionName: "approve",
+    args: [spender, amount],
+  });
+const auctionPolicyAbi = parseAbi([
+  "function deployEscrow(address beneficiary) returns (address escrow)",
+  "function approve(address token,address spender,uint160 amount,uint48 expiration)",
 ]);
 const transferData = (
   from = account.address,
@@ -180,6 +213,120 @@ const requestTransaction = async (transaction: object) => {
   });
   return wallet.respondSessionRequest.mock.lastCall?.[0].response;
 };
+
+it("recognizes the staging WETH address and authorizes its exact Permit2 approval", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+  vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+  vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+  vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "auction-approve");
+  await connect();
+  const amount = 2n * 10n ** 18n;
+  const data = approvalData(stagingPermit2, amount);
+  expect(
+    await requestTransaction({
+      from: account.address,
+      to: stagingWeth,
+      data,
+      value: "0x0",
+    }),
+  ).toMatchObject({ result: `0x${"a".repeat(64)}` });
+  expect(wallet.sendTransaction).toHaveBeenCalledWith(
+    expect.objectContaining({ to: stagingWeth, data, value: 0n }),
+  );
+});
+
+it("rejects unrelated staging approval spenders and targets", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+  vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+  vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+  vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "auction-approve");
+  await connect();
+  for (const transaction of [
+    {
+      from: account.address,
+      to: stagingWeth,
+      data: approvalData(getAddress(recipient), 1n),
+      value: "0x0",
+    },
+    {
+      from: account.address,
+      to: getAddress(recipient),
+      data: approvalData(stagingPermit2, 1n),
+      value: "0x0",
+    },
+  ]) {
+    expect(await requestTransaction(transaction)).toMatchObject({
+      error: { code: -32_000 },
+    });
+  }
+  expect(wallet.sendTransaction).not.toHaveBeenCalled();
+});
+
+it("allows only self escrow preparation when explicitly enabled", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+  vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+  vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+  vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "auction-prepare");
+  await connect();
+  const transaction = (beneficiary: Address) => ({
+    from: account.address,
+    to: stagingEscrowFactory,
+    data: encodeFunctionData({
+      abi: auctionPolicyAbi,
+      functionName: "deployEscrow",
+      args: [beneficiary],
+    }),
+    value: "0x0",
+  });
+  expect(await requestTransaction(transaction(account.address))).toMatchObject({
+    result: `0x${"a".repeat(64)}`,
+  });
+  expect(
+    await requestTransaction(transaction(getAddress(recipient))),
+  ).toMatchObject({
+    error: { code: -32_000 },
+  });
+  expect(wallet.sendTransaction).toHaveBeenCalledOnce();
+});
+
+it("allows only bounded nonzero Permit2 allowance for the staging auction", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+  vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+  vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+  vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "auction-approve");
+  await connect();
+  const permitApproval = (
+    token: Address,
+    spender: Address,
+    amount: bigint,
+    expiration: number,
+  ) => ({
+    from: account.address,
+    to: stagingPermit2,
+    data: encodeFunctionData({
+      abi: auctionPolicyAbi,
+      functionName: "approve",
+      args: [token, spender, amount, expiration],
+    }),
+    value: "0x0",
+  });
+  const expiration = Math.floor(Date.now() / 1_000) + 600;
+  expect(
+    await requestTransaction(
+      permitApproval(stagingWeth, stagingAuction, 10n, expiration),
+    ),
+  ).toMatchObject({ result: `0x${"a".repeat(64)}` });
+  for (const rejected of [
+    permitApproval(stagingWeth, stagingAuction, 0n, expiration),
+    permitApproval(stagingWeth, getAddress(recipient), 10n, expiration),
+    permitApproval(stagingWeth, stagingAuction, 10n, expiration + 7_200),
+  ]) {
+    expect(await requestTransaction(rejected)).toMatchObject({
+      error: { code: -32_000 },
+    });
+  }
+  expect(wallet.sendTransaction).toHaveBeenCalledOnce();
+});
 
 it("sends only an enabled transfer from its own account to the configured recipient", async () => {
   vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");

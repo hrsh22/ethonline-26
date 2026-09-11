@@ -37,9 +37,14 @@ const liveSnapshot = (): CollectorAuctionSnapshot => ({
   currencyCommitted: 12n * 10n ** 18n,
   minimumRaise: 10n * 10n ** 18n,
   currencyRaised: 3n * 10n ** 18n,
-  clearingPriceFormatted: "0.0062",
-  floorPriceFormatted: "0.0057",
+  clearingPriceQ96: (6n * (1n << 96n)) / 1_000n,
+  floorPriceQ96: (5n * (1n << 96n)) / 1_000n,
+  tickSpacingQ96: (1n << 96n) / 1_000n,
+  clearingPriceFormatted: "0.006",
+  floorPriceFormatted: "0.005",
+  suggestedMaxPriceFormatted: "0.007",
   walletCurrencyBalance: 5n * 10n ** 18n,
+  walletGasBalance: 10n ** 16n,
   tokenAllowance: 0n,
   auctionAllowance: 0n,
   escrow: {
@@ -126,6 +131,16 @@ describe("collector auction panel", () => {
         ?.textContent,
     ).toBe("Get test funds");
     expect(container.textContent).toContain("50.00%");
+    expect(
+      container.querySelector<HTMLInputElement>("#auction-bid-amount")?.value,
+    ).toBe("0.001");
+    expect(
+      container.querySelector<HTMLInputElement>("#auction-max-price")?.value,
+    ).toBe("0.007");
+    expect(container.textContent).toContain("Bid steps");
+    expect(container.textContent).toContain("Approve 0.001 WETH for Permit2");
+    expect(container.textContent).toContain("Network fee balance");
+    expect(container.textContent).toContain("0.01 ETH");
     await act(async () =>
       enter(
         container.querySelector<HTMLInputElement>("#auction-bid-amount")!,
@@ -139,7 +154,7 @@ describe("collector auction panel", () => {
       ),
     );
     const approve = [...container.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Approve Permit2"),
+      button.textContent?.includes("Approve 2 WETH for Permit2"),
     );
     expect(approve).toBeDefined();
     await act(async () => approve?.click());
@@ -151,6 +166,42 @@ describe("collector auction panel", () => {
     expect(container.textContent).toContain(
       "Each allowance is capped at this bid amount",
     );
+  });
+
+  it("stops before a doomed approval when the wallet has no gas ETH", async () => {
+    const adapter = adapterFor({ ...liveSnapshot(), walletGasBalance: 0n });
+    await act(async () => root.render(<AuctionPanel adapter={adapter} />));
+    await act(async () =>
+      vi.waitFor(() => expect(container.textContent).toContain("Bidding live")),
+    );
+
+    expect(container.textContent).toContain(
+      "You need Base Sepolia ETH for network fees.",
+    );
+    expect(container.textContent).toContain("Get test ETH");
+    expect(container.textContent).not.toContain("Approve Permit2");
+  });
+
+  it("turns an opaque wallet internal error into step-specific recovery", async () => {
+    const adapter = adapterFor(liveSnapshot());
+    adapter.execute.mockRejectedValueOnce(
+      new Error("An internal error was received. Request Arguments: ..."),
+    );
+    await act(async () => root.render(<AuctionPanel adapter={adapter} />));
+    await act(async () =>
+      vi.waitFor(() => expect(container.textContent).toContain("Bidding live")),
+    );
+
+    const approve = [...container.querySelectorAll("button")].find((button) =>
+      button.textContent?.includes("Approve 0.001 WETH for Permit2"),
+    );
+    await act(async () => approve?.click());
+
+    expect(container.textContent).toContain(
+      "Approve Permit2 could not complete",
+    );
+    expect(container.textContent).toContain("Base Sepolia ETH for gas");
+    expect(container.textContent).not.toContain("Request Arguments");
   });
 
   it("makes a loaded WETH shortfall recoverable without inferring unknown balances", async () => {

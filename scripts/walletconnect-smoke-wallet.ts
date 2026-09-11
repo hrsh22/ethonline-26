@@ -6,6 +6,7 @@ import { WalletKit } from "@reown/walletkit";
 import type { WalletKitTypes } from "@reown/walletkit";
 import { Core } from "@walletconnect/core";
 import { buildApprovedNamespaces, getSdkError } from "@walletconnect/utils";
+import { selectDeploymentEnvironment } from "@orbit/config/deployment-environments";
 import { decodeProtocolDeploymentManifest } from "@orbit/config/deployment-manifest";
 import { verifyFundingProofFields } from "@orbit/config/funding-proof";
 import { Effect, Schema } from "effect";
@@ -37,6 +38,7 @@ import {
 const NonEmptyString = Schema.String.pipe(Schema.minLength(1));
 const WalletEnvironmentSchema = Schema.Struct({
   NEXT_PUBLIC_REOWN_PROJECT_ID: NonEmptyString,
+  NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: Schema.optional(NonEmptyString),
   WALLETCONNECT_URI: NonEmptyString,
   SMOKE_WALLET_PRIVATE_KEY: Schema.optional(NonEmptyString),
   SMOKE_WALLET_TRANSFER_RECIPIENT: Schema.optional(NonEmptyString),
@@ -91,6 +93,34 @@ const errorMessage = (error: unknown) =>
 const valueOrFallback = <Value>(value: Value | undefined, fallback: Value) =>
   value === undefined ? fallback : value;
 
+const sameAddress = (left: unknown, right: unknown): boolean =>
+  typeof left === "string" &&
+  typeof right === "string" &&
+  left.toLowerCase() === right.toLowerCase();
+
+const isPermit2TokenApproval = (
+  token: Address,
+  spender: Address,
+  weth: Address,
+  permit2: Address,
+) => sameAddress(token, weth) && sameAddress(spender, permit2);
+
+const isSafeErc20Approval = (
+  spenderIsAllowed: boolean,
+  amount: bigint,
+  value: bigint,
+) => spenderIsAllowed && amount > 0n && value === 0n;
+
+const configuredDeploymentForSmoke = (input: unknown, chainId: number) => {
+  const deployment = selectDeploymentEnvironment(input);
+  if (deployment.status !== "configured" || deployment.chainId !== chainId) {
+    throw new Error(
+      "WalletConnect smoke deployment environment must be configured for the selected chain",
+    );
+  }
+  return deployment;
+};
+
 const parseTransferRecipient = (
   configured: string | undefined,
   required: boolean,
@@ -116,6 +146,14 @@ runMain(
     const pairingUri = environment.WALLETCONNECT_URI;
     const requestedPrivateKey = environment.SMOKE_WALLET_PRIVATE_KEY;
     const chainId = Number(environment.SMOKE_WALLET_CHAIN_ID);
+    const deploymentEnvironment = yield* validate(
+      "WalletConnect smoke deployment environment is invalid",
+      () =>
+        configuredDeploymentForSmoke(
+          environment.NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT,
+          chainId,
+        ),
+    );
     const emittedChainIdText = environment.SMOKE_WALLET_EMIT_CHAIN_ID;
     const emittedChainId = parseOptionalNumber(emittedChainIdText);
     const allowTransactions = environment.SMOKE_WALLET_ALLOW_TRANSACTIONS;
@@ -131,6 +169,8 @@ runMain(
     const allowedDappUrl = environment.SMOKE_WALLET_ALLOWED_DAPP_URL;
     type SupportedAction =
       | "approve"
+      | "auction-prepare"
+      | "auction-approve"
       | "trade"
       | "commit"
       | "claim"
@@ -145,6 +185,8 @@ runMain(
     );
     const supportedActions = new Set<SupportedAction>([
       "approve",
+      "auction-prepare",
+      "auction-approve",
       "trade",
       "commit",
       "claim",
@@ -212,7 +254,10 @@ runMain(
     const deploymentText = yield* fileSystem(
       "Could not read the Base Sepolia deployment manifest",
       () =>
-        readFileSync(join(repositoryRoot, "deployments/84532.json"), "utf8"),
+        readFileSync(
+          join(repositoryRoot, deploymentEnvironment.manifestPath),
+          "utf8",
+        ),
     );
     const deployment = yield* validate("Deployment manifest is invalid", () =>
       decodeProtocolDeploymentManifest(JSON.parse(deploymentText) as unknown),
@@ -222,11 +267,14 @@ runMain(
       () =>
         requireAddresses(deployment.contracts, [
           "canonicalRouter",
+          "ccaBidEscrowFactory",
+          "continuousClearingAuction",
           "epochConverter",
           "fuelCore",
           "fuelMirror",
           "protocolLiquidityVault",
           "rewardLedger",
+          "permit2",
           "weth",
         ] as const),
     );
@@ -257,6 +305,12 @@ runMain(
     const erc20Abi = parseAbi([
       "function approve(address spender,uint256 amount) returns (bool)",
     ]);
+    const permit2Abi = parseAbi([
+      "function approve(address token,address spender,uint160 amount,uint48 expiration)",
+    ]);
+    const bidEscrowFactoryAbi = parseAbi([
+      "function deployEscrow(address beneficiary) returns (address escrow)",
+    ]);
     const routerAbi = parseAbi([
       "function swapExactInput((bool fuelForWeth,uint256 amountIn,uint256 amountOutMinimum,address recipient,uint256 deadline,bool useNative) params) payable returns (uint256 amountOut)",
     ]);
@@ -274,10 +328,6 @@ runMain(
     ]);
     const normalizedUrl = (url: string): string =>
       new URL(url).href.replace(/\/$/, "");
-    const sameAddress = (left: unknown, right: unknown): boolean =>
-      typeof left === "string" &&
-      typeof right === "string" &&
-      left.toLowerCase() === right.toLowerCase();
     const decodePersonalSignParams = (
       params: unknown,
     ): { readonly message: string; readonly messageInput: string } => {
@@ -392,11 +442,21 @@ runMain(
           data: transaction.data,
         });
         if (decoded.functionName !== "approve") return undefined;
-        requireAction("approve");
-        const safeApproval =
-          sameAddress(decoded.args[0], contracts.canonicalRouter) &&
-          BigInt(decoded.args[1]) > 0n &&
-          transactionValue(transaction) === 0n;
+        const permit2Approval = isPermit2TokenApproval(
+          transaction.to,
+          decoded.args[0],
+          contracts.weth,
+          contracts.permit2,
+        );
+        requireAction(permit2Approval ? "auction-approve" : "approve");
+        const spenderIsAllowed =
+          permit2Approval ||
+          sameAddress(decoded.args[0], contracts.canonicalRouter);
+        const safeApproval = isSafeErc20Approval(
+          spenderIsAllowed,
+          BigInt(decoded.args[1]),
+          transactionValue(transaction),
+        );
         if (!safeApproval) {
           throw new Error("Smoke wallet rejected an unsafe approval");
         }
@@ -407,6 +467,39 @@ runMain(
         if (policyError) throw cause;
         return undefined;
       }
+    };
+    const validateAuctionPrepare = (transaction: SmokeTransaction) => {
+      requireAction("auction-prepare");
+      const decoded = decodeFunctionData({
+        abi: bidEscrowFactoryAbi,
+        data: transaction.data,
+      });
+      if (
+        decoded.functionName !== "deployEscrow" ||
+        !sameAddress(decoded.args[0], account.address) ||
+        transactionValue(transaction) !== 0n
+      ) {
+        throw new Error("Smoke wallet rejected unsafe auction preparation");
+      }
+      return transaction;
+    };
+    const validateAuctionApproval = (transaction: SmokeTransaction) => {
+      requireAction("auction-approve");
+      const decoded = decodeFunctionData({
+        abi: permit2Abi,
+        data: transaction.data,
+      });
+      const safeApproval =
+        decoded.functionName === "approve" &&
+        sameAddress(decoded.args[0], contracts.weth) &&
+        sameAddress(decoded.args[1], contracts.continuousClearingAuction) &&
+        decoded.args[2] > 0n &&
+        transactionValue(transaction) === 0n;
+      if (!safeApproval) {
+        throw new Error("Smoke wallet rejected unsafe auction approval");
+      }
+      requireDeadline(BigInt(decoded.args[3]));
+      return transaction;
     };
     const validateTrade = (transaction: SmokeTransaction) => {
       requireAction("trade");
@@ -529,6 +622,11 @@ runMain(
       return transaction;
     };
     const transactionPolicies = [
+      {
+        address: contracts.ccaBidEscrowFactory,
+        validate: validateAuctionPrepare,
+      },
+      { address: contracts.permit2, validate: validateAuctionApproval },
       { address: contracts.canonicalRouter, validate: validateTrade },
       { address: contracts.fuelCore, validate: validateCommit },
       { address: contracts.rewardLedger, validate: validateClaim },

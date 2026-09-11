@@ -1,5 +1,7 @@
 import { formatUnits, parseUnits, type Address, type Hash } from "viem";
 
+import { parseAuctionPriceQ96 } from "./auction-price";
+
 export type AuctionPhase =
   | "upcoming"
   | "live"
@@ -36,9 +38,14 @@ export interface CollectorAuctionSnapshot {
   readonly currencyCommitted: bigint;
   readonly minimumRaise: bigint;
   readonly currencyRaised: bigint;
+  readonly clearingPriceQ96: bigint;
+  readonly floorPriceQ96: bigint;
+  readonly tickSpacingQ96: bigint;
   readonly clearingPriceFormatted: string;
   readonly floorPriceFormatted: string;
+  readonly suggestedMaxPriceFormatted: string;
   readonly walletCurrencyBalance: bigint;
+  readonly walletGasBalance: bigint;
   readonly tokenAllowance: bigint;
   readonly auctionAllowance: bigint;
   readonly escrow: {
@@ -70,7 +77,7 @@ export type AuctionAction =
 
 export interface AuctionActionState {
   readonly enabled: boolean;
-  readonly condition?: "insufficient-weth" | undefined;
+  readonly condition?: "insufficient-eth" | "insufficient-weth" | undefined;
   readonly reason?: string | undefined;
 }
 
@@ -122,6 +129,31 @@ export const parseAuctionAmount = (
   }
 };
 
+const maximumPriceState = (
+  snapshot: CollectorAuctionSnapshot,
+  maxPriceFormatted: string,
+): AuctionActionState => {
+  try {
+    const maximumPrice = parseAuctionPriceQ96(
+      maxPriceFormatted,
+      snapshot.floorPriceQ96,
+      snapshot.tickSpacingQ96,
+    );
+    return maximumPrice <= snapshot.clearingPriceQ96
+      ? {
+          enabled: false,
+          reason: "Set a maximum price above the current clearing price.",
+        }
+      : { enabled: true };
+  } catch (cause) {
+    return {
+      enabled: false,
+      reason:
+        cause instanceof Error ? cause.message : "Enter a valid maximum price.",
+    };
+  }
+};
+
 export const bidActionState = (
   snapshot: CollectorAuctionSnapshot,
   amount: bigint | undefined,
@@ -138,27 +170,29 @@ export const bidActionState = (
       enabled: false,
       reason: `Your ${snapshot.currency.symbol} balance is too low.`,
     };
+  if (snapshot.walletGasBalance === 0n)
+    return {
+      condition: "insufficient-eth",
+      enabled: false,
+      reason: "You need Base Sepolia ETH for network fees.",
+    };
   if (snapshot.escrow.deployed && !snapshot.escrow.readyToBid)
     return {
       enabled: false,
       reason: "Your auction delivery account is not registered for bidding.",
     };
-  const maximumPrice = parseAuctionAmount(
-    maxPriceFormatted,
-    snapshot.currency.decimals,
-  );
-  if (maximumPrice === undefined)
-    return { enabled: false, reason: "Enter a positive maximum price." };
-  const clearingPrice = parseAuctionAmount(
-    snapshot.clearingPriceFormatted,
-    snapshot.currency.decimals,
-  );
-  if (clearingPrice !== undefined && maximumPrice <= clearingPrice)
-    return {
-      enabled: false,
-      reason: "Set a maximum price above the current clearing price.",
-    };
-  return { enabled: true };
+  return maximumPriceState(snapshot, maxPriceFormatted);
+};
+
+export const recommendedAuctionBidAmount = (
+  snapshot: CollectorAuctionSnapshot,
+): string => {
+  const demoAmount = parseUnits("0.001", snapshot.currency.decimals);
+  const amount =
+    snapshot.walletCurrencyBalance >= demoAmount
+      ? demoAmount
+      : snapshot.walletCurrencyBalance;
+  return amount > 0n ? formatUnits(amount, snapshot.currency.decimals) : "";
 };
 
 export const nextBidAction = (

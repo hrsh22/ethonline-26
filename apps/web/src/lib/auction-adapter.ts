@@ -3,7 +3,6 @@ import { createProtocolReader } from "@orbit/protocol/reader";
 import { makeViemProtocolTransport } from "@orbit/protocol/viem-transport";
 import {
   encodeFunctionData,
-  formatUnits,
   parseAbi,
   type Abi,
   type AbiEvent,
@@ -32,6 +31,7 @@ import type {
   AuctionTransactionRecord,
   CollectorAuctionSnapshot,
 } from "./auction-state";
+import { formatAuctionPriceQ96, parseAuctionPriceQ96 } from "./auction-price";
 import type { TransactionState } from "./transaction-state";
 
 export interface AuctionAdapter {
@@ -56,12 +56,9 @@ const erc20Abi = parseAbi([
   "function balanceOf(address account) view returns (uint256)",
   "function approve(address spender,uint256 amount) returns (bool)",
 ]);
-const Q96 = 1n << 96n;
-const DISPLAY_SCALE = 10n ** 18n;
 const MAX_UINT128 = (1n << 128n) - 1n;
 const MAX_UINT160 = (1n << 160n) - 1n;
 const PERMIT2_LIFETIME_SECONDS = 24n * 60n * 60n;
-const PRICE_DISPLAY_DECIMALS = 6;
 const LOG_BLOCK_WINDOW = 9_999n;
 
 const unavailable = (): never => {
@@ -70,38 +67,7 @@ const unavailable = (): never => {
   );
 };
 
-const q96Price = (value: bigint): string =>
-  formatUnits(
-    (value * 10n ** BigInt(PRICE_DISPLAY_DECIMALS) + Q96 / 2n) / Q96,
-    PRICE_DISPLAY_DECIMALS,
-  );
-
-export const snapAuctionPriceQ96 = (
-  value: string,
-  floor: bigint,
-  spacing: bigint,
-): bigint => {
-  const normalized = value.trim();
-  if (!/^\d+(?:\.\d{0,18})?$/u.test(normalized))
-    throw new RangeError("Enter a maximum price with at most 18 decimals.");
-  const [whole, fraction = ""] = normalized.split(".") as [string, string?];
-  const decimal = BigInt(`${whole}${fraction.padEnd(18, "0")}`);
-  const requested = (decimal * Q96) / DISPLAY_SCALE;
-  if (spacing <= 0n) throw new RangeError("Auction tick spacing is invalid.");
-  if (requested <= floor) return floor + spacing;
-  const delta = requested - floor;
-  const completeTicks = delta / spacing;
-  const remainder = delta % spacing;
-  // Decimal input cannot spell most Q96 grid points exactly. Treat a
-  // sub-wei display difference as the intended tick; otherwise preserve the
-  // user's ceiling by rounding upward.
-  const subDisplayWeiTolerance = Q96 / DISPLAY_SCALE;
-  const ticks =
-    remainder === 0n || remainder <= subDisplayWeiTolerance
-      ? completeTicks
-      : completeTicks + 1n;
-  return floor + (ticks === 0n ? 1n : ticks) * spacing;
-};
+export const snapAuctionPriceQ96 = parseAuctionPriceQ96;
 
 const sameAddress = (left: string, right: string) =>
   left.toLowerCase() === right.toLowerCase();
@@ -214,6 +180,7 @@ const readAuction = async (
   ].reduce((minimum, block) => (block < minimum ? block : minimum));
   const [
     walletCurrencyBalance,
+    walletGasBalance,
     maximumFuelWithdrawal,
     block,
     allSubmitted,
@@ -226,6 +193,7 @@ const readAuction = async (
       args: [account],
       blockNumber: observedBlock,
     }),
+    client.getBalance({ address: account, blockNumber: observedBlock }),
     escrow.deployed
       ? client.readContract({
           address: escrow.escrow,
@@ -293,7 +261,7 @@ const readAuction = async (
       {
         bidId: result.bidId,
         committedCurrency: bid.amountQ96 >> 96n,
-        maxPriceFormatted: q96Price(bid.maxPrice),
+        maxPriceFormatted: formatAuctionPriceQ96(bid.maxPrice),
         exited,
         claimableTokens:
           exited && !claimedIds.has(result.bidId.toString())
@@ -321,9 +289,18 @@ const readAuction = async (
     currencyCommitted,
     minimumRaise: BigInt(manifest.cca.economics.minimumRaise),
     currencyRaised: auction.currencyRaised,
-    clearingPriceFormatted: q96Price(auction.clearingPriceQ96),
-    floorPriceFormatted: q96Price(BigInt(manifest.cca.economics.floorPriceQ96)),
+    clearingPriceQ96: auction.clearingPriceQ96,
+    floorPriceQ96: BigInt(manifest.cca.economics.floorPriceQ96),
+    tickSpacingQ96: BigInt(manifest.cca.economics.tickSpacingQ96),
+    clearingPriceFormatted: formatAuctionPriceQ96(auction.clearingPriceQ96),
+    floorPriceFormatted: formatAuctionPriceQ96(
+      BigInt(manifest.cca.economics.floorPriceQ96),
+    ),
+    suggestedMaxPriceFormatted: formatAuctionPriceQ96(
+      auction.clearingPriceQ96 + BigInt(manifest.cca.economics.tickSpacingQ96),
+    ),
     walletCurrencyBalance,
+    walletGasBalance,
     tokenAllowance: escrow.wethPermit2Allowance,
     auctionAllowance:
       escrow.permit2AuctionAllowance.expiration >= block.timestamp
