@@ -25,6 +25,8 @@ const snapshot = (
   token: { symbol: "$FUEL", decimals: 18 },
   totalTokens: 1_000n,
   tokensSold: 400n,
+  currencyCommitted: 30n,
+  minimumRaise: 20n,
   currencyRaised: 25n,
   clearingPriceFormatted: "0.0062",
   floorPriceFormatted: "0.0057",

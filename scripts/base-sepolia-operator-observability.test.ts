@@ -72,6 +72,9 @@ describe("Protocol-Owned Liquidity operator observability", () => {
     expect(
       previousPolQueueFirstObservedAt(JSON.stringify({ observedState: {} })),
     ).toBeUndefined();
+    expect(
+      previousPolQueueFirstObservedAt(JSON.stringify({ mode: "execute" })),
+    ).toBeUndefined();
     expect(() =>
       previousPolQueueFirstObservedAt(
         JSON.stringify({

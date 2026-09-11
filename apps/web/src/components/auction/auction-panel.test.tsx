@@ -34,6 +34,8 @@ const liveSnapshot = (): CollectorAuctionSnapshot => ({
   token: { symbol: "$FUEL", decimals: 18 },
   totalTokens: 900n * 10n ** 18n,
   tokensSold: 400n * 10n ** 18n,
+  currencyCommitted: 12n * 10n ** 18n,
+  minimumRaise: 10n * 10n ** 18n,
   currencyRaised: 3n * 10n ** 18n,
   clearingPriceFormatted: "0.0062",
   floorPriceFormatted: "0.0057",
@@ -110,6 +112,12 @@ describe("collector auction panel", () => {
     );
 
     expect(container.textContent).toContain("Bidding live");
+    expect(container.textContent).toContain("Committed");
+    expect(container.textContent).toContain("12 WETH");
+    expect(container.textContent).toContain("Minimum to succeed");
+    expect(container.textContent).toContain("Commitment cushion");
+    expect(container.textContent).toContain("2 WETH");
+    expect(container.textContent).toContain("120.00% of the minimum submitted");
     expect(container.textContent).toContain(
       "Bidding needs test WETH plus Base Sepolia ETH for network fees.",
     );
@@ -181,6 +189,22 @@ describe("collector auction panel", () => {
       ),
     );
     expect(container.textContent).not.toContain("Get test WETH");
+  });
+
+  it("shows automatic settlement without asking a collector to finalize", async () => {
+    const adapter = adapterFor({
+      ...liveSnapshot(),
+      observedBlock: 201n,
+    });
+    await act(async () => root.render(<AuctionPanel adapter={adapter} />));
+    await act(async () =>
+      vi.waitFor(() =>
+        expect(container.textContent).toContain("Finalizing automatically"),
+      ),
+    );
+
+    expect(container.textContent).toContain("No wallet action is required.");
+    expect(container.textContent).not.toContain("Finalize auction");
   });
 
   it("offers each settled claim as its own bounded delivery", async () => {

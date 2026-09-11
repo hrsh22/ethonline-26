@@ -16,9 +16,15 @@ at least `10 WETH`. A fully cleared auction at the floor raises at least `20 WET
 rounding. These values keep the demo close to the earlier reference benchmark while allowing CCA,
 rather than the deployment script, to select the final price.
 
-The auction starts 300 Base blocks after configuration and runs for 43,200 blocks. Its two issuance
-steps sum exactly to CCA's 10,000,000 millionths: `232 × 20,800 + 231 × 22,400 = 10,000,000`.
-Assuming roughly two-second Base blocks, this is about one day; block height remains the contract's
+Do not use an exact `10 WETH` bid as a graduation demonstration. CCA decides graduation from its
+final fixed-point checkpoint accounting, so exact-minimum scenarios can lose equality to integer
+rounding. The executable defaults encode a `1 wei` safety margin: the smallest demonstration bid is
+`10.000000000000000001 WETH`. A regression test checkpoints that intentionally over-threshold bid
+at the end of the default schedule and proves that the auction graduates.
+
+The auction starts 300 Base blocks after configuration and runs for 10,800 blocks. Its two issuance
+steps sum exactly to CCA's 10,000,000 millionths: `926 × 10,000 + 925 × 800 = 10,000,000`.
+Assuming roughly two-second Base blocks, this is about six hours; block height remains the contract's
 source of truth.
 
 Auction inventory, unsold inventory, reserve, proceeds, and dust always have fixed destinations.

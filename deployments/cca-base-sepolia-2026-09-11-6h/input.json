@@ -8,13 +8,13 @@
     "lbpStrategy": "0xB06428b62c259eE982cE3D9BED47391dC9A5E000"
   },
   "roles": {
-    "deploymentOwner": "0x0000000000000000000000000000000000000000",
-    "governanceOwner": "0x0000000000000000000000000000000000000000",
-    "creator": "0x0000000000000000000000000000000000000000",
-    "guardian": "0x0000000000000000000000000000000000000000",
-    "keeper": "0x0000000000000000000000000000000000000000",
-    "liquidityExecutor": "0x0000000000000000000000000000000000000000",
-    "recoveryCosigner": "0x0000000000000000000000000000000000000000"
+    "deploymentOwner": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "governanceOwner": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+    "creator": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "guardian": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "keeper": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "liquidityExecutor": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
+    "recoveryCosigner": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
   },
   "identity": {
     "key": "orbit-4444",
@@ -40,14 +40,14 @@
     "minimumRaise": "10000000000000000000",
     "floorPriceQ96": "396140812571321687967719750",
     "auctionTickSpacingQ96": "79228162514264337593543950",
-    "startBlock": 0,
-    "endBlock": 0,
-    "claimBlock": 0,
-    "migrationBlock": 0,
+    "startBlock": 46678297,
+    "endBlock": 46689097,
+    "claimBlock": 46689098,
+    "migrationBlock": 46689098,
     "poolTickSpacing": 60,
     "auctionSteps": "0x00039e000000271000039d0000000320",
-    "distributionSalt": "0xc651ee22c6951bb8b5bd29e8210fb394645a94315fe10eff2cc73de1aa75c137",
-    "testnetEconomicsConfirmed": false
+    "distributionSalt": "0xa0fe6cec5ccb2dc7968f2d1b1501f1e69fdb3563fbb942b87a5cbb3bf667f6bf",
+    "testnetEconomicsConfirmed": true
   },
   "blockedVenueCodehashes": []
 }

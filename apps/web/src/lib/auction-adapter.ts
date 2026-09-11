@@ -216,7 +216,7 @@ const readAuction = async (
     walletCurrencyBalance,
     maximumFuelWithdrawal,
     block,
-    submitted,
+    allSubmitted,
     claimed,
   ] = await Promise.all([
     client.readContract({
@@ -241,7 +241,7 @@ const readAuction = async (
       ccaAbis.continuousClearingAuction.find(
         (item) => item.type === "event" && item.name === "BidSubmitted",
       ) as AbiEvent,
-      escrow.escrow,
+      undefined,
       auction.startBlock,
       observedBlock,
     ),
@@ -257,6 +257,16 @@ const readAuction = async (
     ),
   ]);
   signal.throwIfAborted();
+  const submitted = allSubmitted.filter((log) => {
+    const owner = (log as { readonly args?: { readonly owner?: Address } }).args
+      ?.owner;
+    return owner !== undefined && sameAddress(owner, escrow.escrow);
+  });
+  const currencyCommitted = allSubmitted.reduce<bigint>((total, log) => {
+    const amount = (log as { readonly args?: { readonly amount?: bigint } })
+      .args?.amount;
+    return amount === undefined ? total : total + amount;
+  }, 0n);
   const bidIds = [
     ...new Set(
       submitted.flatMap((log) => {
@@ -308,6 +318,8 @@ const readAuction = async (
     token: { symbol: "$FUEL", decimals: 18 },
     totalTokens: BigInt(manifest.cca.economics.auctionSupply),
     tokensSold: auction.tokensCleared,
+    currencyCommitted,
+    minimumRaise: BigInt(manifest.cca.economics.minimumRaise),
     currencyRaised: auction.currencyRaised,
     clearingPriceFormatted: q96Price(auction.clearingPriceQ96),
     floorPriceFormatted: q96Price(BigInt(manifest.cca.economics.floorPriceQ96)),

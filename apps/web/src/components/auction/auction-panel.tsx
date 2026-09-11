@@ -59,6 +59,12 @@ const actionLabel = (action: AuctionAction): string => {
   }
 };
 
+const fundingCoverage = (committed: bigint, minimum: bigint): string => {
+  if (minimum <= 0n) return "No minimum configured";
+  const basisPoints = (committed * 10_000n) / minimum;
+  return `${basisPoints / 100n}.${(basisPoints % 100n).toString().padStart(2, "0")}% of the minimum submitted`;
+};
+
 function AuctionTape({
   snapshot,
 }: {
@@ -314,27 +320,50 @@ function AuctionInstrument({
     if (action !== undefined) void run(action);
   };
   const bidAction = next.action;
+  const commitmentCushion = snapshot.currencyCommitted - snapshot.minimumRaise;
+  const commitmentGap =
+    commitmentCushion >= 0n ? commitmentCushion : -commitmentCushion;
 
   return (
     <div className="mt-5 grid gap-5">
       <AuctionTape snapshot={snapshot} />
       {auctionPhase(snapshot) === "settling" ? (
-        <Panel title="Finalize result" tone="live">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-body-sm text-ink-soft">
-              Record the end-block checkpoint so allocations and refunds can be
-              calculated.
-            </p>
-            <Button
-              disabled={busy}
-              onClick={() => void run({ type: "finalize" })}
-            >
-              Finalize auction
-            </Button>
-          </div>
+        <Panel title="Finalizing automatically" tone="live">
+          <p className="text-body-sm text-ink-soft">
+            The operator is recording the end-block checkpoint and preparing the
+            canonical market. No wallet action is required.
+          </p>
         </Panel>
       ) : null}
-      <MetricGroup columns={4} label="Current auction measurements">
+      <MetricGroup columns={4} label="Auction funding progress">
+        <Metric
+          hint={fundingCoverage(
+            snapshot.currencyCommitted,
+            snapshot.minimumRaise,
+          )}
+          label="Committed"
+          tone="live"
+          value={`${formatAuctionAmount(snapshot.currencyCommitted, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+        />
+        <Metric
+          hint="The final cleared amount must reach this threshold."
+          label="Minimum to succeed"
+          value={`${formatAuctionAmount(snapshot.minimumRaise, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+        />
+        <Metric
+          hint="Submitted commitments can clear for less than their maximum amount."
+          label={
+            commitmentCushion >= 0n ? "Commitment cushion" : "Still needed"
+          }
+          value={`${formatAuctionAmount(commitmentGap, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+        />
+        <Metric
+          hint="This clearing-derived value determines graduation."
+          label="Cleared / raised"
+          value={`${formatAuctionAmount(snapshot.currencyRaised, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+        />
+      </MetricGroup>
+      <MetricGroup columns={3} label="Current auction measurements">
         <Metric
           label="Clearing price"
           tone="live"
@@ -343,10 +372,6 @@ function AuctionInstrument({
         <Metric
           label="Floor price"
           value={`${snapshot.floorPriceFormatted} ${snapshot.currency.symbol}`}
-        />
-        <Metric
-          label="Raised"
-          value={`${formatAuctionAmount(snapshot.currencyRaised, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
         />
         <Metric
           label="Token allocation"

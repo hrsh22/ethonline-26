@@ -213,6 +213,7 @@ const continuousClearingAuctionAbi = parseAbi([
   "function remainingSupply() view returns (uint256)",
   "function nextBidId() view returns (uint256)",
   "function lastCheckpointedBlock() view returns (uint64)",
+  "function lbpInitializationParams() view returns ((uint256 initialPriceX96,uint256 tokensSold,uint256 currencyRaised))",
   "function bids(uint256 bidId) view returns ((uint64 startBlock,uint24 startCumulativeMps,uint64 exitedBlock,uint256 maxPrice,address owner,uint256 amountQ96,uint256 tokensFilled) bid)",
   "function exitBid(uint256 bidId)",
   "function exitPartiallyFilledBid(uint256 bidId,uint64 lastFullyFilledCheckpointBlock,uint64 outbidBlock)",
@@ -290,6 +291,8 @@ const ccaCanonicalLaunchReadinessAbi = parseAbi([
 ]);
 
 const permanentPositionRecipientAbi = parseAbi([
+  "function registerPosition(uint256 tokenId)",
+  "function receivedPosition(uint256 tokenId) view returns (bool)",
   "function positionManager() view returns (address)",
   "function expectedPoolId() view returns (bytes32)",
   "function receivedPositionCount() view returns (uint256)",
@@ -393,7 +396,10 @@ const ccaRequiredContracts = {
   ccaRecoverySeeder: ccaRecoverySeederAbi,
   permanentPositionRecipient: permanentPositionRecipientAbi,
   liquidityLauncher: noReadsAbi,
-  ccaStrategy: noReadsAbi,
+  ccaStrategy: parseAbi([
+    "function migrate(address initializer)",
+    "function registeredPoolIds(bytes32 poolId) view returns (address)",
+  ]),
   permit2: permit2Abi,
   uniswapV4PositionManager: noReadsAbi,
 } as const satisfies Record<string, Abi>;

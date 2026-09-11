@@ -53,6 +53,7 @@ import {
 } from "./base-sepolia-operator-observability.ts";
 import { operatorDiagnostic } from "./base-sepolia-operator-diagnostic.ts";
 import { maintainBaseSepoliaDiscovery } from "./discovery-maintenance.ts";
+import { maintainBaseSepoliaCca } from "./cca-maintenance.ts";
 import {
   bindOperatorActors,
   type OperatorAccounts,
@@ -2704,6 +2705,58 @@ export const operatorProgram = Effect.scoped(
         );
       },
     );
+    const ccaMaintenance = yield* rpc(
+      "Base Sepolia CCA maintenance failed",
+      () =>
+        maintainBaseSepoliaCca({
+          manifest,
+          rpcUrl: environment.rpcUrl,
+          execute: environment.execute,
+          account:
+            clients.roles.keeper.account?.address ??
+            getAddress(manifest.roles.keeper),
+          ...(reconciliation.minimumBlock === undefined
+            ? {}
+            : { minimumBlock: reconciliation.minimumBlock }),
+          assertMaySign,
+          submitTransaction: (request) =>
+            signAndSubmitOperatorCall(
+              clients,
+              "keeper",
+              request,
+              async (_hash, rawTransaction) => {
+                outbox.enqueueLocalSubmission(rawTransaction);
+              },
+            ),
+        }),
+    );
+    // A lifecycle action consumes this cycle even when activation completed.
+    // The next cycle reconciles its durable submission before reward/POL work.
+    if (
+      ccaMaintenance !== undefined &&
+      ccaMaintenance.plan.kind !== "complete"
+    ) {
+      yield* fileSystem("Could not write CCA operator evidence", () => {
+        writeOperatorEvidenceAtomically(
+          environment.evidencePath,
+          serializeEvidence({
+            mode: environment.execute ? "execute" : "simulate",
+            observedBlock: ccaMaintenance.head.blockNumber,
+            ccaMaintenance,
+            actions: [],
+          }),
+        );
+      });
+      process.stdout.write(
+        `Base Sepolia CCA maintenance: ${ccaMaintenance.status}; evidence at ${environment.evidencePath}\n`,
+      );
+      yield* ensure(
+        ccaMaintenance.status !== "failed" &&
+          ccaMaintenance.status !== "submitted-unknown",
+        `CCA maintenance is ${ccaMaintenance.status}`,
+      );
+      return;
+    }
     const discoveryMaintenance = yield* rpc(
       "Base Sepolia discovery maintenance failed",
       () =>
@@ -2744,7 +2797,11 @@ export const operatorProgram = Effect.scoped(
         );
       },
     );
-    const evidence = { ...operatorEvidence, discoveryMaintenance } as const;
+    const evidence = {
+      ...operatorEvidence,
+      discoveryMaintenance,
+      ccaMaintenance,
+    } as const;
     yield* fileSystem("Could not write Base Sepolia operator evidence", () => {
       writeOperatorEvidenceAtomically(
         environment.evidencePath,

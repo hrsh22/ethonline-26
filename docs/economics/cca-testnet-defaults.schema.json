@@ -15,6 +15,7 @@
     "floorWethPerFuel",
     "priceTickSpacingQ96",
     "minimumWethRaisedWei",
+    "graduationSafetyMarginWethWei",
     "startDelayBlocks",
     "claimDelayBlocks",
     "migrationDelayBlocks",
@@ -32,6 +33,10 @@
     "floorWethPerFuel": { "const": "0.005" },
     "priceTickSpacingQ96": { "$ref": "#/$defs/uint" },
     "minimumWethRaisedWei": { "$ref": "#/$defs/uint" },
+    "graduationSafetyMarginWethWei": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
     "startDelayBlocks": { "type": "integer", "minimum": 1 },
     "claimDelayBlocks": { "type": "integer", "minimum": 0 },
     "migrationDelayBlocks": { "type": "integer", "minimum": 1 },

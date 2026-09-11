@@ -33,6 +33,8 @@ export interface CollectorAuctionSnapshot {
   readonly token: { readonly symbol: string; readonly decimals: number };
   readonly totalTokens: bigint;
   readonly tokensSold: bigint;
+  readonly currencyCommitted: bigint;
+  readonly minimumRaise: bigint;
   readonly currencyRaised: bigint;
   readonly clearingPriceFormatted: string;
   readonly floorPriceFormatted: string;

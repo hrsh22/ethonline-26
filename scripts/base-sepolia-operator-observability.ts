@@ -7,15 +7,17 @@ import { Schema } from "effect";
 export const DEFAULT_POL_STALE_QUEUE_SECONDS = 900n;
 
 const PreviousOperatorEvidenceSchema = Schema.Struct({
-  observedState: Schema.Struct({
-    protocolOwnedLiquidity: Schema.optional(
-      Schema.Struct({
-        firstEligibleQueueObservedAt: Schema.optional(
-          Schema.NullOr(Schema.String),
-        ),
-      }),
-    ),
-  }),
+  observedState: Schema.optional(
+    Schema.Struct({
+      protocolOwnedLiquidity: Schema.optional(
+        Schema.Struct({
+          firstEligibleQueueObservedAt: Schema.optional(
+            Schema.NullOr(Schema.String),
+          ),
+        }),
+      ),
+    }),
+  ),
 });
 
 interface EligiblePolQueueInput {
@@ -76,7 +78,7 @@ export const previousPolQueueFirstObservedAt = (
     JSON.parse(serializedEvidence),
   );
   const encoded =
-    decoded.observedState.protocolOwnedLiquidity?.firstEligibleQueueObservedAt;
+    decoded.observedState?.protocolOwnedLiquidity?.firstEligibleQueueObservedAt;
   if (encoded === undefined || encoded === null) return undefined;
   if (!/^\d+$/.test(encoded)) {
     throw new RangeError(

@@ -9,12 +9,13 @@
   "floorWethPerFuel": "0.005",
   "priceTickSpacingQ96": "79228162514264337593543950",
   "minimumWethRaisedWei": "10000000000000000000",
+  "graduationSafetyMarginWethWei": "1",
   "startDelayBlocks": 300,
   "claimDelayBlocks": 1,
   "migrationDelayBlocks": 1,
   "issuanceSteps": [
-    { "mpsPerBlock": 232, "blockCount": 20800 },
-    { "mpsPerBlock": 231, "blockCount": 22400 }
+    { "mpsPerBlock": 926, "blockCount": 10000 },
+    { "mpsPerBlock": 925, "blockCount": 800 }
   ],
   "secondaryMarket": {
     "fee": 8388608,
