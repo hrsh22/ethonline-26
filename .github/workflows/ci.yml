@@ -87,7 +87,9 @@ jobs:
     name: Formatting, lint, types, and configuration
     needs: classify
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # Recent successful runs take over seven minutes; leave headroom for
+    # dependency-cache variance instead of cancelling a healthy required gate.
+    timeout-minutes: 12
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
