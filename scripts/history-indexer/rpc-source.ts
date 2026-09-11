@@ -342,7 +342,7 @@ const retryableFailure = (cause: unknown, message: string): boolean => {
     cause instanceof InternalRpcError ||
     status === 429 ||
     (status !== undefined && status >= 500) ||
-    /(rate limit|throttl|timeout|timed out|temporar|fetch failed|network|connection reset|socket hang up|econnreset|econnrefused|enotfound|eai_again)/iu.test(
+    /(rate limit|throttl|compute units?.{0,20}per second.{0,20}capacity|timeout|timed out|temporar|fetch failed|network|connection reset|socket hang up|econnreset|econnrefused|enotfound|eai_again)/iu.test(
       message,
     )
   );

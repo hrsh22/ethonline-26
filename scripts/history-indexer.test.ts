@@ -641,6 +641,34 @@ describe("canonical RPC event source", () => {
       });
     }
   });
+
+  it("classifies provider compute-capacity throttling as retryable", async () => {
+    const config = configuration();
+    const client: HistoryPublicClient = {
+      getChainId: async () => config.chainId,
+      getBlock: async ({ blockNumber } = {}) => header(blockNumber ?? 20n),
+      getLogs: async () =>
+        Promise.reject(
+          new Error(
+            "Your app has exceeded its compute units per second capacity.",
+          ),
+        ),
+    };
+
+    const result = await Effect.runPromise(
+      Effect.either(
+        createHistoryChainSource(client, config).getEvents(10n, 20n),
+      ),
+    );
+
+    expect(result._tag).toBe("Left");
+    if (result._tag === "Left") {
+      expect(result.left).toMatchObject({
+        _tag: "HistoryRpcError",
+        retryable: true,
+      });
+    }
+  });
 });
 
 describe("SQLite history store", () => {
