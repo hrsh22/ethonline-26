@@ -356,22 +356,30 @@ export const runHarnessSelfTest = async (
   // 5. A hydration mismatch. The server HTML is rewritten in flight so the
   // client renders different text than the server sent, which is the failure
   // class the pre-hydration JSDOM harness could never observe.
+  const hydrationResponse = await fetch(`${origin}/`);
+  if (!hydrationResponse.ok) {
+    throw new Error(
+      `Could not load the hydration self-test document: HTTP ${hydrationResponse.status}`,
+    );
+  }
+  const hydrationDocument = await hydrationResponse.text();
   outcomes.push(
     await withPage(origin, "/", async (page) => {
       const observer = observePage(page);
-      await page.route(`${origin}/`, async (route) => {
-        const response = await route.fetch();
-        const body = await response.text();
-        await route.fulfill({
+      await page.route(`${origin}/`, (route) =>
+        route.fulfill({
           // The collector shell is a client component, so changing visible
           // brand text makes the client render something different from the
           // server instead of relying on an attribute-only mismatch. Anchored
           // on the shell's explicit hook, not on a generated class name.
-          body: body.replace(/(data-brand-mark[^>]*>)[^<]+/u, "$1BROKEN ORBIT"),
+          body: hydrationDocument.replace(
+            /(data-brand-mark[^>]*>)[^<]+/u,
+            "$1BROKEN ORBIT",
+          ),
           headers: { "content-type": "text/html; charset=utf-8" },
           status: 200,
-        });
-      });
+        }),
+      );
       await page.goto(`${origin}/`, { waitUntil: "commit" });
       const detected = await waitForFailure(
         page,
