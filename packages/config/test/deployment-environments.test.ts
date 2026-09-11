@@ -16,10 +16,8 @@ import {
   selectDeploymentEnvironment,
 } from "../src/deployment-environments.js";
 
-const readManifest = (chainId: 31_337 | 84_532): unknown =>
-  JSON.parse(
-    readFileSync(`../../deployments/${chainId}.json`, "utf8"),
-  ) as unknown;
+const readManifest = (manifestPath: string): unknown =>
+  JSON.parse(readFileSync(`../../${manifestPath}`, "utf8")) as unknown;
 
 describe("deployment environments", () => {
   it("selects checked mock manifests for both development identities", () => {
@@ -41,27 +39,29 @@ describe("deployment environments", () => {
     );
   });
 
-  it("reserves a separate staging target without publishing a runtime deployment", () => {
+  it("publishes staging as a configured environment with its own manifest", () => {
     const staging = deploymentEnvironmentForName("staging");
-    expect(requireDeployableDeploymentEnvironment(staging)).toMatchObject({
-      status: "unconfigured",
+    expect(requireConfiguredDeploymentEnvironment(staging)).toMatchObject({
+      status: "configured",
       name: "staging",
       chainId: 84_532,
       manifestPath: "deployments/84532.staging.json",
     });
-    expect(() => requireConfiguredDeploymentEnvironment(staging)).toThrow(
-      "staging has no published manifest",
-    );
+    expect(requireDeployableDeploymentEnvironment(staging)).toBe(staging);
     expect(configuredDeploymentEnvironments.map(({ name }) => name)).toEqual([
       "development",
       "development-sepolia",
+      "staging",
     ]);
-    expect(() =>
-      decodeConfiguredDeploymentSelection({
-        environment: staging,
-        manifest: readManifest(84_532),
-      }),
-    ).toThrow();
+    const selection = decodeConfiguredDeploymentSelection({
+      environment: staging,
+      manifest: readManifest("deployments/84532.staging.json"),
+    });
+    expect(selection.environment).toStrictEqual(staging);
+    expect(selection.manifest).toMatchObject({
+      chainId: 84_532,
+      network: "base-sepolia",
+    });
   });
 
   it("never falls back from production to a mock deployment", () => {
@@ -98,7 +98,7 @@ describe("deployment environments", () => {
       }),
     ).toThrow();
     for (const patch of [
-      { status: "configured" },
+      { status: "unconfigured" },
       { manifestPath: "deployments/84532.json" },
       { chainId: 31_337 },
     ]) {
@@ -115,19 +115,22 @@ describe("deployment environments", () => {
     expect(() =>
       decodeConfiguredDeploymentSelection({
         environment: deploymentEnvironmentConfigurations.development,
-        manifest: readManifest(84_532),
+        manifest: readManifest("deployments/84532.json"),
       }),
     ).toThrow();
     expect(() =>
       decodeConfiguredDeploymentSelection({
         environment: deploymentEnvironmentConfigurations["development-sepolia"],
-        manifest: readManifest(31_337),
+        manifest: readManifest("deployments/31337.json"),
       }),
     ).toThrow();
   });
 
   it("rejects unexpected nested manifest fields without echoing their values", () => {
-    const manifest = readManifest(84_532) as Record<string, unknown>;
+    const manifest = readManifest("deployments/84532.json") as Record<
+      string,
+      unknown
+    >;
     const contracts = manifest.contracts as Record<string, unknown>;
     const secretSentinel = "selection-secret-must-never-be-echoed";
 

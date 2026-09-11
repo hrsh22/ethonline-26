@@ -37,13 +37,8 @@ const DevelopmentSepoliaDeploymentEnvironmentSchema = Schema.Struct({
   assetPolicy: Schema.Literal("mock"),
 });
 
-export const ConfiguredDeploymentEnvironmentSchema = Schema.Union(
-  DevelopmentDeploymentEnvironmentSchema,
-  DevelopmentSepoliaDeploymentEnvironmentSchema,
-);
-
-const UnconfiguredStagingEnvironmentSchema = Schema.Struct({
-  status: Schema.Literal("unconfigured"),
+const StagingDeploymentEnvironmentSchema = Schema.Struct({
+  status: Schema.Literal("configured"),
   name: Schema.Literal("staging"),
   chainId: Schema.Literal(84_532),
   network: Schema.Literal("base-sepolia"),
@@ -53,11 +48,14 @@ const UnconfiguredStagingEnvironmentSchema = Schema.Struct({
   assetPolicy: Schema.Literal("mock"),
 });
 
-/** Valid deployment targets can exist before their runtime manifest is published. */
-export const DeployableDeploymentEnvironmentSchema = Schema.Union(
-  ConfiguredDeploymentEnvironmentSchema,
-  UnconfiguredStagingEnvironmentSchema,
+export const ConfiguredDeploymentEnvironmentSchema = Schema.Union(
+  DevelopmentDeploymentEnvironmentSchema,
+  DevelopmentSepoliaDeploymentEnvironmentSchema,
+  StagingDeploymentEnvironmentSchema,
 );
+
+export const DeployableDeploymentEnvironmentSchema =
+  ConfiguredDeploymentEnvironmentSchema;
 
 export type DeployableDeploymentEnvironment =
   typeof DeployableDeploymentEnvironmentSchema.Type;
@@ -118,9 +116,6 @@ const decodeConfiguredConfiguration = Schema.decodeUnknownSync(
 const decodeProductionConfiguration = Schema.decodeUnknownSync(
   UnconfiguredProductionEnvironmentSchema,
 );
-const decodeStagingConfiguration = Schema.decodeUnknownSync(
-  UnconfiguredStagingEnvironmentSchema,
-);
 
 export const deploymentEnvironmentConfigurations = {
   development: decodeConfiguredConfiguration({
@@ -143,8 +138,8 @@ export const deploymentEnvironmentConfigurations = {
     manifestPath: "deployments/84532.json",
     assetPolicy: "mock",
   }),
-  staging: decodeStagingConfiguration({
-    status: "unconfigured",
+  staging: decodeConfiguredConfiguration({
+    status: "configured",
     name: "staging",
     chainId: 84_532,
     network: "base-sepolia",

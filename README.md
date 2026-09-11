@@ -133,7 +133,7 @@ to sign eligible Base Sepolia transactions. Start the web separately with `pnpm 
 Public contract addresses live in checked deployment configuration, never in `.env`: `development`
 selects `deployments/31337.json`, `development-sepolia` selects the current developer deployment in
 `deployments/84532.json`, and `staging` reserves `deployments/84532.staging.json` for the separately
-deployed VM demo. Staging remains unavailable until that manifest is reviewed and published;
+deployed VM demo. The reviewed staging manifest is published independently from the developer deployment;
 `production` likewise has no address manifest until a reviewed Base mainnet deployment exists.
 Because the two remote targets share chain 84532, Base Sepolia deployment commands require an
 explicit `DEPLOYMENT_ENVIRONMENT` and fail instead of inferring an identity from the chain.

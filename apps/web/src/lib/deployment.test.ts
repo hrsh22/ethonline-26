@@ -30,16 +30,24 @@ describe("web deployment binding", () => {
     expect(developmentSepolia.manifest?.chainId).toBe(84_532);
   });
 
-  it("keeps staging address-free without falling back to development-sepolia", () => {
+  it("selects the published staging manifest without falling back to development-sepolia", () => {
     const staging = selectProtocolDeployment("staging");
+    const developmentSepolia = selectProtocolDeployment("development-sepolia");
 
     expect(staging.environment).toMatchObject({
       name: "staging",
-      status: "unconfigured",
+      status: "configured",
       chainId: 84_532,
       manifestPath: "deployments/84532.staging.json",
     });
-    expect(staging.manifest).toBeUndefined();
+    expect(staging.manifest).toMatchObject({
+      chainId: 84_532,
+      network: "base-sepolia",
+      phase: "cca",
+    });
+    expect(staging.manifest?.contracts.fuelCore).not.toBe(
+      developmentSepolia.manifest?.contracts.fuelCore,
+    );
   });
 
   it("keeps production address-free until a manifest is published", () => {

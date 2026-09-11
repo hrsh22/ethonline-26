@@ -20,9 +20,8 @@ deployment secret bundle. The detailed templates remain authoritative when a def
 knob is not repeated there; deployed services have independent lifecycles and identities.
 
 `development` remains the Anvil target used by `pnpm dev:local`. `development-sepolia` selects the
-current checked `deployments/84532.json`. `staging` reserves
-`deployments/84532.staging.json` and remains unavailable to runtime consumers until that separately
-deployed manifest is reviewed and published. Because both remote targets use chain 84532, every
+current checked `deployments/84532.json`. `staging` selects the separately deployed and reviewed
+`deployments/84532.staging.json`. Because both remote targets use chain 84532, every
 deployment command must name the environment explicitly; chain ID alone is intentionally
 ambiguous.
 

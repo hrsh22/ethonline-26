@@ -183,7 +183,7 @@ describe("web public configuration", () => {
       publicApiBaseUrl: "https://api.orbit.example",
     });
 
-    expect(() =>
+    expect(
       requireProductionWebPublicConfiguration(
         parseWebPublicConfiguration({
           NEXT_PUBLIC_API_URL: "https://api.orbit.example",
@@ -191,6 +191,10 @@ describe("web public configuration", () => {
           NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
         }),
       ),
-    ).toThrow(/Deployment environment staging is not published/u);
+    ).toMatchObject({
+      applicationUrl: "https://orbit.example",
+      deploymentEnvironment: "staging",
+      publicApiBaseUrl: "https://api.orbit.example",
+    });
   });
 });

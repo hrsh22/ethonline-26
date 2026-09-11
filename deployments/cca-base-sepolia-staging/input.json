@@ -1,0 +1,53 @@
+{
+  "infrastructure": {
+    "poolManager": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
+    "positionManager": "0x4B2C77d209D3405F41a037Ec6c77F7F5b8e2ca80",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "ccaFactory": "0x000000001F26a0044BaA66024e7b6599c61963F8",
+    "liquidityLauncher": "0x00004c4ccc709Ef590F7C81102C0689F0263D4e9",
+    "lbpStrategy": "0xB06428b62c259eE982cE3D9BED47391dC9A5E000"
+  },
+  "roles": {
+    "deploymentOwner": "0xd288B7e8e8C968eE0F21f0bA5Fb726e9D88dbea9",
+    "governanceOwner": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec",
+    "creator": "0xd288B7e8e8C968eE0F21f0bA5Fb726e9D88dbea9",
+    "guardian": "0xd288B7e8e8C968eE0F21f0bA5Fb726e9D88dbea9",
+    "keeper": "0x476e48A027546eb9F91B00dd18500d442541Cf6E",
+    "liquidityExecutor": "0x476e48A027546eb9F91B00dd18500d442541Cf6E",
+    "recoveryCosigner": "0x4325337EcEcE105484A5F0b2e6464d82D5FeBBec"
+  },
+  "identity": {
+    "key": "orbit-4444",
+    "liquidTokenName": "ORBIT Fuel",
+    "liquidTokenSymbol": "FUEL",
+    "collectibleTokenName": "ORBIT 4444 Collectibles",
+    "collectibleTokenSymbol": "ORBIT",
+    "transientCollectible": "Grounded Craft",
+    "permanentCollectible": "Orbiter",
+    "basketRelic": "Station",
+    "indicatorRelic": "Observatory",
+    "metadataDescription": "A placeholder ORBIT 4444 identity for the valueless Base Sepolia proof of concept. Base Sepolia only. All assets are valueless test assets. Placeholder metadata and artwork for the proof of concept; this is not final artwork or production metadata.",
+    "transientImage": "placeholder://orbit-4444/grounded-craft",
+    "permanentImage": "placeholder://orbit-4444/orbiter",
+    "basketRelicImage": "placeholder://orbit-4444/station",
+    "indicatorRelicImage": "placeholder://orbit-4444/observatory"
+  },
+  "discovery": {
+    "nativeFundingWei": "30000000000000000"
+  },
+  "auction": {
+    "reserveSupply": "444000000000000000000",
+    "minimumRaise": "10000000000000000000",
+    "floorPriceQ96": "396140812571321687967719750",
+    "auctionTickSpacingQ96": "79228162514264337593543950",
+    "startBlock": 46690000,
+    "endBlock": 46700800,
+    "claimBlock": 46700801,
+    "migrationBlock": 46700801,
+    "poolTickSpacing": 60,
+    "auctionSteps": "0x00039e000000271000039d0000000320",
+    "distributionSalt": "0xf20a4f4c344ee5623185251b690b8ff677cdd3c4327c27f79ffeefa692a80db5",
+    "testnetEconomicsConfirmed": true
+  },
+  "blockedVenueCodehashes": []
+}
