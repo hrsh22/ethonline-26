@@ -12,6 +12,7 @@ import { nextRuntimeArguments } from "../../../scripts/next-runtime-command.ts";
 import { startAdminFixtureServer } from "../browser/admin-fixture.ts";
 import { runBrowserMatrix, writeMatrixReport } from "../browser/run-matrix.ts";
 import { runHarnessSelfTest } from "../browser/self-test.ts";
+import { createProductionServerEnvironment } from "../browser/production-server-environment.ts";
 
 const PORT = 3_108;
 const ORIGIN = `http://127.0.0.1:${PORT}`;
@@ -65,17 +66,10 @@ runInterruptibleMain(
             nextRuntimeArguments("start", "--port", String(PORT)),
             {
               cwd: new URL("..", import.meta.url),
-              env: {
-                NEXT_PUBLIC_API_URL: API_ORIGIN,
-                // next.config.ts fails a production start without the app
-                // origin, because it is signed into operator commands and
-                // published as wallet metadata. The audit server satisfies the
-                // guard explicitly; browser-visible values were baked at build.
-                NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3001",
-                NEXT_TELEMETRY_DISABLED: "1",
-                NODE_ENV: "production",
-                __NEXT_PROCESSED_ENV: "true",
-              },
+              // next.config.ts revalidates the app origin and deployment
+              // identity at production start. Browser-visible values were
+              // already baked into the reviewed build.
+              env: createProductionServerEnvironment(process.env, API_ORIGIN),
               stdio: ["ignore", "pipe", "pipe"],
             },
           ),
