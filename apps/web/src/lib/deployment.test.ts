@@ -9,8 +9,8 @@ import {
 } from "@/lib/deployment";
 
 describe("web deployment binding", () => {
-  it("publishes staging by default for the current POC", () => {
-    expect(deploymentEnvironment.name).toBe("staging");
+  it("publishes development-sepolia by default for the current POC", () => {
+    expect(deploymentEnvironment.name).toBe("development-sepolia");
     expect(protocolDeploymentManifest).toMatchObject({
       schemaVersion: 3,
       chainId: 84_532,
@@ -18,15 +18,28 @@ describe("web deployment binding", () => {
     });
   });
 
-  it("selects the development manifest without reusing staging addresses", () => {
+  it("selects distinct Anvil and Base Sepolia development manifests", () => {
     const development = selectProtocolDeployment("development");
-    const staging = selectProtocolDeployment("staging");
+    const developmentSepolia = selectProtocolDeployment("development-sepolia");
 
     expect(development.environment.chainId).toBe(31_337);
     expect(development.manifest?.chainId).toBe(31_337);
     expect(development.manifest?.contracts.mockAaplc).not.toBe(
-      staging.manifest?.contracts.mockAaplc,
+      developmentSepolia.manifest?.contracts.mockAaplc,
     );
+    expect(developmentSepolia.manifest?.chainId).toBe(84_532);
+  });
+
+  it("keeps staging address-free without falling back to development-sepolia", () => {
+    const staging = selectProtocolDeployment("staging");
+
+    expect(staging.environment).toMatchObject({
+      name: "staging",
+      status: "unconfigured",
+      chainId: 84_532,
+      manifestPath: "deployments/84532.staging.json",
+    });
+    expect(staging.manifest).toBeUndefined();
   });
 
   it("keeps production address-free until a manifest is published", () => {

@@ -31,13 +31,19 @@ Set these environment variables without putting signing keys in command argument
 
 ```sh
 export RPC_URL=https://sepolia.base.org
+export DEPLOYMENT_ENVIRONMENT=staging
 export CCA_DEPLOYMENT_INPUT="$PWD/deployments/my-cca/input.json"
-export CCA_MANIFEST_OUTPUT="$PWD/deployments/my-cca/84532.json"
 # Supply DEPLOYER_PRIVATE_KEY through your local secret environment.
 pnpm deploy:cca-protocol
 ```
 
-With no `--broadcast`, Forge simulates the whole deployment and writes only `composition.json`. It does not create a canonical manifest or claim confirmed transactions. A later explicitly authorized broadcast uses:
+The explicit deployment identity is mandatory because developer and staging both use chain 84532.
+Staging defaults to `deployments/84532.staging.json`; an explicit `CCA_MANIFEST_OUTPUT` may select a
+review directory inside `deployments/`, but it must never overwrite `deployments/84532.json`.
+
+With no `--broadcast`, Forge simulates the whole deployment and writes only the output-adjacent
+`*.composition.json` sidecar. It does not create a canonical manifest or claim confirmed
+transactions. A later explicitly authorized broadcast uses:
 
 ```sh
 pnpm deploy:cca-protocol -- --broadcast

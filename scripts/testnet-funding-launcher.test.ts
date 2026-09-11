@@ -1,8 +1,12 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { createRuntimeServiceEnvironment } from "./runtime-environment.ts";
+import { createTestnetFundingLauncherEnvironment } from "./testnet-funding-launcher.ts";
+import { createReplenisherLauncherEnvironment } from "./testnet-funding-replenisher-launcher.ts";
 
 describe("testnet funding process isolation", () => {
   it("passes only funding and minimal runtime variables to the signer process", () => {
@@ -36,18 +40,46 @@ describe("testnet funding process isolation", () => {
     });
   });
 
-  it("resolves shared bindings from the root environment the same way supervised", () => {
-    // The supervisor loads the root .env before projecting; the standalone
-    // launchers did not, so `pnpm funding:worker` and `pnpm
-    // funding:replenisher` refused to start on their own while the identical
-    // child under `pnpm backend` came up fine.
-    for (const launcher of [
-      "./testnet-funding-launcher.ts",
-      "./testnet-funding-replenisher-launcher.ts",
-    ]) {
-      const source = readFileSync(new URL(launcher, import.meta.url), "utf8");
-      expect(source).toContain("readRuntimeEnvironmentSource({");
-      expect(source).toContain('path: join(repositoryRoot, ".env"),');
+  it("uses the selected root profile and never falls back under injected-only launch", () => {
+    const repositoryRoot = mkdtempSync(
+      join(tmpdir(), "orbit-funding-profile-"),
+    );
+    try {
+      writeFileSync(
+        join(repositoryRoot, ".env"),
+        "RPC_URL=https://development.invalid\nTESTNET_FUNDING_SIGNER_PRIVATE_KEY=development-key\nTESTNET_FUNDING_TREASURY_PRIVATE_KEY=development-treasury\n",
+      );
+      writeFileSync(
+        join(repositoryRoot, ".env.staging"),
+        "RPC_URL=https://staging.invalid\n",
+      );
+      writeFileSync(
+        join(repositoryRoot, ".env.testnet-funding"),
+        "TESTNET_FUNDING_SIGNER_PRIVATE_KEY=dedicated-staging-key\n",
+      );
+      writeFileSync(
+        join(repositoryRoot, ".env.testnet-funding-treasury"),
+        "TESTNET_FUNDING_TREASURY_PRIVATE_KEY=dedicated-treasury-key\n",
+      );
+
+      expect(
+        createTestnetFundingLauncherEnvironment({}, "staging", repositoryRoot),
+      ).toMatchObject({
+        RPC_URL: "https://staging.invalid",
+        TESTNET_FUNDING_SIGNER_PRIVATE_KEY: "dedicated-staging-key",
+      });
+      expect(
+        createTestnetFundingLauncherEnvironment(
+          { RPC_URL: "https://injected.invalid" },
+          "none",
+          repositoryRoot,
+        ),
+      ).toEqual({ RPC_URL: "https://injected.invalid" });
+      expect(
+        createReplenisherLauncherEnvironment({}, "none", repositoryRoot),
+      ).toEqual({});
+    } finally {
+      rmSync(repositoryRoot, { force: true, recursive: true });
     }
   });
 

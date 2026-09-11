@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   acquireBackendInstance,
+  backendEnvironmentProfile,
   foundationalBackendServices,
   operatorBackendService,
   createBackendLaunchPlan,
@@ -38,6 +39,23 @@ const persistentChild = (): ChildProcess =>
   });
 
 describe("combined backend", () => {
+  it("selects explicit backend environment profiles", () => {
+    expect(backendEnvironmentProfile([])).toBe("development");
+    expect(backendEnvironmentProfile(["--profile=staging"])).toBe("staging");
+    expect(backendEnvironmentProfile(["--no-env-file"])).toBe("none");
+    expect(() => backendEnvironmentProfile(["unexpected"])).toThrow(
+      /only environment profile arguments/u,
+    );
+  });
+
+  it("prevents nested secret launchers from reopening a root env file", () => {
+    for (const service of foundationalBackendServices.filter(
+      ({ id }) => id === "funding" || id === "replenisher",
+    )) {
+      expect(service.arguments.at(-1)).toBe("--no-env-file");
+    }
+  });
+
   it("hands backend ownership to a new supervisor", async () => {
     const socketPath = join(
       "/tmp",
@@ -261,10 +279,10 @@ describe("combined backend", () => {
     });
   });
 
-  it("maps the self-funded staging deployer only into an unconfigured live operator", () => {
+  it("maps the self-funded developer deployer only into an unconfigured live operator", () => {
     const environment = {
       DEPLOYER_PRIVATE_KEY: "development-single-signer",
-      DEPLOYMENT_ENVIRONMENT: "staging",
+      DEPLOYMENT_ENVIRONMENT: "development-sepolia",
       OPERATOR_EXECUTE: "true",
       SELF_FUNDED_TEST_ASSETS: "true",
     };
@@ -293,6 +311,12 @@ describe("combined backend", () => {
         OPERATOR_PRIVATE_KEY: "dedicated-operator",
       }).OPERATOR_PRIVATE_KEY,
     ).toBe("dedicated-operator");
+    expect(
+      createBackendServiceEnvironment("operator", {
+        ...environment,
+        DEPLOYMENT_ENVIRONMENT: "staging",
+      }),
+    ).not.toHaveProperty("OPERATOR_PRIVATE_KEY");
     expect(
       createBackendServiceEnvironment("operator", {
         ...environment,

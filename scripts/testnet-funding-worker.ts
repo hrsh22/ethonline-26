@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 
@@ -18,6 +18,13 @@ import { createViemTestnetFundingChain } from "./testnet-funding/viem-chain.ts";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
+const fundingManifestPath = (value: string | undefined): string => {
+  const configured = value?.trim() || "deployments/84532.json";
+  return isAbsolute(configured)
+    ? configured
+    : resolve(repositoryRoot, configured);
+};
+
 const unavailableChain: TestnetFundingChain = {
   inspect: () => Effect.die("Disabled funding worker cannot inspect the chain"),
   prepare: () => Effect.die("Disabled funding worker cannot prepare transfers"),
@@ -34,7 +41,10 @@ const readRuntimeInputs = Effect.try({
     );
     const manifest = decodeProtocolDeploymentManifest(
       JSON.parse(
-        readFileSync(join(repositoryRoot, "deployments/84532.json"), "utf8"),
+        readFileSync(
+          fundingManifestPath(process.env.TESTNET_FUNDING_MANIFEST_PATH),
+          "utf8",
+        ),
       ) as unknown,
     );
     if (manifest.chainId !== 84_532 || manifest.network !== "base-sepolia") {

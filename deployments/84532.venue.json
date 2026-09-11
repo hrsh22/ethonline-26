@@ -1,19 +1,19 @@
 {
   "$schema": "./venue-schema.json",
   "schemaVersion": 1,
-  "environment": "staging",
+  "environment": "development-sepolia",
   "chainId": 84532,
   "network": "base-sepolia",
   "assetProfile": "self-funded-test-assets",
   "operator": "0x5991fd6Ecc5634C4de497b47Eb0Aa0065fffb214",
   "contracts": {
-    "weth": "0x7106aaa3436e47092Bc950472BCe8a8636Ae5Fda",
-    "usdc": "0x413504a8E883Cf5BC92B512c12a0b7483C53c6fc",
+    "weth": "0x3aD69834aE6Eb9C0A46Bc8F320295346497d59dc",
+    "usdc": "0x35BdfC6713a0F2AAb640F49cb1905166468BE8c4",
     "uniswapV4PoolManager": "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408",
-    "testConversionVenue": "0xCEc045220E2b8d8cBe09615398753E265A8360c5",
-    "mockAaplc": "0x537db73Ea935043B145a83c7b240F60CACC71E1D",
-    "mockGooglc": "0x504f4a08d90cEc20a922a89671A7fE1B0489a99A",
-    "mockMetac": "0x89F9493f15F8E9D891234eab73889fF7b0E81ec5",
-    "mockNvdac": "0x3CaAeC90Bb52462737e58e247B3C2333eC8E7E0A"
+    "testConversionVenue": "0xe8B4A645368b52d5e02ca46296a67e81C552f222",
+    "mockAaplc": "0xa009d67954e7bC83AeC2376033d63a3B155b23E2",
+    "mockGooglc": "0xe102E9090b9dd949023fbeA579bf642cC63a79FC",
+    "mockMetac": "0x37fA3624Ff88Ab0C72aE3e30245D6b051c43A798",
+    "mockNvdac": "0x30bB758dAb96758c31B28258Acd36Fcf7F36fdD2"
   }
 }

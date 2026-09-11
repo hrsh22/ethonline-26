@@ -94,6 +94,34 @@ describe("runtime service process isolation", () => {
     }
   });
 
+  it("keeps each funding manifest selector inside its own signer boundary", () => {
+    const environment = {
+      TESTNET_FUNDING_MANIFEST_PATH: "deployments/funding-canary.json",
+      TESTNET_FUNDING_REPLENISH_MANIFEST_PATH:
+        "deployments/replenisher-canary.json",
+    };
+
+    for (const service of ["funding", "funding-launcher"] as const) {
+      expect(createRuntimeServiceEnvironment(service, environment)).toEqual({
+        TESTNET_FUNDING_MANIFEST_PATH: "deployments/funding-canary.json",
+      });
+    }
+    for (const service of [
+      "funding-replenisher",
+      "funding-replenisher-launcher",
+    ] as const) {
+      expect(createRuntimeServiceEnvironment(service, environment)).toEqual({
+        TESTNET_FUNDING_REPLENISH_MANIFEST_PATH:
+          "deployments/replenisher-canary.json",
+      });
+    }
+    for (const service of ["api", "history", "operator", "web"] as const) {
+      expect(createRuntimeServiceEnvironment(service, environment)).toEqual(
+        service === "web" ? { __NEXT_PROCESSED_ENV: "true" } : {},
+      );
+    }
+  });
+
   it("merges a runtime file with host precedence and an explicit missing-file policy", () => {
     const directory = mkdtempSync(join(tmpdir(), "orbit-runtime-env-"));
     const path = join(directory, "service.env");

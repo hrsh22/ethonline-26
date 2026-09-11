@@ -152,7 +152,7 @@ values, not secrets. At the audited `0.0519697581 WETH` queue, two meaningful cy
 executable; the remaining approximately `0.0019697581 WETH` waits for future fees to reach the
 minimum instead of creating another dust position.
 
-The root staging command loads this file and forwards `BASE_SEPOLIA_RPC_URL` to the web application.
+The developer command loads the root `.env` and forwards `BASE_SEPOLIA_RPC_URL` to the web application.
 Do not create `apps/web/.env.local` or another `apps/web/.env*` file: the guarded launcher rejects
 them before startup and prevents development hot reload from reading one created later. It starts
 no Keeper or liquidity-executor process:
@@ -192,9 +192,9 @@ watch restarts resume its last authorized policy for the same deployment. Fresh
 or legacy unbound ledgers require a signed live command once. See
 [Operator control plane](operator-control-plane.md).
 
-For the explicitly self-funded staging profile, `pnpm backend` reuses `DEPLOYER_PRIVATE_KEY` only
+For the explicitly self-funded developer profile, `pnpm backend` reuses `DEPLOYER_PRIVATE_KEY` only
 when execute mode is live and no operator-specific key is configured. That fallback is projected
-only into the operator child and is disabled outside `DEPLOYMENT_ENVIRONMENT=staging`; the API,
+only into the operator child and is disabled outside `DEPLOYMENT_ENVIRONMENT=development-sepolia`; the API,
 history, funding, replenisher, web, and supervisor environments never receive it. Configure the
 dedicated variables above for any deployment that separates operational duties.
 

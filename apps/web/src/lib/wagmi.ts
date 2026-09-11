@@ -14,6 +14,7 @@ import {
 
 const webChains = {
   development: foundry,
+  "development-sepolia": baseSepolia,
   staging: baseSepolia,
   production: base,
 } as const;

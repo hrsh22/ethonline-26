@@ -12,11 +12,19 @@ files as service-specific overrides. The API and history entry points do not loa
 themselves. Adding a variable to any source therefore does not make it available to a service
 unless its reviewed allowlist also names it.
 
-The root `.env.example` is deliberately slim. Its `.env` copy is a local integration convenience
-for `pnpm backend` plus a separately started web process, not a deployment secret bundle. The
-detailed templates remain authoritative when a default or optional knob is not repeated there.
-`pnpm backend` is suitable for one-developer Base Sepolia testing; deployed services have
-independent lifecycles and identities.
+The root `.env.example` is deliberately slim. Its `.env` copy selects the developer Base Sepolia
+deployment for `pnpm backend` plus a separately started `pnpm dev` web process. The checked
+`.env.staging.example` can be copied to the ignored `.env.staging` for a workstation rehearsal of
+the demo deployment with `pnpm backend:staging` and `pnpm dev:staging`. Neither combined file is a
+deployment secret bundle. The detailed templates remain authoritative when a default or optional
+knob is not repeated there; deployed services have independent lifecycles and identities.
+
+`development` remains the Anvil target used by `pnpm dev:local`. `development-sepolia` selects the
+current checked `deployments/84532.json`. `staging` reserves
+`deployments/84532.staging.json` and remains unavailable to runtime consumers until that separately
+deployed manifest is reviewed and published. Because both remote targets use chain 84532, every
+deployment command must name the environment explicitly; chain ID alone is intentionally
+ambiguous.
 
 ## Deployment boundaries
 
@@ -58,7 +66,7 @@ credential and provision it independently to both consumers. In particular, API/
 the history-read token, history/operator share only the history-ingestion token, API/funding share
 only the funding token, and API/operator share only the operator-control token.
 
-`config/env/web.env.example` is the public boundary. Its `NEXT_PUBLIC_` values are compiled into or
+`config/env/web.env.example` is the staging public boundary. Its `NEXT_PUBLIC_` values are compiled into or
 sent to browser code; none is a secret. Runtime templates may hold only the credentials named in the
 table. `config/env/deployment.env.example` is a separate one-shot authority boundary and must never
 be reused as a runtime service file.
@@ -88,7 +96,8 @@ also starts with a read guard for app-root `.env*` paths, preventing the develop
 force-loading a file created after startup. A blocked read reports only the filename, never its
 contents.
 
-Put reviewed local browser-public values in the root `.env`; inject only the documented web
+Put reviewed developer browser-public values in the root `.env`; use `.env.staging` only for a
+workstation staging rehearsal. On the VM, inject only the documented web
 allowlist from a production process manager. `config/env/web.env.example` enumerates every
 browser-public binding the application reads, and a test fails if the application reads a binding
 the launcher does not project or the authoritative template does not document. Wallet onboarding
@@ -109,10 +118,30 @@ only in the separately controlled deployment system or offline custody required 
 procedure.
 
 The only exception is the documented local-development fallback in `pnpm backend`: with
-`DEPLOYMENT_ENVIRONMENT=staging`, `SELF_FUNDED_TEST_ASSETS=true`, and `OPERATOR_EXECUTE=true`, and no
+`DEPLOYMENT_ENVIRONMENT=development-sepolia`, `SELF_FUNDED_TEST_ASSETS=true`, and
+`OPERATOR_EXECUTE=true`, and no
 dedicated operator key configured, the supervisor maps the local deployer key only into the
 operator child as `OPERATOR_PRIVATE_KEY`. This fallback does not apply to separately launched or
-production services and does not change any runtime allowlist.
+staging/production services and does not change any runtime allowlist.
+
+## Publishing staging and initializing VM state
+
+Deploy staging contracts from a trusted workstation or isolated CI runner using the one-shot
+deployment template. Set `DEPLOYMENT_ENVIRONMENT=staging` and write the verified result to
+`deployments/84532.staging.json`; do not overwrite the developer manifest. The deployer key remains
+outside the VM. Publishing staging is a reviewed release change: add the manifest, mark the staging
+target configured, regenerate the web binding, and deploy that exact revision.
+
+SQLite does not require contract deployment to run on the VM. Provision fresh staging paths in the
+service-specific environment files, start the history worker, and let it backfill from the new
+manifest's launch block. Do not copy the developer history, administrator sessions, operator
+outbox/control state, or funding ledgers. The history database is manifest-bound and reconstructible;
+the other databases contain environment-specific operational state. Wait for history readiness and
+catch-up before enabling operator execution or opening the demo.
+
+Process-manager units should invoke the API, history, and operator launcher with `--no-env-file`
+so the unit's isolated `EnvironmentFile=` is the only source. The health command supports the same
+flag; `pnpm health:base-sepolia:staging` is the workstation convenience that reads `.env.staging`.
 
 Before starting services, verify that the runtime account, its environment file, its process-manager
 configuration, and its container secret set contain no deployer key. Rotate a runtime credential by

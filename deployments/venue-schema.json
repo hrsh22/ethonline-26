@@ -17,7 +17,7 @@
   "properties": {
     "$schema": { "const": "./venue-schema.json" },
     "schemaVersion": { "const": 1 },
-    "environment": { "const": "staging" },
+    "environment": { "const": "development-sepolia" },
     "chainId": { "const": 84532 },
     "network": { "const": "base-sepolia" },
     "assetProfile": {

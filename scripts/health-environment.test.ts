@@ -124,6 +124,32 @@ describe("Base Sepolia health environment", () => {
     expect(configuration.rpcUrl).toBe("https://shell.example");
   });
 
+  it("loads staging only from .env.staging", async () => {
+    const repositoryRoot = makeRepository(
+      `BASE_SEPOLIA_RPC_URL=https://development.example\nHISTORY_READ_API_TOKEN=${HISTORY_READ_API_TOKEN}\n`,
+    );
+    writeFileSync(
+      join(repositoryRoot, ".env.staging"),
+      [
+        "BASE_SEPOLIA_RPC_URL=https://staging.example",
+        "DEPLOYMENT_MANIFEST_PATH=deployments/84532.staging.json",
+        "HEALTH_EVIDENCE_PATH=.scratch/base-sepolia-staging-health.json",
+        `HISTORY_READ_API_TOKEN=${HISTORY_READ_API_TOKEN}`,
+      ].join("\n"),
+    );
+
+    await expect(
+      Effect.runPromise(loadHealthEnvironment(repositoryRoot, "staging")),
+    ).resolves.toMatchObject({
+      rpcUrl: "https://staging.example",
+      manifestPath: join(repositoryRoot, "deployments/84532.staging.json"),
+      evidencePath: join(
+        repositoryRoot,
+        ".scratch/base-sepolia-staging-health.json",
+      ),
+    });
+  });
+
   it.each([
     "https://127.0.0.1:8787",
     "http://localhost:8787",
@@ -163,11 +189,11 @@ describe("Base Sepolia health environment", () => {
     ).rejects.toThrow(/HISTORY_READ_API_TOKEN/u);
   });
 
-  it("fails clearly when the root dotenv file is absent", async () => {
+  it("fails clearly when the development dotenv file is absent", async () => {
     const repositoryRoot = makeRepository();
 
     await expect(
       Effect.runPromise(loadHealthEnvironment(repositoryRoot)),
-    ).rejects.toThrow("Unable to load the root .env");
+    ).rejects.toThrow("Unable to load the .env environment profile");
   });
 });

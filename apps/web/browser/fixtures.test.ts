@@ -13,7 +13,7 @@ describe("browser history responses through the public reader", () => {
       basePath: "https://history.test/v1/history",
       fetcher: async (input) => historyFixtureResponse(new URL(String(input))),
       identity: selectIdentityConfiguration("orbit-4444"),
-      manifest: protocolDeploymentManifests.staging,
+      manifest: protocolDeploymentManifests["development-sepolia"],
     });
     const status = await reader.status();
     expect(status.status.state).toBe("complete");
@@ -44,7 +44,7 @@ describe("browser history responses through the public reader", () => {
 
   it("reads two priced minutes from canonical swaps and matched fees", async () => {
     const identity = selectIdentityConfiguration("orbit-4444");
-    const manifest = protocolDeploymentManifests.staging;
+    const manifest = protocolDeploymentManifests["development-sepolia"];
     const history = createIndexedHistoryReaders({
       basePath: "https://history.test/v1/history",
       fetcher: async (input) =>

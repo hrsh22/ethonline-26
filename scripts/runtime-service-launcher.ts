@@ -11,12 +11,16 @@ import {
 } from "./effect-runtime.ts";
 import {
   createRuntimeServiceEnvironment,
-  readRuntimeEnvironmentSource,
   replaceProcessEnvironment,
   spawnRuntimeServiceProcess,
   type EnvironmentVariables,
   type RuntimeService,
 } from "./runtime-environment.ts";
+import {
+  parseRuntimeEnvironmentProfileArguments,
+  readRuntimeEnvironmentProfile,
+  type RuntimeEnvironmentProfile,
+} from "./runtime-environment-profile.ts";
 
 type RuntimeLaunchTarget = "api" | "history" | "operator" | "operator-watch";
 
@@ -25,6 +29,10 @@ interface RuntimeLaunchConfiguration {
   readonly command: string;
   readonly label: string;
   readonly service: RuntimeService;
+}
+
+export interface RuntimeServiceLaunchConfiguration extends RuntimeLaunchConfiguration {
+  readonly environmentProfile: RuntimeEnvironmentProfile;
 }
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -107,27 +115,44 @@ const runtimeLaunchConfiguration = (
   return launchConfigurationByTarget[target](forwardedArguments);
 };
 
+export const runtimeServiceLaunchConfiguration = (
+  arguments_: readonly string[],
+): RuntimeServiceLaunchConfiguration => {
+  const parsed = parseRuntimeEnvironmentProfileArguments(arguments_);
+  return {
+    ...runtimeLaunchConfiguration(parsed.remainingArguments),
+    environmentProfile: parsed.profile,
+  };
+};
+
 const isolatedEnvironment = (
   host: EnvironmentVariables,
   service: RuntimeService,
+  profile: RuntimeEnvironmentProfile,
 ): NodeJS.ProcessEnv =>
   createRuntimeServiceEnvironment(
     service,
-    readRuntimeEnvironmentSource({
+    readRuntimeEnvironmentProfile({
+      developmentFileRequired: false,
       environment: host,
-      path: join(repositoryRoot, ".env"),
-      required: false,
+      profile,
+      repositoryRoot,
     }),
   );
 
 const launcher = Effect.gen(function* () {
   const configuration = yield* validate(
     "Runtime service arguments are invalid",
-    () => runtimeLaunchConfiguration(process.argv.slice(2)),
+    () => runtimeServiceLaunchConfiguration(process.argv.slice(2)),
   );
   const isolated = yield* fileSystem(
-    "Unable to read the optional root .env for the runtime service",
-    () => isolatedEnvironment(process.env, configuration.service),
+    "Unable to read the runtime service environment profile",
+    () =>
+      isolatedEnvironment(
+        process.env,
+        configuration.service,
+        configuration.environmentProfile,
+      ),
   );
   replaceProcessEnvironment(isolated);
   yield* runManagedProcess(configuration.label, () =>

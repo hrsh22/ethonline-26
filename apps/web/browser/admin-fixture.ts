@@ -14,7 +14,7 @@ import { createProtocolContracts } from "@orbit/protocol/contracts";
 import { protocolDeploymentManifests } from "../src/generated/deployment-manifests.ts";
 import { decodeAdminSessionResponse } from "../src/lib/admin-session-contract.ts";
 
-const manifest = protocolDeploymentManifests.staging;
+const manifest = protocolDeploymentManifests["development-sepolia"];
 const hook = createProtocolContracts(manifest).canonicalFeeHook;
 export const ADMIN_FIXTURE_COOKIE = `orbit_admin_session=${"b".repeat(64)}`;
 const block = {

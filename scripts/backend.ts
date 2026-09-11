@@ -17,17 +17,22 @@ import {
   runInterruptibleMain,
   SubprocessError,
   successfulProcess,
+  validate,
 } from "./effect-runtime.ts";
 import { createServiceLogger } from "./service-log.ts";
 import {
   createRuntimeProcessEnvironment,
   createRuntimeServiceEnvironment,
-  readRuntimeEnvironmentSource,
   replaceProcessEnvironment,
   type EnvironmentVariables,
   type RuntimeService,
   spawnRuntimeServiceProcess,
 } from "./runtime-environment.ts";
+import {
+  parseRuntimeEnvironmentProfileArguments,
+  readRuntimeEnvironmentProfile,
+  type RuntimeEnvironmentProfile,
+} from "./runtime-environment-profile.ts";
 
 export interface BackendService {
   readonly id: "api" | "funding" | "history" | "operator" | "replenisher";
@@ -245,7 +250,10 @@ export const foundationalBackendServices: readonly BackendService[] = [
     id: "funding",
     label: "funding worker",
     command: process.execPath,
-    arguments: [join(repositoryRoot, "scripts/testnet-funding-launcher.ts")],
+    arguments: [
+      join(repositoryRoot, "scripts/testnet-funding-launcher.ts"),
+      "--no-env-file",
+    ],
   },
   {
     id: "api",
@@ -262,6 +270,7 @@ export const foundationalBackendServices: readonly BackendService[] = [
     command: process.execPath,
     arguments: [
       join(repositoryRoot, "scripts/testnet-funding-replenisher-launcher.ts"),
+      "--no-env-file",
     ],
   },
 ] as const;
@@ -294,7 +303,7 @@ export const createBackendServiceEnvironment = (
     ].some((value) => nonBlankString(value) !== undefined);
     const deployerPrivateKey = nonBlankString(environment.DEPLOYER_PRIVATE_KEY);
     const singleSignerDevelopment =
-      environment.DEPLOYMENT_ENVIRONMENT === "staging" &&
+      environment.DEPLOYMENT_ENVIRONMENT === "development-sepolia" &&
       environment.SELF_FUNDED_TEST_ASSETS === "true" &&
       environment.OPERATOR_EXECUTE === "true";
     return !hasDedicatedSigner &&
@@ -625,22 +634,55 @@ export const runBackendServices = <ReadinessError, PreflightError = never>({
     }),
   );
 
-const createBackendLaunchPlanFromRoot = (
+export const backendEnvironmentProfile = (
+  arguments_: readonly string[],
+): RuntimeEnvironmentProfile => {
+  const parsed = parseRuntimeEnvironmentProfileArguments(arguments_);
+  if (parsed.remainingArguments.length !== 0) {
+    throw new Error("Backend accepts only environment profile arguments");
+  }
+  return parsed.profile;
+};
+
+export const createBackendLaunchPlanFromProfile = (
   hostEnvironment: EnvironmentVariables,
-): BackendLaunchPlan =>
-  createBackendLaunchPlan(
-    readRuntimeEnvironmentSource({
-      environment: hostEnvironment,
-      path: join(repositoryRoot, ".env"),
-      required: true,
-    }),
-  );
+  profile: RuntimeEnvironmentProfile,
+  root = repositoryRoot,
+): BackendLaunchPlan => {
+  const environment = readRuntimeEnvironmentProfile({
+    developmentFileRequired: true,
+    environment: hostEnvironment,
+    profile,
+    repositoryRoot: root,
+  });
+  const withDedicatedLauncherPaths =
+    profile === "none"
+      ? environment
+      : {
+          ...environment,
+          TESTNET_FUNDING_ENV_PATH:
+            nonBlankString(environment.TESTNET_FUNDING_ENV_PATH) ??
+            (profile === "staging"
+              ? ".env.testnet-funding.staging"
+              : ".env.testnet-funding"),
+          TESTNET_FUNDING_REPLENISH_ENV_PATH:
+            nonBlankString(environment.TESTNET_FUNDING_REPLENISH_ENV_PATH) ??
+            (profile === "staging"
+              ? ".env.testnet-funding-treasury.staging"
+              : ".env.testnet-funding-treasury"),
+        };
+  return createBackendLaunchPlan(withDedicatedLauncherPaths);
+};
 
 const backendSession = Effect.scoped(
   Effect.gen(function* () {
+    const profile = yield* validate(
+      "Backend environment profile arguments are invalid",
+      () => backendEnvironmentProfile(process.argv.slice(2)),
+    );
     const launchPlan = yield* fileSystem(
-      "Unable to load or validate the root .env for pnpm backend",
-      () => createBackendLaunchPlanFromRoot(process.env),
+      "Unable to load or validate the backend environment profile",
+      () => createBackendLaunchPlanFromProfile(process.env, profile),
     );
     replaceProcessEnvironment(launchPlan.supervisorEnvironment);
     yield* Effect.acquireRelease(

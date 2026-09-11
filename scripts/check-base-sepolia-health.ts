@@ -19,11 +19,23 @@ import {
 import { loadHealthEnvironment } from "./health-environment.ts";
 import { createBaseSepoliaHealthReader } from "./health-history.ts";
 import { readFundingHealth } from "./health-funding.ts";
+import { parseRuntimeEnvironmentProfileArguments } from "./runtime-environment-profile.ts";
 
 runMain(
   Effect.gen(function* () {
     const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-    const environment = yield* loadHealthEnvironment(repositoryRoot);
+    const profileArguments = yield* validate(
+      "Health environment profile arguments are invalid",
+      () => parseRuntimeEnvironmentProfileArguments(process.argv.slice(2)),
+    );
+    yield* ensure(
+      profileArguments.remainingArguments.length === 0,
+      "Health check accepts only environment profile arguments",
+    );
+    const environment = yield* loadHealthEnvironment(
+      repositoryRoot,
+      profileArguments.profile,
+    );
     const {
       evidencePath,
       fundingApiToken,

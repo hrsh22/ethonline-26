@@ -9,17 +9,17 @@ const readJson = (path: string): unknown =>
   JSON.parse(readFileSync(path, "utf8")) as unknown;
 
 describe("public test venue configuration", () => {
-  it("decodes the checked staging address configuration", () => {
+  it("decodes the checked developer Base Sepolia address configuration", () => {
     const configuration = decodeTestVenueConfiguration(
       readJson("../../deployments/84532.venue.json"),
     );
 
-    expect(configuration.environment).toBe("staging");
+    expect(configuration.environment).toBe("development-sepolia");
     expect(configuration.assetProfile).toBe("self-funded-test-assets");
     expect(configuration.contracts.mockAaplc).toMatch(/^0x[0-9a-fA-F]{40}$/);
   });
 
-  it("matches every externally managed address in the staging manifest", () => {
+  it("matches every externally managed address in the developer manifest", () => {
     const configuration = decodeTestVenueConfiguration(
       readJson("../../deployments/84532.venue.json"),
     );
@@ -43,26 +43,27 @@ describe("public test venue configuration", () => {
   });
 
   it("rejects mock venue addresses labelled as production", () => {
-    const staging = readJson("../../deployments/84532.venue.json") as Record<
-      string,
-      unknown
-    >;
+    const development = readJson(
+      "../../deployments/84532.venue.json",
+    ) as Record<string, unknown>;
 
     expect(() =>
-      decodeTestVenueConfiguration({ ...staging, environment: "production" }),
+      decodeTestVenueConfiguration({
+        ...development,
+        environment: "production",
+      }),
     ).toThrow();
   });
 
   it("rejects malformed public addresses", () => {
-    const staging = readJson("../../deployments/84532.venue.json") as Record<
-      string,
-      unknown
-    >;
-    const contracts = staging.contracts as Record<string, unknown>;
+    const development = readJson(
+      "../../deployments/84532.venue.json",
+    ) as Record<string, unknown>;
+    const contracts = development.contracts as Record<string, unknown>;
 
     expect(() =>
       decodeTestVenueConfiguration({
-        ...staging,
+        ...development,
         contracts: { ...contracts, mockAaplc: "not-an-address" },
       }),
     ).toThrow();

@@ -15,7 +15,7 @@ import {
   DeploymentEnvironmentNameSchema,
   deploymentEnvironmentForChainId,
   deploymentEnvironmentForName,
-  requireConfiguredDeploymentEnvironment,
+  requireDeployableDeploymentEnvironment,
 } from "@orbit/config/deployment-environments";
 import {
   selectedIdentityConfiguration,
@@ -101,18 +101,17 @@ runMain(
         chainId === 31_337 || chainId === 84_532,
         `Unsupported deployment chain ${chainId}`,
       );
-      const chainEnvironment = requireConfiguredDeploymentEnvironment(
-        deploymentEnvironmentForChainId(chainId),
+      const chainEnvironment = requireDeployableDeploymentEnvironment(
+        deploymentEnvironment.DEPLOYMENT_ENVIRONMENT === undefined
+          ? deploymentEnvironmentForChainId(chainId)
+          : deploymentEnvironmentForName(
+              deploymentEnvironment.DEPLOYMENT_ENVIRONMENT,
+            ),
       );
-      if (deploymentEnvironment.DEPLOYMENT_ENVIRONMENT !== undefined) {
-        const requestedEnvironment = deploymentEnvironmentForName(
-          deploymentEnvironment.DEPLOYMENT_ENVIRONMENT,
-        );
-        yield* ensure(
-          requestedEnvironment.name === chainEnvironment.name,
-          `Deployment environment ${requestedEnvironment.name} does not match RPC chain ${chainId}`,
-        );
-      }
+      yield* ensure(
+        chainEnvironment.chainId === chainId,
+        `Deployment environment ${chainEnvironment.name} does not match RPC chain ${chainId}`,
+      );
 
       const configuredManifestPath =
         deploymentEnvironment.DEPLOYMENT_MANIFEST_PATH;
@@ -610,7 +609,7 @@ runMain(
       );
 
       const shouldRefreshWebBinding = () =>
-        chainEnvironment.name === "staging" &&
+        chainEnvironment.name === "development-sepolia" &&
         resolve(manifestPath) ===
           join(repositoryRoot, chainEnvironment.manifestPath);
       if (shouldRefreshWebBinding()) {

@@ -45,11 +45,14 @@ pnpm test
 NEXT_PUBLIC_APP_URL=https://orbit.example pnpm build
 pnpm api:serve
 pnpm backend
+pnpm backend:staging
 pnpm dev
 pnpm dev:local
+pnpm dev:staging
 pnpm funding:worker
 pnpm funding:replenisher
 pnpm health:base-sepolia
+pnpm health:base-sepolia:staging
 pnpm model:genesis-curve
 pnpm history:backfill
 pnpm history:worker
@@ -126,7 +129,17 @@ to sign eligible Base Sepolia transactions. Start the web separately with `pnpm 
 
 `pnpm deploy:cca-protocol -- --local-test` starts an isolated Anvil chain and rehearses the fresh CCA replacement end to end. It deploys new local v4 and launch infrastructure, every project-owned module, a new 4,444 FUEL supply, conversion pools, deterministic bidder custody, and a funded auction. It then checks the uninitialized canonical PoolKey, module ownership and seals, contiguous successful receipts, and an exact schema-v3 manifest. For Base Sepolia, provide the reviewed JSON input through `CCA_DEPLOYMENT_INPUT`, choose a new `CCA_MANIFEST_OUTPUT`, and run without `--broadcast` first. The simulation writes only a composition sidecar. Adding `-- --broadcast` is the explicit transaction gate; it refuses to overwrite an existing manifest and publishes the canonical manifest only after every setup receipt and onchain postcondition passes. The auction remains pending until settlement, permissionless pool seeding, and coordinator activation.
 
-Public contract addresses live in checked deployment configuration, never in `.env`: `development` selects `deployments/31337.json`, `staging` selects `deployments/84532.json`, and `production` has no address manifest until a reviewed Base mainnet deployment is published. CLI deployments derive the environment from the RPC chain and use `DEPLOYMENT_ENVIRONMENT` only as an optional fail-closed cross-check. `pnpm dev` explicitly selects the staging binding and Base Sepolia network; use `pnpm dev:local` only when running against Anvil. This deployment target is independent of Next.js development mode. Selecting production fails closed instead of borrowing mock addresses. RPC URLs, signing keys, and connector credentials remain in the ignored root or service-specific environment files described below; do not create an `apps/web/.env*` file.
+Public contract addresses live in checked deployment configuration, never in `.env`: `development`
+selects `deployments/31337.json`, `development-sepolia` selects the current developer deployment in
+`deployments/84532.json`, and `staging` reserves `deployments/84532.staging.json` for the separately
+deployed VM demo. Staging remains unavailable until that manifest is reviewed and published;
+`production` likewise has no address manifest until a reviewed Base mainnet deployment exists.
+Because the two remote targets share chain 84532, Base Sepolia deployment commands require an
+explicit `DEPLOYMENT_ENVIRONMENT` and fail instead of inferring an identity from the chain.
+`pnpm dev` selects developer Base Sepolia from `.env`, `pnpm dev:staging` selects staging from
+`.env.staging`, and `pnpm dev:local` selects Anvil. This deployment target is independent of
+Next.js development mode. RPC URLs, signing keys, and connector credentials remain in the ignored
+root or service-specific environment files described below; do not create an `apps/web/.env*` file.
 
 `pnpm funding:worker` starts the separate loopback-only self-service funding service used by the public `/start` route through `apps/api`. A minimal launcher gives the signer process only variables from the dedicated ignored `.env.testnet-funding`, created from [`config/env/funding.env.example`](config/env/funding.env.example); deployer and operator keys from the shared environment are not inherited. The service uses a finite, inventory-only signer that transfers existing valueless test WETH and Base Sepolia gas; it cannot mint or hold any protocol role. Signed transactions are persisted before broadcast, while cooldowns, lifetime limits, pending recovery, and receipts survive restarts in a private SQLite ledger. `pnpm dev` never starts this worker. See [`docs/operations/testnet-funding.md`](docs/operations/testnet-funding.md) before provisioning inventory or enabling it.
 
@@ -143,11 +156,14 @@ templates:
 
 ```bash
 cp .env.example .env
+cp .env.staging.example .env.staging # workstation staging rehearsal only
 cp config/env/funding.env.example .env.testnet-funding
 cp config/env/replenisher.env.example .env.testnet-funding-treasury
+cp .env.testnet-funding.staging.example .env.testnet-funding.staging
+cp .env.testnet-funding-treasury.staging.example .env.testnet-funding-treasury.staging
 ```
 
-The authoritative per-process templates are in [`config/env/`](config/env/): web, API, history,
+The authoritative per-process staging templates are in [`config/env/`](config/env/): web, API, history,
 operator, funding, replenisher, and one-shot deployment. They document defaults and advanced knobs;
 the root example intentionally contains only the cross-service values needed for local integration.
 Never commit funded keys or credential-bearing RPC URLs.

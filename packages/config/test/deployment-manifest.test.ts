@@ -453,7 +453,7 @@ describe("Base Sepolia deployment manifest", () => {
     // is caught. A genuine redeployment changes it, and updating it is part of
     // recording that deployment.
     expect(deploymentManifestFingerprint(manifest)).toBe(
-      "0x4acaf587773a454e20de450530d53fe35ae1e62dc90c01806ae528c715c3aeaa",
+      "0x189d8cb0fbf0854d836d6222723cbf63536d063501e0889191658f70df3e7fe6",
     );
     if (!isProtocolDeploymentManifest(manifest)) {
       throw new Error("expected a Base Sepolia protocol deployment");

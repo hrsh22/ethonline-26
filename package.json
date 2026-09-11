@@ -10,6 +10,7 @@
   "scripts": {
     "api:serve": "pnpm build:packages && pnpm --filter @orbit/api build && pnpm --filter @orbit/api start",
     "backend": "pnpm build:packages && pnpm --filter @orbit/api build && node scripts/backend.ts",
+    "backend:staging": "pnpm build:packages && pnpm --filter @orbit/api build && node scripts/backend.ts --profile=staging",
     "build": "pnpm -r --if-present build",
     "build:packages": "pnpm --filter @orbit/config build && pnpm --filter @orbit/protocol build",
     "check": "pnpm check:ci",
@@ -19,6 +20,7 @@
     "deploy:protocol": "pnpm --filter @orbit/config build && node scripts/deploy-protocol.ts",
     "dev": "pnpm build:packages && node scripts/staging-web.ts dev",
     "dev:local": "pnpm build:packages && node scripts/staging-web.ts dev:local",
+    "dev:staging": "pnpm build:packages && node scripts/staging-web.ts dev:staging",
     "format": "pnpm format:prettier && pnpm --dir packages/contracts format",
     "format:check": "pnpm format:prettier:check && pnpm --dir packages/contracts format:check",
     "format:prettier": "prettier --write \"*.{ts,json,md,yaml,yml}\" \".github/**/*.{md,yaml,yml}\" \"apps/api/**/*.{ts,json,md}\" \"apps/web/**/*.{ts,tsx,css,json,md}\" \"docs/**/*.{md,json}\" \"packages/**/*.{ts,json,md}\" \"scripts/**/*.ts\" \"deployments/*.json\"",
@@ -29,6 +31,7 @@
     "governance:accept": "pnpm build:packages && node scripts/accept-module-governance.ts",
     "governance:safe": "pnpm build:packages && node scripts/governance-safe.ts",
     "health:base-sepolia": "pnpm build:packages && node scripts/check-base-sepolia-health.ts",
+    "health:base-sepolia:staging": "pnpm build:packages && node scripts/check-base-sepolia-health.ts --profile=staging",
     "history:backfill": "pnpm build:packages && node scripts/runtime-service-launcher.ts history --once",
     "history:worker": "pnpm build:packages && node scripts/runtime-service-launcher.ts history",
     "model:genesis-curve": "pnpm build:packages && node scripts/model-genesis-curve.ts",

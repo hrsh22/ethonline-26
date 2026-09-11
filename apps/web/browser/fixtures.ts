@@ -33,7 +33,7 @@ export type DataFixture =
   | "funded"
   | "cooldown";
 
-const manifest = protocolDeploymentManifests.staging;
+const manifest = protocolDeploymentManifests["development-sepolia"];
 const PROTOCOL_CHAIN_ID = manifest.chainId;
 const ORDINARY_WALLET = "0x2000000000000000000000000000000000000002";
 

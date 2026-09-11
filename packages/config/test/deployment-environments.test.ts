@@ -5,11 +5,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   decodeConfiguredDeploymentSelection,
+  configuredDeploymentEnvironments,
+  DeployableDeploymentEnvironmentSchema,
   DeploymentEnvironmentConfigurationSchema,
   deploymentEnvironmentConfigurations,
   deploymentEnvironmentForChainId,
   deploymentEnvironmentForName,
   requireConfiguredDeploymentEnvironment,
+  requireDeployableDeploymentEnvironment,
   selectDeploymentEnvironment,
 } from "../src/deployment-environments.js";
 
@@ -19,21 +22,46 @@ const readManifest = (chainId: 31_337 | 84_532): unknown =>
   ) as unknown;
 
 describe("deployment environments", () => {
-  it("selects checked mock manifests for development and staging", () => {
+  it("selects checked mock manifests for both development identities", () => {
     expect(deploymentEnvironmentForName("development")).toMatchObject({
       chainId: 31_337,
       manifestPath: "deployments/31337.json",
       assetPolicy: "mock",
     });
-    expect(deploymentEnvironmentForName("staging")).toMatchObject({
+    expect(deploymentEnvironmentForName("development-sepolia")).toMatchObject({
       chainId: 84_532,
       manifestPath: "deployments/84532.json",
       assetPolicy: "mock",
     });
   });
 
-  it("keeps the current POC on staging when no selector is supplied", () => {
-    expect(selectDeploymentEnvironment(undefined).name).toBe("staging");
+  it("keeps the current POC on development-sepolia when no selector is supplied", () => {
+    expect(selectDeploymentEnvironment(undefined).name).toBe(
+      "development-sepolia",
+    );
+  });
+
+  it("reserves a separate staging target without publishing a runtime deployment", () => {
+    const staging = deploymentEnvironmentForName("staging");
+    expect(requireDeployableDeploymentEnvironment(staging)).toMatchObject({
+      status: "unconfigured",
+      name: "staging",
+      chainId: 84_532,
+      manifestPath: "deployments/84532.staging.json",
+    });
+    expect(() => requireConfiguredDeploymentEnvironment(staging)).toThrow(
+      "staging has no published manifest",
+    );
+    expect(configuredDeploymentEnvironments.map(({ name }) => name)).toEqual([
+      "development",
+      "development-sepolia",
+    ]);
+    expect(() =>
+      decodeConfiguredDeploymentSelection({
+        environment: staging,
+        manifest: readManifest(84_532),
+      }),
+    ).toThrow();
   });
 
   it("never falls back from production to a mock deployment", () => {
@@ -49,6 +77,9 @@ describe("deployment environments", () => {
     });
     expect(() => requireConfiguredDeploymentEnvironment(production)).toThrow(
       "production has no published manifest",
+    );
+    expect(() => requireDeployableDeploymentEnvironment(production)).toThrow(
+      "production has no deployment target",
     );
   });
 
@@ -66,6 +97,18 @@ describe("deployment environments", () => {
         manifestPath: "deployments/84532.json",
       }),
     ).toThrow();
+    for (const patch of [
+      { status: "configured" },
+      { manifestPath: "deployments/84532.json" },
+      { chainId: 31_337 },
+    ]) {
+      expect(() =>
+        Schema.decodeUnknownSync(DeployableDeploymentEnvironmentSchema)({
+          ...deploymentEnvironmentConfigurations.staging,
+          ...patch,
+        }),
+      ).toThrow();
+    }
   });
 
   it("rejects a checked manifest selected for the wrong environment", () => {
@@ -77,7 +120,7 @@ describe("deployment environments", () => {
     ).toThrow();
     expect(() =>
       decodeConfiguredDeploymentSelection({
-        environment: deploymentEnvironmentConfigurations.staging,
+        environment: deploymentEnvironmentConfigurations["development-sepolia"],
         manifest: readManifest(31_337),
       }),
     ).toThrow();
@@ -90,7 +133,7 @@ describe("deployment environments", () => {
 
     try {
       decodeConfiguredDeploymentSelection({
-        environment: deploymentEnvironmentConfigurations.staging,
+        environment: deploymentEnvironmentConfigurations["development-sepolia"],
         manifest: {
           ...manifest,
           contracts: {
@@ -107,9 +150,11 @@ describe("deployment environments", () => {
     }
   });
 
-  it("maps configured and future production chains to one environment", () => {
+  it("maps chains with a single identity and rejects ambiguous Base Sepolia lookup", () => {
     expect(deploymentEnvironmentForChainId(31_337).name).toBe("development");
-    expect(deploymentEnvironmentForChainId(84_532).name).toBe("staging");
+    expect(() => deploymentEnvironmentForChainId(84_532)).toThrow(
+      "Ambiguous deployment chain 84532; select an environment explicitly: development-sepolia, staging",
+    );
     expect(deploymentEnvironmentForChainId(8_453).name).toBe("production");
   });
 });

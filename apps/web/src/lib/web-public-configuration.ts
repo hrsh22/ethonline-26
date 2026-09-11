@@ -33,14 +33,15 @@ const optionalBinding = (value: string | undefined): string | undefined => {
 const parseDeploymentEnvironment = (
   value: string | undefined,
 ): DeploymentEnvironmentName => {
-  const configured = optionalBinding(value) ?? "staging";
+  const configured = optionalBinding(value) ?? "development-sepolia";
   if (
     configured !== "development" &&
+    configured !== "development-sepolia" &&
     configured !== "staging" &&
     configured !== "production"
   ) {
     throw new TypeError(
-      "NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT must be development, staging, or production",
+      "NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT must be development, development-sepolia, staging, or production",
     );
   }
   return configured;
@@ -137,7 +138,10 @@ export const parseWebPublicConfiguration = (
         : normalizePublicApiBaseUrl(configuredPublicApiUrl),
     rpcUrl:
       explicitRpcUrl ??
-      (deploymentEnvironment === "staging" ? baseSepoliaRpcUrl : undefined),
+      (deploymentEnvironment === "development-sepolia" ||
+      deploymentEnvironment === "staging"
+        ? baseSepoliaRpcUrl
+        : undefined),
   };
 };
 

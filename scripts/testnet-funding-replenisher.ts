@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { decodeProtocolDeploymentManifest } from "@orbit/config/deployment-manifest";
@@ -28,6 +28,13 @@ import {
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const CHAIN_ID = 84_532;
+
+const replenisherManifestPath = (value: string | undefined): string => {
+  const configured = value?.trim() || "deployments/84532.json";
+  return isAbsolute(configured)
+    ? configured
+    : resolve(repositoryRoot, configured);
+};
 
 interface ReplenisherInputs {
   readonly environment: ReplenisherEnvironment;
@@ -57,7 +64,12 @@ const readRuntimeInputs = Effect.try({
     if (!environment.enabled) return { enabled: false };
     const manifest = decodeProtocolDeploymentManifest(
       JSON.parse(
-        readFileSync(join(repositoryRoot, "deployments/84532.json"), "utf8"),
+        readFileSync(
+          replenisherManifestPath(
+            process.env.TESTNET_FUNDING_REPLENISH_MANIFEST_PATH,
+          ),
+          "utf8",
+        ),
       ) as unknown,
     );
     if (manifest.chainId !== CHAIN_ID || manifest.network !== "base-sepolia") {

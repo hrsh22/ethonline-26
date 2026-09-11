@@ -14,7 +14,7 @@ import { createProtocolContracts } from "@orbit/protocol/contracts";
 import { protocolDeploymentManifests } from "../src/generated/deployment-manifests.ts";
 import { historyFixtureResponse } from "./fixtures.ts";
 
-const manifest = protocolDeploymentManifests.staging;
+const manifest = protocolDeploymentManifests["development-sepolia"];
 const contracts = createProtocolContracts(manifest);
 export const COLLECTOR_WALLET = "0x2000000000000000000000000000000000000002";
 export const COLLECTOR_HASH = `0x${"d".repeat(64)}` as Hex;

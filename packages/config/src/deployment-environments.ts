@@ -7,6 +7,7 @@ import {
 
 export const DeploymentEnvironmentNameSchema = Schema.Literal(
   "development",
+  "development-sepolia",
   "staging",
   "production",
 );
@@ -25,21 +26,41 @@ const DevelopmentDeploymentEnvironmentSchema = Schema.Struct({
   assetPolicy: Schema.Literal("mock"),
 });
 
-const StagingDeploymentEnvironmentSchema = Schema.Struct({
+const DevelopmentSepoliaDeploymentEnvironmentSchema = Schema.Struct({
   status: Schema.Literal("configured"),
-  name: Schema.Literal("staging"),
+  name: Schema.Literal("development-sepolia"),
   chainId: Schema.Literal(84_532),
   network: Schema.Literal("base-sepolia"),
   chainLabel: Schema.Literal("Base Sepolia"),
-  applicationLabel: Schema.Literal("Base Sepolia POC"),
+  applicationLabel: Schema.Literal("Base Sepolia Development"),
   manifestPath: Schema.Literal("deployments/84532.json"),
   assetPolicy: Schema.Literal("mock"),
 });
 
 export const ConfiguredDeploymentEnvironmentSchema = Schema.Union(
   DevelopmentDeploymentEnvironmentSchema,
-  StagingDeploymentEnvironmentSchema,
+  DevelopmentSepoliaDeploymentEnvironmentSchema,
 );
+
+const UnconfiguredStagingEnvironmentSchema = Schema.Struct({
+  status: Schema.Literal("unconfigured"),
+  name: Schema.Literal("staging"),
+  chainId: Schema.Literal(84_532),
+  network: Schema.Literal("base-sepolia"),
+  chainLabel: Schema.Literal("Base Sepolia"),
+  applicationLabel: Schema.Literal("Base Sepolia Staging"),
+  manifestPath: Schema.Literal("deployments/84532.staging.json"),
+  assetPolicy: Schema.Literal("mock"),
+});
+
+/** Valid deployment targets can exist before their runtime manifest is published. */
+export const DeployableDeploymentEnvironmentSchema = Schema.Union(
+  ConfiguredDeploymentEnvironmentSchema,
+  UnconfiguredStagingEnvironmentSchema,
+);
+
+export type DeployableDeploymentEnvironment =
+  typeof DeployableDeploymentEnvironmentSchema.Type;
 
 const UnconfiguredProductionEnvironmentSchema = Schema.Struct({
   status: Schema.Literal("unconfigured"),
@@ -52,7 +73,7 @@ const UnconfiguredProductionEnvironmentSchema = Schema.Struct({
 });
 
 export const DeploymentEnvironmentConfigurationSchema = Schema.Union(
-  ConfiguredDeploymentEnvironmentSchema,
+  DeployableDeploymentEnvironmentSchema,
   UnconfiguredProductionEnvironmentSchema,
 );
 
@@ -97,6 +118,9 @@ const decodeConfiguredConfiguration = Schema.decodeUnknownSync(
 const decodeProductionConfiguration = Schema.decodeUnknownSync(
   UnconfiguredProductionEnvironmentSchema,
 );
+const decodeStagingConfiguration = Schema.decodeUnknownSync(
+  UnconfiguredStagingEnvironmentSchema,
+);
 
 export const deploymentEnvironmentConfigurations = {
   development: decodeConfiguredConfiguration({
@@ -109,14 +133,24 @@ export const deploymentEnvironmentConfigurations = {
     manifestPath: "deployments/31337.json",
     assetPolicy: "mock",
   }),
-  staging: decodeConfiguredConfiguration({
+  "development-sepolia": decodeConfiguredConfiguration({
     status: "configured",
+    name: "development-sepolia",
+    chainId: 84_532,
+    network: "base-sepolia",
+    chainLabel: "Base Sepolia",
+    applicationLabel: "Base Sepolia Development",
+    manifestPath: "deployments/84532.json",
+    assetPolicy: "mock",
+  }),
+  staging: decodeStagingConfiguration({
+    status: "unconfigured",
     name: "staging",
     chainId: 84_532,
     network: "base-sepolia",
     chainLabel: "Base Sepolia",
-    applicationLabel: "Base Sepolia POC",
-    manifestPath: "deployments/84532.json",
+    applicationLabel: "Base Sepolia Staging",
+    manifestPath: "deployments/84532.staging.json",
     assetPolicy: "mock",
   }),
   production: decodeProductionConfiguration({
@@ -140,7 +174,7 @@ export const configuredDeploymentEnvironments = Object.values(
     configuration.status === "configured",
 );
 
-export const defaultDeploymentEnvironmentName = "staging" as const;
+export const defaultDeploymentEnvironmentName = "development-sepolia" as const;
 
 export const deploymentEnvironmentForName = (
   input: unknown,
@@ -157,11 +191,28 @@ export const selectDeploymentEnvironment = (
 export const deploymentEnvironmentForChainId = (
   chainId: number,
 ): DeploymentEnvironmentConfiguration => {
-  const configuration = Object.values(deploymentEnvironmentConfigurations).find(
-    (candidate) => candidate.chainId === chainId,
-  );
+  const configurations = Object.values(
+    deploymentEnvironmentConfigurations,
+  ).filter((candidate) => candidate.chainId === chainId);
+  if (configurations.length > 1) {
+    throw new RangeError(
+      `Ambiguous deployment chain ${chainId}; select an environment explicitly: ${configurations.map((configuration) => configuration.name).join(", ")}`,
+    );
+  }
+  const configuration = configurations[0];
   if (configuration === undefined) {
     throw new RangeError(`Unsupported deployment chain ${chainId}`);
+  }
+  return configuration;
+};
+
+export const requireDeployableDeploymentEnvironment = (
+  configuration: DeploymentEnvironmentConfiguration,
+): DeployableDeploymentEnvironment => {
+  if (!("manifestPath" in configuration)) {
+    throw new Error(
+      `Deployment environment ${configuration.name} has no deployment target`,
+    );
   }
   return configuration;
 };

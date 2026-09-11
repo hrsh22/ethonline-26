@@ -27,7 +27,9 @@ it("validates the fixture session through HTTP and denies every action", async (
   expect(
     decodeAdminSessionResponse(
       await response.json(),
-      deploymentManifestFingerprint(protocolDeploymentManifests.staging),
+      deploymentManifestFingerprint(
+        protocolDeploymentManifests["development-sepolia"],
+      ),
     ).session.roles,
   ).toEqual(["keeper", "creator"]);
   expect(
@@ -49,7 +51,7 @@ it("renders only the observed creator balance from a real partial health read", 
   const address = server.address();
   if (address === null || typeof address === "string")
     throw new Error("No port");
-  const manifest = protocolDeploymentManifests.staging;
+  const manifest = protocolDeploymentManifests["development-sepolia"];
   const identity = selectIdentityConfiguration("orbit-4444");
   const client = createPublicClient({
     chain: baseSepolia as Chain,

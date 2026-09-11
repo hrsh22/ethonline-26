@@ -60,6 +60,7 @@ describe("manifest-bound contract clients", () => {
       ccaRecoverySeeder: "CcaRecoverySeeder.sol/CcaRecoverySeeder.json",
       permanentPositionRecipient:
         "PermanentPositionRecipient.sol/PermanentPositionRecipient.json",
+      ccaStrategy: "LBPStrategy.sol/LBPStrategy.json",
       permit2: [
         "IAllowanceTransfer.sol/IAllowanceTransfer.default.json",
         "IAllowanceTransfer.sol/IAllowanceTransfer.cca_via_ir.json",

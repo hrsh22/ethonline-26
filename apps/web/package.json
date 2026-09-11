@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node ../../scripts/staging-web.ts dev",
     "dev:local": "node ../../scripts/staging-web.ts dev:local",
+    "dev:staging": "node ../../scripts/staging-web.ts dev:staging",
     "build": "node ../../scripts/staging-web.ts build",
     "start": "node ../../scripts/staging-web.ts start",
     "test:production": "pnpm test:release",

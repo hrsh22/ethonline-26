@@ -19,10 +19,10 @@ import {
 import {
   createRuntimeProcessEnvironment,
   createRuntimeServiceEnvironment,
-  readRuntimeEnvironmentSource,
   replaceProcessEnvironment,
   spawnRuntimeServiceProcess,
 } from "./runtime-environment.ts";
+import { readRuntimeEnvironmentProfile } from "./runtime-environment-profile.ts";
 
 type EnvironmentVariables = Readonly<Record<string, string | undefined>>;
 
@@ -32,6 +32,7 @@ export type WebRuntimeTarget =
   | "build"
   | "dev"
   | "dev:local"
+  | "dev:staging"
   | "start"
   | "typecheck";
 
@@ -123,24 +124,40 @@ export const normalizeCanonicalApplicationUrl = (
 export const createWebEnvironment = (
   configuration: StagingWebEnvironment,
   environment: NodeJS.ProcessEnv,
+  deploymentEnvironment = "staging",
 ): NodeJS.ProcessEnv =>
   createRuntimeServiceEnvironment("web", {
     ...environment,
     NEXT_PUBLIC_API_URL: configuration.publicApiUrl,
-    NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
+    NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: deploymentEnvironment,
     NEXT_PUBLIC_RPC_URL: configuration.rpcUrl,
   });
 
-export const createStagingWebLaunchPlan = (
+const createConfiguredWebLaunchPlan = (
   environment: EnvironmentVariables,
+  deploymentEnvironment: "development-sepolia" | "staging",
 ): StagingWebLaunchPlan => {
   const configuration = resolveStagingWebEnvironment(environment);
   return {
     configuration,
     supervisorEnvironment: createRuntimeProcessEnvironment(environment),
-    webEnvironment: createWebEnvironment(configuration, environment),
+    webEnvironment: createWebEnvironment(
+      configuration,
+      environment,
+      deploymentEnvironment,
+    ),
   };
 };
+
+export const createStagingWebLaunchPlan = (
+  environment: EnvironmentVariables,
+): StagingWebLaunchPlan =>
+  createConfiguredWebLaunchPlan(environment, "staging");
+
+export const createDevelopmentSepoliaWebLaunchPlan = (
+  environment: EnvironmentVariables,
+): StagingWebLaunchPlan =>
+  createConfiguredWebLaunchPlan(environment, "development-sepolia");
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const webRoot = join(repositoryRoot, "apps/web");
@@ -166,6 +183,7 @@ const webRuntimeTargets: readonly WebRuntimeTarget[] = [
   "build",
   "dev",
   "dev:local",
+  "dev:staging",
   "start",
   "typecheck",
 ];
@@ -179,7 +197,7 @@ const webRuntimeTarget = (arguments_: readonly string[]): WebRuntimeTarget => {
     !webRuntimeTargets.includes(positional[0] as WebRuntimeTarget)
   ) {
     throw new Error(
-      "Web runtime target must be browser, browser:self, build, dev, dev:local, start, or typecheck",
+      "Web runtime target must be browser, browser:self, build, dev, dev:local, dev:staging, start, or typecheck",
     );
   }
   return positional[0] as WebRuntimeTarget;
@@ -187,7 +205,7 @@ const webRuntimeTarget = (arguments_: readonly string[]): WebRuntimeTarget => {
 
 const genericWebLaunchPlan = (
   environment: EnvironmentVariables,
-  target: Exclude<WebRuntimeTarget, "dev">,
+  target: Exclude<WebRuntimeTarget, "dev" | "dev:staging">,
 ): WebRuntimeLaunchPlan => {
   const additions = {
     ...(target === "dev:local"
@@ -211,31 +229,24 @@ const genericWebLaunchPlan = (
   };
 };
 
-const createStagingWebLaunchPlanFromRoot = (
-  hostEnvironment: EnvironmentVariables,
-): StagingWebLaunchPlan =>
-  createStagingWebLaunchPlan(
-    readRuntimeEnvironmentSource({
-      environment: hostEnvironment,
-      path: join(repositoryRoot, ".env"),
-      required: true,
-    }),
-  );
-
 const createWebRuntimeLaunchPlanFromRoot = (
   target: WebRuntimeTarget,
   hostEnvironment: EnvironmentVariables,
-): WebRuntimeLaunchPlan =>
-  target === "dev"
-    ? createStagingWebLaunchPlanFromRoot(hostEnvironment)
-    : genericWebLaunchPlan(
-        readRuntimeEnvironmentSource({
-          environment: hostEnvironment,
-          path: join(repositoryRoot, ".env"),
-          required: target === "dev:local",
-        }),
-        target,
-      );
+): WebRuntimeLaunchPlan => {
+  const environment = readRuntimeEnvironmentProfile({
+    developmentFileRequired: target === "dev" || target === "dev:local",
+    environment: hostEnvironment,
+    profile: target === "dev:staging" ? "staging" : "development",
+    repositoryRoot,
+  });
+  if (target === "dev") {
+    return createDevelopmentSepoliaWebLaunchPlan(environment);
+  }
+  if (target === "dev:staging") {
+    return createStagingWebLaunchPlan(environment);
+  }
+  return genericWebLaunchPlan(environment, target);
+};
 
 const nextCommand = (
   subcommand: NextRuntimeSubcommand,
@@ -266,11 +277,15 @@ const browserMatrixCommand = (
 const webRuntimeCommands = (
   target: WebRuntimeTarget,
 ): readonly WebRuntimeCommand[] => {
-  if (target === "dev" || target === "dev:local") {
+  if (target === "dev" || target === "dev:local" || target === "dev:staging") {
     return [
       nextCommand(
         "dev",
-        target === "dev" ? "staging web application" : "local web application",
+        target === "dev:local"
+          ? "local web application"
+          : target === "dev:staging"
+            ? "staging web application"
+            : "Base Sepolia development web application",
       ),
     ];
   }

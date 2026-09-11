@@ -12,6 +12,7 @@ import {
   loadEnvironmentFile,
   validate,
 } from "./effect-runtime.ts";
+import type { RuntimeEnvironmentProfile } from "./runtime-environment-profile.ts";
 
 const NonEmptyString = Schema.String.pipe(Schema.minLength(1));
 
@@ -27,12 +28,18 @@ const HealthEnvironmentSchema = Schema.Struct({
   TESTNET_FUNDING_SERVICE_URL: Schema.optional(NonEmptyString),
 });
 
-export const loadHealthEnvironment = (repositoryRoot: string) =>
+export const loadHealthEnvironment = (
+  repositoryRoot: string,
+  profile: RuntimeEnvironmentProfile = "development",
+) =>
   Effect.gen(function* () {
-    yield* loadEnvironmentFile(
-      join(repositoryRoot, ".env"),
-      "Unable to load the root .env",
-    );
+    if (profile !== "none") {
+      const filename = profile === "staging" ? ".env.staging" : ".env";
+      yield* loadEnvironmentFile(
+        join(repositoryRoot, filename),
+        `Unable to load the ${filename} environment profile`,
+      );
+    }
     const environment = yield* decodeEnvironment(
       HealthEnvironmentSchema,
       "Health environment is invalid",

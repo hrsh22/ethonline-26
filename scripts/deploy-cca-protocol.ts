@@ -29,6 +29,10 @@ import {
   decodeProtocolDeploymentManifest,
   type ProtocolDeploymentManifestV3,
 } from "@orbit/config/deployment-manifest";
+import {
+  deploymentEnvironmentForName,
+  requireDeployableDeploymentEnvironment,
+} from "@orbit/config/deployment-environments";
 import { Schema } from "effect";
 import { collectionManifestHash } from "@orbit/config/collection-manifest";
 import {
@@ -40,6 +44,27 @@ const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const contractsRoot = join(repositoryRoot, "packages/contracts");
 const permit2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3" as const;
 const tracks = ["aaplc", "googlc", "metac", "nvdac"] as const;
+
+export const resolveCcaDeploymentEnvironment = (
+  chainId: number,
+  environmentName: string | undefined,
+) => {
+  if (chainId === 31_337) return undefined;
+  if (environmentName === undefined) {
+    throw new Error(
+      "DEPLOYMENT_ENVIRONMENT is required for a Base Sepolia CCA deployment",
+    );
+  }
+  const target = requireDeployableDeploymentEnvironment(
+    deploymentEnvironmentForName(environmentName),
+  );
+  if (target.chainId !== chainId) {
+    throw new Error(
+      `Deployment environment ${target.name} does not match chain ${chainId}`,
+    );
+  }
+  return target;
+};
 type Infrastructure = {
   poolManager: Address;
   positionManager: Address;
@@ -966,22 +991,28 @@ async function prepareLocal(
 }
 
 async function prepareInputs(rpcUrl: string, local: boolean, chainId: number) {
-  const directory = local
+  const deploymentTarget = resolveCcaDeploymentEnvironment(
+    chainId,
+    local ? undefined : process.env.DEPLOYMENT_ENVIRONMENT,
+  );
+  const localDirectory = local
     ? mkdtempSync(
         join(repositoryRoot, "deployments/.local-deployment-test-cca-"),
       )
-    : dirname(
-        resolve(
-          process.env.CCA_MANIFEST_OUTPUT ?? "deployments/cca-composition.json",
-        ),
-      );
+    : undefined;
+  const output =
+    localDirectory === undefined
+      ? resolve(
+          process.env.CCA_MANIFEST_OUTPUT ??
+            deploymentTarget?.manifestPath ??
+            "deployments/31337.json",
+        )
+      : join(localDirectory, `${chainId}.json`);
+  const directory = dirname(output);
   const inputPath = local
     ? join(directory, "input.json")
     : process.env.CCA_DEPLOYMENT_INPUT;
   insist(inputPath, "CCA_DEPLOYMENT_INPUT is required");
-  const output = resolve(
-    process.env.CCA_MANIFEST_OUTPUT ?? join(directory, `${chainId}.json`),
-  );
   insist(
     !existsSync(output),
     `Refusing to overwrite existing deployment manifest ${output}`,
@@ -996,7 +1027,10 @@ async function prepareInputs(rpcUrl: string, local: boolean, chainId: number) {
     directory,
     inputPath: resolve(inputPath),
     output,
-    compositionPath: join(directory, "composition.json"),
+    compositionPath: join(
+      directory,
+      `${output.slice(directory.length + 1).replace(/\.json$/u, "")}.composition.json`,
+    ),
   };
   if (!local)
     return {
@@ -1084,7 +1118,7 @@ async function runDeployment(
 export async function main(args = process.argv.slice(2)): Promise<void> {
   if (args.includes("--help")) {
     process.stdout.write(
-      "deploy:cca-protocol --local-test | [--broadcast]\nExternal input: RPC_URL, CCA_DEPLOYMENT_INPUT, CCA_MANIFEST_OUTPUT, DEPLOYER_PRIVATE_KEY (Base). Without --broadcast, only a composition simulation is written. --local-test creates an isolated Anvil deployment and verifies a v3 manifest.\n",
+      "deploy:cca-protocol --local-test | [--broadcast]\nExternal input: RPC_URL, DEPLOYMENT_ENVIRONMENT, CCA_DEPLOYMENT_INPUT, optional CCA_MANIFEST_OUTPUT, DEPLOYER_PRIVATE_KEY (Base). Base Sepolia requires an explicit deployment environment and defaults to that target's canonical manifest path. Without --broadcast, only a composition simulation is written. --local-test creates an isolated Anvil deployment and verifies a v3 manifest.\n",
     );
     return;
   }

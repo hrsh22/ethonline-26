@@ -9,17 +9,30 @@ import {
   spawnRuntimeServiceProcess,
   type EnvironmentVariables,
 } from "./runtime-environment.ts";
+import {
+  parseRuntimeEnvironmentProfileArguments,
+  readRuntimeEnvironmentProfile,
+  type RuntimeEnvironmentProfile,
+} from "./runtime-environment-profile.ts";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const dedicatedEnvironment = (
   host: EnvironmentVariables,
+  profile: RuntimeEnvironmentProfile,
+  root: string,
 ): EnvironmentVariables => {
   const configured = host.TESTNET_FUNDING_ENV_PATH?.trim();
+  if (
+    (configured === undefined || configured.length === 0) &&
+    profile === "none"
+  ) {
+    return {};
+  }
   const path =
     configured === undefined || configured.length === 0
-      ? join(repositoryRoot, ".env.testnet-funding")
-      : resolve(repositoryRoot, configured);
+      ? join(root, ".env.testnet-funding")
+      : resolve(root, configured);
   return readRuntimeEnvironmentSource({
     environment: {},
     path,
@@ -53,19 +66,32 @@ const waitForChild = (child: ChildProcess): Promise<number> =>
     });
   });
 
-const launchTestnetFundingWorker = async (): Promise<void> => {
-  // The supervisor loads the root .env before projecting, so a supervised
-  // child sees the shared browser-public and RPC bindings and a standalone one
-  // did not: the signer refused to start on its own. The allowlist still
-  // strips everything else, and the dedicated file still wins.
-  const isolated = createRuntimeServiceEnvironment(
+export const createTestnetFundingLauncherEnvironment = (
+  host: EnvironmentVariables,
+  profile: RuntimeEnvironmentProfile,
+  root = repositoryRoot,
+): NodeJS.ProcessEnv =>
+  createRuntimeServiceEnvironment(
     "funding",
-    readRuntimeEnvironmentSource({
-      environment: process.env,
-      path: join(repositoryRoot, ".env"),
-      required: false,
+    readRuntimeEnvironmentProfile({
+      developmentFileRequired: false,
+      environment: host,
+      profile,
+      repositoryRoot: root,
     }),
-    dedicatedEnvironment(process.env),
+    dedicatedEnvironment(host, profile, root),
+  );
+
+const launchTestnetFundingWorker = async (): Promise<void> => {
+  const parsed = parseRuntimeEnvironmentProfileArguments(process.argv.slice(2));
+  if (parsed.remainingArguments.length !== 0) {
+    throw new Error(
+      "Funding launcher accepts only environment profile arguments",
+    );
+  }
+  const isolated = createTestnetFundingLauncherEnvironment(
+    process.env,
+    parsed.profile,
   );
   replaceProcessEnvironment(isolated);
   const child = spawnRuntimeServiceProcess({

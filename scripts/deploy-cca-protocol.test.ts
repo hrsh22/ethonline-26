@@ -6,6 +6,7 @@ import type { Address, Hex, PublicClient } from "viem";
 import {
   canonicalContracts,
   reconcileBroadcasts,
+  resolveCcaDeploymentEnvironment,
   selectedCcaIdentity,
   validateCcaInput,
 } from "./deploy-cca-protocol.ts";
@@ -16,6 +17,31 @@ const hashes = [1, 2].map(
   (value) => `0x${value.toString(16).padStart(64, "0")}` as Hex,
 );
 const directories: string[] = [];
+
+describe("CCA deployment environment selection", () => {
+  it("requires an explicit identity for Base Sepolia", () => {
+    expect(() => resolveCcaDeploymentEnvironment(84_532, undefined)).toThrow(
+      "DEPLOYMENT_ENVIRONMENT is required",
+    );
+  });
+
+  it("keeps developer and staging Base Sepolia outputs separate", () => {
+    expect(
+      resolveCcaDeploymentEnvironment(84_532, "development-sepolia")
+        ?.manifestPath,
+    ).toBe("deployments/84532.json");
+    expect(
+      resolveCcaDeploymentEnvironment(84_532, "staging")?.manifestPath,
+    ).toBe("deployments/84532.staging.json");
+  });
+
+  it("rejects a deployment identity for the wrong chain", () => {
+    expect(() =>
+      resolveCcaDeploymentEnvironment(84_532, "development"),
+    ).toThrow("does not match chain 84532");
+  });
+});
+
 afterEach(() => {
   directories
     .splice(0)
@@ -160,9 +186,9 @@ function validInput() {
     auction: {
       ...(example.auction as Record<string, unknown>),
       startBlock: 1000,
-      endBlock: 44200,
-      claimBlock: 44201,
-      migrationBlock: 44201,
+      endBlock: 11800,
+      claimBlock: 11801,
+      migrationBlock: 11801,
       testnetEconomicsConfirmed: true,
     },
   };

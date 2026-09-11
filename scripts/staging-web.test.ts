@@ -20,6 +20,7 @@ import { describe, expect, it } from "vitest";
 import { nextRuntimeArguments } from "./next-runtime-command.ts";
 import {
   assertNoUncheckedNextEnvironmentFiles,
+  createDevelopmentSepoliaWebLaunchPlan,
   createStagingWebLaunchPlan,
   createWebEnvironment,
   normalizeCanonicalApplicationUrl,
@@ -117,7 +118,22 @@ describe("staging web environment", () => {
     expect(JSON.stringify(plan)).not.toContain("/sentinel/forbidden.cjs");
   });
 
-  it("binds the root development command only to the staging web entry point", () => {
+  it("forces the development-sepolia selector for the normal dev target", () => {
+    const plan = createDevelopmentSepoliaWebLaunchPlan({
+      NEXT_PUBLIC_API_URL: publicApiUrl,
+      NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
+      RPC_URL: "https://base-sepolia.example",
+    });
+
+    expect(plan.webEnvironment).toMatchObject({
+      NEXT_PUBLIC_API_URL: publicApiUrl,
+      NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "development-sepolia",
+      NEXT_PUBLIC_RPC_URL: "https://base-sepolia.example",
+      __NEXT_PROCESSED_ENV: "true",
+    });
+  });
+
+  it("binds workspace web commands to the isolated web entry point", () => {
     const workspace = JSON.parse(
       readFileSync(new URL("../package.json", import.meta.url), "utf8"),
     ) as { readonly scripts: Readonly<Record<string, string>> };
@@ -127,6 +143,12 @@ describe("staging web environment", () => {
     );
     expect(workspace.scripts["dev:local"]).toBe(
       "pnpm build:packages && node scripts/staging-web.ts dev:local",
+    );
+    expect(workspace.scripts["dev:staging"]).toBe(
+      "pnpm build:packages && node scripts/staging-web.ts dev:staging",
+    );
+    expect(workspace.scripts["backend:staging"]).toBe(
+      "pnpm build:packages && pnpm --filter @orbit/api build && node scripts/backend.ts --profile=staging",
     );
     expect(workspace.scripts["history:backfill"]).toBe(
       "pnpm build:packages && node scripts/runtime-service-launcher.ts history --once",
@@ -169,6 +191,9 @@ describe("staging web environment", () => {
     );
     expect(webWorkspace.scripts["dev:local"]).toBe(
       "node ../../scripts/staging-web.ts dev:local",
+    );
+    expect(webWorkspace.scripts["dev:staging"]).toBe(
+      "node ../../scripts/staging-web.ts dev:staging",
     );
     expect(webWorkspace.scripts.build).toBe(
       "node ../../scripts/staging-web.ts build",

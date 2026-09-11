@@ -3,6 +3,9 @@
 .env
 .env.*
 !.env.example
+!.env.staging.example
+!.env.testnet-funding.staging.example
+!.env.testnet-funding-treasury.staging.example
 node_modules/
 .next/
 out/

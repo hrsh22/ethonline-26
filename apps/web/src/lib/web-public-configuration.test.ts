@@ -25,12 +25,29 @@ describe("web public configuration", () => {
     });
   });
 
-  it("uses the legacy Base Sepolia RPC only as the staging fallback", () => {
+  it("uses the legacy Base Sepolia RPC for both Base Sepolia identities", () => {
     const defaultConfiguration = parseWebPublicConfiguration({
       NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: " https://fallback.example ",
     });
-    expect(defaultConfiguration.deploymentEnvironment).toBe("staging");
+    expect(defaultConfiguration.deploymentEnvironment).toBe(
+      "development-sepolia",
+    );
     expect(defaultConfiguration.rpcUrl).toBe("https://fallback.example");
+    for (const deploymentEnvironment of ["development-sepolia", "staging"]) {
+      expect(
+        parseWebPublicConfiguration({
+          NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: "https://fallback.example",
+          NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: deploymentEnvironment,
+        }).rpcUrl,
+      ).toBe("https://fallback.example");
+      expect(
+        parseWebPublicConfiguration({
+          NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: "https://fallback.example",
+          NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: deploymentEnvironment,
+          NEXT_PUBLIC_RPC_URL: "https://explicit.example",
+        }).rpcUrl,
+      ).toBe("https://explicit.example");
+    }
     expect(
       parseWebPublicConfiguration({
         NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: "https://fallback.example",
