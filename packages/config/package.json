@@ -64,7 +64,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -b tsconfig.json --force",
     "check:deployment-schema": "node scripts/generate-deployment-schema.ts --check",
     "generate:deployment-schema": "node scripts/generate-deployment-schema.ts",
     "generate:manifest": "pnpm build && node scripts/generate-collection-manifest.ts",

@@ -142,6 +142,9 @@ describe("staging web environment", () => {
     };
 
     expect(workspace.engines.pnpm).toBe(">=10.28.0 <12");
+    expect(workspace.scripts["build:packages"]).toBe(
+      "tsc -b packages/config/tsconfig.json packages/protocol/tsconfig.json --force",
+    );
 
     expect(workspace.scripts.dev).toBe(
       "node scripts/staging-web-bootstrap.ts dev",
@@ -184,6 +187,18 @@ describe("staging web environment", () => {
     expect(apiWorkspace.scripts.start).toBe(
       "node ../../scripts/runtime-service-launcher.ts api",
     );
+    expect(apiWorkspace.scripts.build).toBe("tsc -b tsconfig.json --force");
+    for (const packageName of ["config", "protocol"] as const) {
+      const sharedWorkspace = JSON.parse(
+        readFileSync(
+          new URL(`../packages/${packageName}/package.json`, import.meta.url),
+          "utf8",
+        ),
+      ) as { readonly scripts: Readonly<Record<string, string>> };
+      expect(sharedWorkspace.scripts.build).toBe(
+        "tsc -b tsconfig.json --force",
+      );
+    }
     const webWorkspace = JSON.parse(
       readFileSync(
         new URL("../apps/web/package.json", import.meta.url),

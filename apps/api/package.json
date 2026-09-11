@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -b tsconfig.json --force",
     "dev": "pnpm build && pnpm start",
     "lint": "eslint src test --max-warnings=0",
     "start": "node ../../scripts/runtime-service-launcher.ts api",

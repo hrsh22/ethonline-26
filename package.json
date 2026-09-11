@@ -12,7 +12,7 @@
     "backend": "pnpm build:packages && pnpm --filter @orbit/api build && node scripts/backend.ts",
     "backend:staging": "pnpm build:packages && pnpm --filter @orbit/api build && node scripts/backend.ts --profile=staging",
     "build": "pnpm -r --if-present build",
-    "build:packages": "pnpm --filter @orbit/config build && pnpm --filter @orbit/protocol build",
+    "build:packages": "tsc -b packages/config/tsconfig.json packages/protocol/tsconfig.json --force",
     "check": "pnpm check:ci",
     "check:ci": "pnpm format:check && pnpm --filter @orbit/config check:deployment-schema && pnpm build:packages && node scripts/generate-web-deployment-manifest.ts --check && pnpm lint && pnpm typecheck:scripts && pnpm -r --if-present typecheck",
     "check:web-deployment-manifest": "pnpm --filter @orbit/config build && node scripts/generate-web-deployment-manifest.ts --check",

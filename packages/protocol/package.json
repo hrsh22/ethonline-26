@@ -70,7 +70,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -b tsconfig.json --force",
     "lint": "eslint src test --max-warnings=0",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
