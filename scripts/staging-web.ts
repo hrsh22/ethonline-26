@@ -308,12 +308,6 @@ const webRuntimeCommands = (
   }
   return [
     {
-      arguments: ["--filter", "@orbit/config", "build"],
-      command: "pnpm",
-      cwd: repositoryRoot,
-      label: "web configuration package build",
-    },
-    {
       arguments: [
         join(repositoryRoot, "scripts/generate-web-deployment-manifest.ts"),
         "--check",

@@ -5,7 +5,7 @@
   "type": "module",
   "engines": {
     "node": ">=24.15.0 <25",
-    "pnpm": "11.22.0"
+    "pnpm": ">=10.28.0 <12"
   },
   "scripts": {
     "api:serve": "pnpm build:packages && pnpm --filter @orbit/api build && pnpm --filter @orbit/api start",
@@ -18,9 +18,9 @@
     "check:web-deployment-manifest": "pnpm --filter @orbit/config build && node scripts/generate-web-deployment-manifest.ts --check",
     "clean:generated": "node scripts/clean-generated.ts",
     "deploy:protocol": "pnpm --filter @orbit/config build && node scripts/deploy-protocol.ts",
-    "dev": "pnpm build:packages && node scripts/staging-web.ts dev",
-    "dev:local": "pnpm build:packages && node scripts/staging-web.ts dev:local",
-    "dev:staging": "pnpm build:packages && node scripts/staging-web.ts dev:staging",
+    "dev": "node scripts/staging-web-bootstrap.ts dev",
+    "dev:local": "node scripts/staging-web-bootstrap.ts dev:local",
+    "dev:staging": "node scripts/staging-web-bootstrap.ts dev:staging",
     "format": "pnpm format:prettier && pnpm --dir packages/contracts format",
     "format:check": "pnpm format:prettier:check && pnpm --dir packages/contracts format:check",
     "format:prettier": "prettier --write \"*.{ts,json,md,yaml,yml}\" \".github/**/*.{md,yaml,yml}\" \"apps/api/**/*.{ts,json,md}\" \"apps/web/**/*.{ts,tsx,css,json,md}\" \"docs/**/*.{md,json}\" \"packages/**/*.{ts,json,md}\" \"scripts/**/*.ts\" \"deployments/*.json\"",

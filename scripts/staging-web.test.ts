@@ -136,16 +136,21 @@ describe("staging web environment", () => {
   it("binds workspace web commands to the isolated web entry point", () => {
     const workspace = JSON.parse(
       readFileSync(new URL("../package.json", import.meta.url), "utf8"),
-    ) as { readonly scripts: Readonly<Record<string, string>> };
+    ) as {
+      readonly engines: Readonly<Record<string, string>>;
+      readonly scripts: Readonly<Record<string, string>>;
+    };
+
+    expect(workspace.engines.pnpm).toBe(">=10.28.0 <12");
 
     expect(workspace.scripts.dev).toBe(
-      "pnpm build:packages && node scripts/staging-web.ts dev",
+      "node scripts/staging-web-bootstrap.ts dev",
     );
     expect(workspace.scripts["dev:local"]).toBe(
-      "pnpm build:packages && node scripts/staging-web.ts dev:local",
+      "node scripts/staging-web-bootstrap.ts dev:local",
     );
     expect(workspace.scripts["dev:staging"]).toBe(
-      "pnpm build:packages && node scripts/staging-web.ts dev:staging",
+      "node scripts/staging-web-bootstrap.ts dev:staging",
     );
     expect(workspace.scripts["backend:staging"]).toBe(
       "pnpm build:packages && pnpm --filter @orbit/api build && node scripts/backend.ts --profile=staging",
@@ -187,22 +192,22 @@ describe("staging web environment", () => {
     ) as { readonly scripts: Readonly<Record<string, string>> };
     expect(webWorkspace.scripts.prebuild).toBeUndefined();
     expect(webWorkspace.scripts.dev).toBe(
-      "node ../../scripts/staging-web.ts dev",
+      "node ../../scripts/staging-web-bootstrap.ts dev",
     );
     expect(webWorkspace.scripts["dev:local"]).toBe(
-      "node ../../scripts/staging-web.ts dev:local",
+      "node ../../scripts/staging-web-bootstrap.ts dev:local",
     );
     expect(webWorkspace.scripts["dev:staging"]).toBe(
-      "node ../../scripts/staging-web.ts dev:staging",
+      "node ../../scripts/staging-web-bootstrap.ts dev:staging",
     );
     expect(webWorkspace.scripts.build).toBe(
-      "node ../../scripts/staging-web.ts build",
+      "node ../../scripts/staging-web-bootstrap.ts build",
     );
     expect(webWorkspace.scripts.start).toBe(
       "node ../../scripts/staging-web.ts start",
     );
     expect(webWorkspace.scripts.typecheck).toBe(
-      "node ../../scripts/staging-web.ts typecheck",
+      "node ../../scripts/staging-web-bootstrap.ts typecheck",
     );
   });
 

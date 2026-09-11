@@ -385,12 +385,9 @@ jobs:
           restore-keys: |
             next-node-24-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/web/next.config.ts') }}-
 
-      - name: Build shared TypeScript packages once
-        run: pnpm build:packages
-
       - name: Build the production application once
-        # The launcher builds config and verifies deployment bindings itself.
-        run: node scripts/staging-web.ts build
+        # Exercise the exact clean build command used by Vercel.
+        run: pnpm --dir apps/web build
 
       # Playwright pins its own Chromium build; it is not vendored.
       - name: Install the pinned Chromium build

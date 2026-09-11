@@ -9,10 +9,18 @@ overrides:
   use-sync-external-store: 1.6.0
 
 patchedDependencies:
-  '@coinbase/wallet-sdk@4.3.2': c023a9b55b628e8edd754aa685149e61e41ae7148f03db23699832e2a731342c
-  '@privy-io/react-auth@3.40.0': 8449fb89a175ce819105aa9ecb8f9abab49821d3ab745dbcb0fba46faca328b3
-  '@tradecanvas/chart@1.1.0': 3c0e61af50bbd9676c49957fb94a47808b7f68932d2e1ea8c2b58b205147cdd6
-  '@tradecanvas/core@1.1.0': 5bc489d21a03ae8764a72d5ab7ac97e77ebd8e08625643c78d43fd51d9794e4b
+  '@coinbase/wallet-sdk@4.3.2':
+    hash: c023a9b55b628e8edd754aa685149e61e41ae7148f03db23699832e2a731342c
+    path: patches/@coinbase__wallet-sdk@4.3.2.patch
+  '@privy-io/react-auth@3.40.0':
+    hash: 8449fb89a175ce819105aa9ecb8f9abab49821d3ab745dbcb0fba46faca328b3
+    path: patches/@privy-io__react-auth@3.40.0.patch
+  '@tradecanvas/chart@1.1.0':
+    hash: 3c0e61af50bbd9676c49957fb94a47808b7f68932d2e1ea8c2b58b205147cdd6
+    path: patches/@tradecanvas__chart@1.1.0.patch
+  '@tradecanvas/core@1.1.0':
+    hash: 5bc489d21a03ae8764a72d5ab7ac97e77ebd8e08625643c78d43fd51d9794e4b
+    path: patches/@tradecanvas__core@1.1.0.patch
 
 importers:
 
