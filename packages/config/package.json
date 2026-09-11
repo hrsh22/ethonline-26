@@ -22,7 +22,8 @@
     },
     "./deployment-environments": {
       "types": "./dist/deployment-environments.d.ts",
-      "import": "./dist/deployment-environments.js"
+      "import": "./dist/deployment-environments.js",
+      "default": "./dist/deployment-environments.js"
     },
     "./deployment-manifest": {
       "types": "./dist/deployment-manifest.d.ts",

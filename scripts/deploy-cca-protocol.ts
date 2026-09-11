@@ -4,9 +4,10 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   createPublicClient,
@@ -30,8 +31,10 @@ import {
   type ProtocolDeploymentManifestV3,
 } from "@orbit/config/deployment-manifest";
 import {
+  deploymentEnvironmentConfigurations,
   deploymentEnvironmentForName,
   requireDeployableDeploymentEnvironment,
+  type DeployableDeploymentEnvironment,
 } from "@orbit/config/deployment-environments";
 import { Schema } from "effect";
 import { collectionManifestHash } from "@orbit/config/collection-manifest";
@@ -49,7 +52,7 @@ export const resolveCcaDeploymentEnvironment = (
   chainId: number,
   environmentName: string | undefined,
 ) => {
-  if (chainId === 31_337) return undefined;
+  if (chainId === 31_337 && environmentName === undefined) return undefined;
   if (environmentName === undefined) {
     throw new Error(
       "DEPLOYMENT_ENVIRONMENT is required for a Base Sepolia CCA deployment",
@@ -65,6 +68,39 @@ export const resolveCcaDeploymentEnvironment = (
   }
   return target;
 };
+
+export const resolveCcaManifestOutput = (
+  target: DeployableDeploymentEnvironment | undefined,
+  configuredPath: string | undefined,
+) => {
+  const output =
+    configuredPath === undefined
+      ? join(repositoryRoot, target?.manifestPath ?? "deployments/31337.json")
+      : resolve(configuredPath);
+  for (const environment of Object.values(
+    deploymentEnvironmentConfigurations,
+  )) {
+    if (
+      "manifestPath" in environment &&
+      environment.name !== (target?.name ?? "development") &&
+      manifestDestination(output) ===
+        manifestDestination(resolve(repositoryRoot, environment.manifestPath))
+    ) {
+      throw new Error(
+        `Manifest output belongs to deployment environment ${environment.name}`,
+      );
+    }
+  }
+  return output;
+};
+
+function manifestDestination(path: string): string {
+  if (existsSync(path)) return realpathSync(path);
+  const parent = dirname(path);
+  return parent === path
+    ? path
+    : join(manifestDestination(parent), basename(path));
+}
 type Infrastructure = {
   poolManager: Address;
   positionManager: Address;
@@ -1002,10 +1038,9 @@ async function prepareInputs(rpcUrl: string, local: boolean, chainId: number) {
     : undefined;
   const output =
     localDirectory === undefined
-      ? resolve(
-          process.env.CCA_MANIFEST_OUTPUT ??
-            deploymentTarget?.manifestPath ??
-            "deployments/31337.json",
+      ? resolveCcaManifestOutput(
+          deploymentTarget,
+          process.env.CCA_MANIFEST_OUTPUT,
         )
       : join(localDirectory, `${chainId}.json`);
   const directory = dirname(output);

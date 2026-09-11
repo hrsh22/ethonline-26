@@ -42,7 +42,7 @@ processes.
 pnpm install
 pnpm check
 pnpm test
-NEXT_PUBLIC_APP_URL=https://orbit.example pnpm build
+NEXT_PUBLIC_APP_URL=https://orbit.example NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT=development-sepolia pnpm build
 pnpm api:serve
 pnpm backend
 pnpm backend:staging
@@ -64,8 +64,9 @@ pnpm --dir packages/config generate:manifest
 ```
 
 Production builds require `NEXT_PUBLIC_APP_URL` to be the canonical HTTPS
-origin (for example, `NEXT_PUBLIC_APP_URL=https://orbit.example pnpm build`).
-The production build guard rejects missing, non-HTTPS, and localhost origins.
+origin and `NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT` to name a published deployment
+(for example, `NEXT_PUBLIC_APP_URL=https://orbit.example NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT=development-sepolia pnpm build`).
+The production build guard rejects missing, non-HTTPS, localhost, implicit, and unpublished targets.
 Development commands do not run that build-only guard.
 
 `pnpm check` runs formatting verification, TypeScript and Solidity linting, and strict type checking from the repository root.

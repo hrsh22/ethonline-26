@@ -37,7 +37,12 @@ const dedicatedEnvironment = (
   }
   const path =
     configured === undefined || configured.length === 0
-      ? join(root, ".env.testnet-funding-treasury")
+      ? join(
+          root,
+          profile === "staging"
+            ? ".env.testnet-funding-treasury.staging"
+            : ".env.testnet-funding-treasury",
+        )
       : resolve(root, configured);
   return readRuntimeEnvironmentSource({
     environment: {},
@@ -76,17 +81,19 @@ export const createReplenisherLauncherEnvironment = (
   host: EnvironmentVariables,
   profile: RuntimeEnvironmentProfile,
   root = repositoryRoot,
-): NodeJS.ProcessEnv =>
-  createRuntimeServiceEnvironment(
+): NodeJS.ProcessEnv => {
+  const environment = readRuntimeEnvironmentProfile({
+    developmentFileRequired: false,
+    environment: host,
+    profile,
+    repositoryRoot: root,
+  });
+  return createRuntimeServiceEnvironment(
     "funding-replenisher",
-    readRuntimeEnvironmentProfile({
-      developmentFileRequired: false,
-      environment: host,
-      profile,
-      repositoryRoot: root,
-    }),
-    dedicatedEnvironment(host, profile, root),
+    environment,
+    dedicatedEnvironment(environment, profile, root),
   );
+};
 
 const launchReplenisher = async (): Promise<void> => {
   const parsed = parseRuntimeEnvironmentProfileArguments(process.argv.slice(2));

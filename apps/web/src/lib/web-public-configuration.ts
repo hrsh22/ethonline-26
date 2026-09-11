@@ -1,4 +1,5 @@
 import type { DeploymentEnvironmentName } from "@orbit/config/deployment-environments";
+import { deploymentEnvironmentForName } from "@orbit/config/deployment-environments";
 import { normalizePublicApiBaseUrl } from "@orbit/config/public-api";
 
 export interface WebPublicEnvironmentBindings {
@@ -13,6 +14,7 @@ export interface WebPublicEnvironmentBindings {
 export interface WebPublicConfiguration {
   readonly applicationUrl: string | undefined;
   readonly deploymentEnvironment: DeploymentEnvironmentName;
+  readonly deploymentEnvironmentConfigured: boolean;
   readonly privyAppId: string | undefined;
   readonly publicApiBaseUrl: string | undefined;
   readonly rpcUrl: string | undefined;
@@ -113,8 +115,11 @@ const normalizeRpcUrl = (
 export const parseWebPublicConfiguration = (
   environment: WebPublicEnvironmentBindings,
 ): WebPublicConfiguration => {
-  const deploymentEnvironment = parseDeploymentEnvironment(
+  const deploymentEnvironmentBinding = optionalBinding(
     environment.NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT,
+  );
+  const deploymentEnvironment = parseDeploymentEnvironment(
+    deploymentEnvironmentBinding,
   );
   const configuredPublicApiUrl = optionalBinding(
     environment.NEXT_PUBLIC_API_URL,
@@ -131,6 +136,7 @@ export const parseWebPublicConfiguration = (
   return {
     applicationUrl: normalizeApplicationUrl(environment.NEXT_PUBLIC_APP_URL),
     deploymentEnvironment,
+    deploymentEnvironmentConfigured: deploymentEnvironmentBinding !== undefined,
     privyAppId: optionalBinding(environment.NEXT_PUBLIC_PRIVY_APP_ID),
     publicApiBaseUrl:
       configuredPublicApiUrl === undefined
@@ -148,6 +154,19 @@ export const parseWebPublicConfiguration = (
 export const requireProductionWebPublicConfiguration = (
   configuration: WebPublicConfiguration,
 ): ProductionWebPublicConfiguration => {
+  if (!configuration.deploymentEnvironmentConfigured) {
+    throw new TypeError(
+      "NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT is required for a production web build",
+    );
+  }
+  const deploymentEnvironment = deploymentEnvironmentForName(
+    configuration.deploymentEnvironment,
+  );
+  if (deploymentEnvironment.status !== "configured") {
+    throw new TypeError(
+      `Deployment environment ${deploymentEnvironment.name} is not published for a production web build`,
+    );
+  }
   if (configuration.publicApiBaseUrl === undefined) {
     throw new TypeError(
       "NEXT_PUBLIC_API_URL is required for a production web build",

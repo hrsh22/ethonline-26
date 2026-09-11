@@ -40,6 +40,22 @@ describe("CCA deployment environment selection", () => {
       resolveCcaDeploymentEnvironment(84_532, "development"),
     ).toThrow("does not match chain 84532");
   });
+
+  it.each(["staging", "development-sepolia"])(
+    "rejects explicit %s targeting Anvil",
+    (environment) => {
+      expect(() =>
+        resolveCcaDeploymentEnvironment(31_337, environment),
+      ).toThrow("does not match chain 31337");
+    },
+  );
+
+  it("preserves isolated local tests and explicit Anvil development", () => {
+    expect(resolveCcaDeploymentEnvironment(31_337, undefined)).toBeUndefined();
+    expect(resolveCcaDeploymentEnvironment(31_337, "development")?.name).toBe(
+      "development",
+    );
+  });
 });
 
 afterEach(() => {

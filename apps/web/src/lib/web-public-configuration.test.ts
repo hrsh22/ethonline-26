@@ -32,6 +32,7 @@ describe("web public configuration", () => {
     expect(defaultConfiguration.deploymentEnvironment).toBe(
       "development-sepolia",
     );
+    expect(defaultConfiguration.deploymentEnvironmentConfigured).toBe(false);
     expect(defaultConfiguration.rpcUrl).toBe("https://fallback.example");
     for (const deploymentEnvironment of ["development-sepolia", "staging"]) {
       expect(
@@ -144,6 +145,17 @@ describe("web public configuration", () => {
     expect(() =>
       requireProductionWebPublicConfiguration(
         parseWebPublicConfiguration({
+          NEXT_PUBLIC_API_URL: "https://api.orbit.example",
+          NEXT_PUBLIC_APP_URL: "https://orbit.example",
+        }),
+      ),
+    ).toThrow(
+      /NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT is required for a production web build/u,
+    );
+    expect(() =>
+      requireProductionWebPublicConfiguration(
+        parseWebPublicConfiguration({
+          NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "development-sepolia",
           NEXT_PUBLIC_APP_URL: "https://orbit.example",
         }),
       ),
@@ -151,6 +163,7 @@ describe("web public configuration", () => {
     expect(() =>
       requireProductionWebPublicConfiguration(
         parseWebPublicConfiguration({
+          NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "development-sepolia",
           NEXT_PUBLIC_API_URL: "https://api.orbit.example",
         }),
       ),
@@ -161,6 +174,7 @@ describe("web public configuration", () => {
         parseWebPublicConfiguration({
           NEXT_PUBLIC_API_URL: "https://api.orbit.example",
           NEXT_PUBLIC_APP_URL: "https://orbit.example",
+          NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "development-sepolia",
         }),
       ),
     ).toMatchObject({
@@ -168,5 +182,15 @@ describe("web public configuration", () => {
       privyAppId: undefined,
       publicApiBaseUrl: "https://api.orbit.example",
     });
+
+    expect(() =>
+      requireProductionWebPublicConfiguration(
+        parseWebPublicConfiguration({
+          NEXT_PUBLIC_API_URL: "https://api.orbit.example",
+          NEXT_PUBLIC_APP_URL: "https://orbit.example",
+          NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: "staging",
+        }),
+      ),
+    ).toThrow(/Deployment environment staging is not published/u);
   });
 });

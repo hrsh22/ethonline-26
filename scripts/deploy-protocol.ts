@@ -1,5 +1,11 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import {
+  existsSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -13,9 +19,11 @@ import {
 } from "@orbit/config/deployment-manifest";
 import {
   DeploymentEnvironmentNameSchema,
+  deploymentEnvironmentConfigurations,
   deploymentEnvironmentForChainId,
   deploymentEnvironmentForName,
   requireDeployableDeploymentEnvironment,
+  type DeployableDeploymentEnvironment,
 } from "@orbit/config/deployment-environments";
 import {
   selectedIdentityConfiguration,
@@ -53,6 +61,40 @@ const DeploymentEnvironmentSchema = Schema.Struct({
   }),
   RECOVERY_AUTHORITY_ADDRESS: Schema.optional(NonEmptyString),
 });
+
+export const resolveProtocolManifestOutput = (
+  target: DeployableDeploymentEnvironment,
+  configuredPath: string | undefined,
+) => {
+  const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+  const output =
+    configuredPath === undefined
+      ? join(repositoryRoot, target.manifestPath)
+      : resolve(configuredPath);
+  for (const environment of Object.values(
+    deploymentEnvironmentConfigurations,
+  )) {
+    if (
+      "manifestPath" in environment &&
+      environment.name !== target.name &&
+      manifestDestination(output) ===
+        manifestDestination(resolve(repositoryRoot, environment.manifestPath))
+    ) {
+      throw new Error(
+        `Manifest output belongs to deployment environment ${environment.name}`,
+      );
+    }
+  }
+  return output;
+};
+
+function manifestDestination(path: string): string {
+  if (existsSync(path)) return realpathSync(path);
+  const parent = dirname(path);
+  return parent === path
+    ? path
+    : join(manifestDestination(parent), basename(path));
+}
 
 runMain(
   Effect.gen(function* () {
@@ -115,12 +157,14 @@ runMain(
 
       const configuredManifestPath =
         deploymentEnvironment.DEPLOYMENT_MANIFEST_PATH;
-      const manifestPath =
-        configuredManifestPath === undefined
-          ? join(repositoryRoot, chainEnvironment.manifestPath)
-          : isAbsolute(configuredManifestPath)
-            ? configuredManifestPath
-            : resolve(process.cwd(), configuredManifestPath);
+      const manifestPath = yield* validate(
+        "Invalid deployment manifest output",
+        () =>
+          resolveProtocolManifestOutput(
+            chainEnvironment,
+            configuredManifestPath,
+          ),
+      );
 
       const readManifest = fileSystem(
         `Could not read deployment manifest at ${manifestPath}`,
