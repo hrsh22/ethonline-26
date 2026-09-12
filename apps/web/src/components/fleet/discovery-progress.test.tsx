@@ -32,7 +32,7 @@ describe("Discovery progress", () => {
       />,
     );
     expect(html).toContain("1 of 3 results processed");
-    expect(html).toContain("Discovery request 17");
+    expect(html).not.toContain("Discovery request 17");
     expect(html).toContain("operator must resume processing");
     expect(html).not.toContain("Retry");
     expect(html).not.toContain("1 of 3 delivered");

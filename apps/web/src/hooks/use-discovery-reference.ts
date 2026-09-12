@@ -20,6 +20,14 @@ const read = (key: string | undefined) => {
     return null;
   }
 };
+const storedReference = (raw: string | null) =>
+  raw !== null && /^\d{1,78}$/.test(raw) ? raw : undefined;
+const completedDiscovery = (
+  wallet: ReturnType<typeof useProtocolClient>["walletRead"],
+) =>
+  wallet.status === "loaded" &&
+  !wallet.stale &&
+  wallet.snapshot.collectibles.pendingDiscovery.count === 0;
 
 /** A reference to observed work, never permission to send or repeat it. */
 export function useDiscoveryReference(
@@ -34,12 +42,27 @@ export function useDiscoveryReference(
     () => read(key),
     () => null,
   );
-  const batch =
-    protocol.walletRead.status === "loaded"
-      ? protocol.walletRead.snapshot.collectibles.pendingDiscovery.batch
+  const wallet = protocol.walletRead;
+  const pending =
+    wallet.status === "loaded"
+      ? wallet.snapshot.collectibles.pendingDiscovery
       : undefined;
+  // A public route deliberately drops wallet reads. Retire the saved work
+  // when a fresh wallet read proves completion, before that route transition.
+  const completed = completedDiscovery(wallet);
+  const batch = pending?.batch;
   const requestId = batch?.vrfRequestId.toString();
   useEffect(() => {
+    if (key !== undefined && completed) {
+      try {
+        if (localStorage.getItem(key) === null) return;
+        localStorage.removeItem(key);
+        window.dispatchEvent(new Event(changed));
+      } catch {
+        /* A fresh zero still suppresses the reference in this render. */
+      }
+      return;
+    }
     if (
       key === undefined ||
       requestId === undefined ||
@@ -53,8 +76,7 @@ export function useDiscoveryReference(
     } catch {
       /* Current evidence remains visible if storage is unavailable. */
     }
-  }, [key, requestId]);
-  return (
-    requestId ?? (raw !== null && /^\d{1,78}$/.test(raw) ? raw : undefined)
-  );
+  }, [completed, key, requestId]);
+  if (completed) return undefined;
+  return requestId ?? storedReference(raw);
 }

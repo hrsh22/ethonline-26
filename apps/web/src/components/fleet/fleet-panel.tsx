@@ -356,7 +356,12 @@ function ClaimShortcut({
   readonly returnTo: string;
 }) {
   const { claimable, updating } = claimableRewards(craft);
-  if (claimable.size === 0 && !updating) return null;
+  if (
+    !craft.some((entry) => entry.permanent) &&
+    !updating &&
+    claimable.size === 0
+  )
+    return null;
   const rewardParams = new URLSearchParams(returnTo.split("?")[1]);
   rewardParams.set("view", "rewards");
   return (
@@ -366,12 +371,24 @@ function ClaimShortcut({
     >
       <div className="min-w-0">
         <h2 className="fleet-reward-heading" id="fleet-rewards-shortcut">
-          {claimable.size === 0 ? "Rewards are updating" : "Rewards available"}
+          {claimable.size > 0
+            ? "Rewards available"
+            : updating
+              ? "Rewards are updating"
+              : "Your Orbiter rewards"}
         </h2>
-        <ClaimableAmounts claimable={claimable} updating={updating} />
+        {claimable.size === 0 && !updating ? (
+          <p className="mt-1 text-body-sm text-ink-soft">
+            See what needs to happen before your next rewards arrive.
+          </p>
+        ) : (
+          <ClaimableAmounts claimable={claimable} updating={updating} />
+        )}
       </div>
       <ButtonLink href={`/fleet?${rewardParams}`} size="sm" variant="outline">
-        Review claims
+        {claimable.size === 0 && !updating
+          ? "View reward progress"
+          : "Review claims"}
       </ButtonLink>
     </section>
   );

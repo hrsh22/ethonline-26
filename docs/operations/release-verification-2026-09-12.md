@@ -67,3 +67,27 @@ GitHub Actions quota was unavailable; these gates ran locally rather than being
 inferred from an absent CI result. This is collector-flow coverage, not a claim
 that every possible wallet, browser, administrative action, or RPC outage was
 exhaustively exercised.
+
+## Discovery completion and reward progress follow-up
+
+The reported stale Discovery banner came from a saved request reference that
+was never retired. Public pages intentionally remove wallet reads; the banner
+then treated that historical reference as unresolved work. Fresh zero-pending
+wallet observations now retire the reference. An old reference or a stale wallet
+read alone cannot produce a pending banner. Opaque request IDs remain internal
+and no longer appear in the banner, progress panel, or acquisition cards.
+
+My Fleet → Rewards now explains and displays the next reward cycle's actual
+0.04 WETH funding threshold, minimum cycle interval, processing status, and
+individual track queues. Queued budgets are distinct from the new-epoch pot and
+from claimable stock-token amounts. Missing or stale reads cannot show a false
+zero or readiness. The view refreshes shared queries every 30 seconds while
+visible, identifies the connected wallet's tracks, and keeps payout timing
+explicitly dependent on activity and successful conversion. An Orbiter with no
+claimable rewards now has a reward-progress shortcut from its collection.
+
+Local verification: 990 web tests, `pnpm check:ci`, the optimized production
+build, and all 142 production-browser cases passed. The production
+journeys now check that the opaque ID is absent, completed Discovery stays
+absent after public-route navigation/reload, and a launched Orbiter can open the
+reward-progress view with an accessible funding meter.

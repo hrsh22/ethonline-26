@@ -287,6 +287,19 @@ describe("collection surfaces", () => {
       expect(summary?.textContent).not.toContain("remaining");
     });
 
+    it("offers reward progress for an Orbiter before it has claimable rewards", async () => {
+      testState.protocol = protocol({
+        status: "loaded",
+        snapshot: walletSnapshot([], [2]),
+      });
+      await render(<FleetPanel />);
+      const shortcut = container.querySelector(
+        '[aria-labelledby="fleet-rewards-shortcut"]',
+      );
+      expect(shortcut?.textContent).toContain("View reward progress");
+      expect(shortcut?.textContent).not.toContain("Rewards available");
+    });
+
     it("puts holdings ahead of the metric summary", async () => {
       testState.protocol = protocol({
         status: "loaded",

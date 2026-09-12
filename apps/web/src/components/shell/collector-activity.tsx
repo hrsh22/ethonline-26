@@ -162,23 +162,15 @@ export function RecoverKnownTransaction({
 }
 
 function DiscoveryActivity({
-  reference,
   pending,
 }: {
-  readonly reference: string | undefined;
   readonly pending: number | undefined;
 }) {
-  if (reference === undefined && !pending) return null;
-  const message =
-    pending === undefined
-      ? "Checking discovery progress."
-      : pending > 0
-        ? `${pending} pending ${pending === 1 ? "Discovery" : "Discoveries"}.`
-        : "The last recorded batch is no longer pending. Recorded acquisition outcomes and verified holdings are in Fleet.";
+  if (!pending) return null;
+  const message = `${pending} pending ${pending === 1 ? "Discovery" : "Discoveries"}.`;
   return (
     <p className="mt-2 text-body [overflow-wrap:anywhere]">
       {message}{" "}
-      {reference === undefined ? "" : `Discovery request ${reference}. `}
       <Link className="underline" href="/fleet">
         View discovery and collection
       </Link>
@@ -188,23 +180,21 @@ function DiscoveryActivity({
 
 const hasActivity = (
   protocol: ReturnType<typeof useProtocolClient>,
-  reference: string | undefined,
   pending: number | undefined,
 ) =>
   (protocol.transaction.status !== "idle" &&
     protocol.transaction.status !== "confirmed") ||
-  (pending === undefined && reference !== undefined) ||
   Boolean(pending);
 
 /** The shell owns this notice so navigation cannot hide a submitted action. */
 export function CollectorActivity() {
   const protocol = useProtocolClient();
-  const discoveryReference = useDiscoveryReference(protocol);
+  useDiscoveryReference(protocol);
   const pending =
-    protocol.walletRead.status === "loaded"
+    protocol.walletRead.status === "loaded" && !protocol.walletRead.stale
       ? protocol.walletRead.snapshot.collectibles.pendingDiscovery.count
       : undefined;
-  if (!hasActivity(protocol, discoveryReference, pending)) return null;
+  if (!hasActivity(protocol, pending)) return null;
   return (
     <section
       id="collector-activity"
@@ -214,9 +204,7 @@ export function CollectorActivity() {
       {protocol.transaction.status === "confirmed" ? null : (
         <WalletTransactionActivity protocol={protocol} />
       )}
-      {pending === 0 ? null : (
-        <DiscoveryActivity reference={discoveryReference} pending={pending} />
-      )}
+      {pending === 0 ? null : <DiscoveryActivity pending={pending} />}
     </section>
   );
 }

@@ -90,9 +90,6 @@ function Outcome({ request }: { readonly request: DiscoveryHistoryRequest }) {
       <p className="text-body-sm">
         {outcomeMessage(request, held !== undefined)}
       </p>
-      <p className="break-all text-body-sm text-ink-soft">
-        Protocol request {request.requestId}
-      </p>
       {request.acquisitionHash !== undefined ? (
         <a
           className="inline-flex min-h-11 items-center underline"

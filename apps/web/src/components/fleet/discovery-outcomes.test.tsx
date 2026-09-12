@@ -47,6 +47,8 @@ it("links acquisition to terminal evidence while waiting for ownership before th
   const delivered = renderToStaticMarkup(<DiscoveryOutcomes />);
   expect(delivered).toContain("View delivered craft #1639");
   expect(delivered).toContain("Delivery and current ownership are verified");
+  expect(delivered).not.toContain("Protocol request");
+  expect(delivered).not.toContain(`0x${"1".repeat(64)}`);
   expect(delivered).toContain(
     `https://sepolia.basescan.org/tx/0x${"2".repeat(64)}`,
   );

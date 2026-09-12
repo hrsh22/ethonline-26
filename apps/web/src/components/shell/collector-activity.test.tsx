@@ -220,3 +220,26 @@ it("does not revive the banner for saved completions or a resolved discovery ref
     await act(async () => root.unmount());
   }
 });
+
+it.each([undefined, 1])(
+  "keeps opaque discovery references out of the collector banner (pending: %s)",
+  async (pending) => {
+    state.transaction = { status: "idle" };
+    state.pending = pending;
+    state.reference =
+      "46834239977972864594047143698670340896121247577665040514495954683581162304911";
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<CollectorActivity />));
+      expect(container.textContent).not.toContain(state.reference);
+      if (pending === undefined) {
+        expect(container.querySelector("#collector-activity")).toBeNull();
+      } else {
+        expect(container.querySelector('a[href="/fleet"]')).not.toBeNull();
+      }
+    } finally {
+      await act(async () => root.unmount());
+    }
+  },
+);

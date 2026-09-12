@@ -103,10 +103,7 @@ function ProgressReference({
   return (
     <>
       {pending.batch !== undefined ? (
-        <p className="break-all text-body-sm">
-          Discovery request {String(pending.batch.vrfRequestId)} · {elapsed} min
-          elapsed
-        </p>
+        <p className="text-body-sm">{elapsed} min elapsed</p>
       ) : (
         <p className="text-body-sm">Request details are still being checked.</p>
       )}

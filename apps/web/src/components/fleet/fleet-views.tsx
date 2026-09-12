@@ -19,6 +19,11 @@ const RewardsPanel = dynamic(() =>
     (module) => module.RewardsPanel,
   ),
 );
+const RewardProgressPanel = dynamic(() =>
+  import("@/components/rewards/reward-progress-panel").then(
+    (module) => module.RewardProgressPanel,
+  ),
+);
 const StockBalancesPanel = dynamic(() =>
   import("@/components/rewards/stock-balances-panel").then(
     (module) => module.StockBalancesPanel,
@@ -30,6 +35,7 @@ function FleetRewards() {
   if (walletRead.status !== "loaded") return <AccessNotice />;
   return (
     <>
+      <RewardProgressPanel />
       <RewardsPanel />
       <StockBalancesPanel />
     </>

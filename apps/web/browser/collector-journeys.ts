@@ -112,6 +112,25 @@ export async function checkLaunchJourney(
       .evaluate((button) => button === document.activeElement),
     true,
   );
+  await page.getByRole("link", { name: "Rewards", exact: true }).click();
+  await page
+    .getByRole("heading", {
+      name: "When will my Orbiter receive rewards?",
+      exact: true,
+    })
+    .waitFor();
+  await page
+    .getByRole("progressbar", {
+      name: "Funding for the next reward cycle",
+      exact: true,
+    })
+    .waitFor();
+  assert.equal(await page.getByRole("progressbar").getAttribute("value"), "0");
+  assert.ok((await page.locator("main").innerText()).includes("Your track"));
+  await page.getByRole("link", { name: "Collection", exact: true }).click();
+  await page.waitForURL(
+    (url) => url.pathname === "/fleet" && !url.searchParams.has("view"),
+  );
 }
 
 export async function checkPartialRewardsJourney(
@@ -267,10 +286,11 @@ export async function checkFundingDiscoveryJourney(
   assert.ok(
     !(await page.locator("main").innerText()).includes("No collectibles yet"),
   );
-  await page
-    .getByText(`Discovery request ${COLLECTOR_VRF_REQUEST}`, { exact: false })
-    .first()
-    .waitFor();
+  assert.ok(
+    !(await page.locator("body").innerText()).includes(
+      COLLECTOR_VRF_REQUEST.toString(),
+    ),
+  );
   await assertMobileCollectionText(page, false);
   fixture.pending = false;
   fixture.delivered = true;
@@ -281,6 +301,31 @@ export async function checkFundingDiscoveryJourney(
     .waitFor({ timeout: 35_000 });
   assert.equal(fixture.submissions.length, 1);
   assert.equal(fixture.fundingRequests, 1);
+  await page
+    .getByRole("link", { name: "Protocol status", exact: true })
+    .click();
+  await page
+    .getByRole("heading", { name: "Protocol status", exact: true })
+    .waitFor();
+  assert.equal(await page.locator("#collector-activity").count(), 0);
+  assert.ok(
+    !(await page.locator("body").innerText()).includes(
+      "Checking discovery progress",
+    ),
+  );
+  await page.reload();
+  await page
+    .getByRole("heading", { name: "Protocol status", exact: true })
+    .waitFor();
+  assert.equal(await page.locator("#collector-activity").count(), 0);
+  await page
+    .getByRole("link", { name: "My Fleet", exact: true })
+    .filter({ visible: true })
+    .click();
+  await page
+    .getByRole("link", { name: /Inspect/ })
+    .first()
+    .waitFor();
 }
 
 export async function checkTradeStagesJourney(
