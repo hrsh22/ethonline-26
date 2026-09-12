@@ -1,3 +1,4 @@
+import { OPERATOR_RECEIPT_CONFIRMATIONS } from "./operator-confirmation.ts";
 import type { ProtocolDeploymentManifest } from "@orbit/config/deployment-manifest";
 import { createProtocolContracts } from "@orbit/protocol/contracts";
 import {
@@ -458,6 +459,7 @@ export async function maintainBaseSepoliaCca(input: {
         });
         const receipt = await client.waitForTransactionReceipt({
           hash: transactionHash,
+          confirmations: OPERATOR_RECEIPT_CONFIRMATIONS,
         });
         if (
           (await client.getBlock({ blockNumber: receipt.blockNumber })).hash !==

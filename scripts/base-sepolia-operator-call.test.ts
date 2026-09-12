@@ -147,6 +147,64 @@ describe("Base Sepolia operator contract preflight", () => {
     ]);
   });
 
+  it("reconciles a newly confirmed call at the same two-block boundary without a cached head", async () => {
+    let head = 12n;
+    const receipt = {
+      status: "success",
+      blockNumber: 12n,
+      blockHash: `0x${"12".repeat(32)}` as Hex,
+    };
+    const clients = {
+      publicClient: {
+        simulateContract: async () => ({
+          result: 25n,
+          request: simulatedRequest(),
+        }),
+        waitForTransactionReceipt: async ({
+          confirmations,
+        }: {
+          confirmations: number;
+        }) => {
+          // Viem includes the receipt's own block in its confirmation count.
+          head = receipt.blockNumber + BigInt(confirmations) - 1n;
+          return receipt;
+        },
+        getTransactionReceipt: async () => receipt,
+        getBlockNumber: async ({ cacheTime }: { cacheTime?: number } = {}) =>
+          cacheTime === 0 ? head : 12n,
+        getBlock: async ({ blockNumber }: { blockNumber?: bigint } = {}) =>
+          blockNumber === 12n
+            ? {
+                number: 12n,
+                hash: receipt.blockHash,
+                timestamp: 1_800_000_002n,
+              }
+            : canonicalPublicClient.getBlock(
+                blockNumber === undefined ? {} : { blockNumber },
+              ),
+      },
+      roles: {
+        keeper: { account: undefined, walletClient: undefined },
+        "liquidity-executor": {
+          account: { address: ACTOR },
+          walletClient: wallet(),
+        },
+      },
+    } as unknown as Parameters<typeof attemptOperatorCall>[0];
+    const result = await attemptOperatorCall(
+      clients,
+      actors(),
+      true,
+      operatorCall(() => {}),
+    );
+    expect(result.status).toBe("confirmed");
+    expect(head).toBe(14n);
+    await expect(reconcileOperatorSubmission(clients, HASH)).resolves.toEqual({
+      status: "confirmed",
+      blockNumber: 12n,
+    });
+  });
+
   it("uses the role declared by the call for simulation and signing", async () => {
     const events: string[] = [];
     const clients = {

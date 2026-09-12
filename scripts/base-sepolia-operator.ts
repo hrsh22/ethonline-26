@@ -1,3 +1,7 @@
+import {
+  OPERATOR_CONFIRMATION_BLOCK_DEPTH,
+  OPERATOR_RECEIPT_CONFIRMATIONS,
+} from "./operator-confirmation.ts";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -1236,10 +1240,10 @@ const reconcileConsumedOperatorNonce = async (
       transactionHash,
       rawTransaction,
     );
-    const head = await clients.publicClient.getBlockNumber();
-    if (typeof head !== "bigint" || head < 2n)
+    const head = await clients.publicClient.getBlockNumber({ cacheTime: 0 });
+    if (typeof head !== "bigint" || head < OPERATOR_CONFIRMATION_BLOCK_DEPTH)
       throw new Error("Canonical confirmation floor unavailable");
-    const floor = head - 2n;
+    const floor = head - OPERATOR_CONFIRMATION_BLOCK_DEPTH;
     const anchor = decodeOperatorBlockIdentity(
       await clients.publicClient.getBlock({ blockNumber: floor }),
       "Operator nonce confirmation header",
@@ -1326,11 +1330,15 @@ export const reconcileOperatorSubmission = async (
         failureClass: "canonicality-uncertain",
       };
     }
-    const head = await clients.publicClient.getBlockNumber();
-    if (typeof head !== "bigint" || head < receipt.blockNumber + 2n) {
+    const head = await clients.publicClient.getBlockNumber({ cacheTime: 0 });
+    if (
+      typeof head !== "bigint" ||
+      head < receipt.blockNumber + OPERATOR_CONFIRMATION_BLOCK_DEPTH
+    ) {
       return {
         status: "submitted-unknown",
-        reason: "The submitted transaction has not reached two confirmations.",
+        reason:
+          "The submitted transaction is waiting for two blocks after inclusion.",
         failureClass: "canonicality-uncertain",
       };
     }
@@ -1451,7 +1459,7 @@ export const attemptOperatorCall = async (
     );
     const receipt = await clients.publicClient.waitForTransactionReceipt({
       hash: transactionHash,
-      confirmations: 2,
+      confirmations: OPERATOR_RECEIPT_CONFIRMATIONS,
     });
     return receiptEvidence(call, transactionHash, receipt);
   } catch (cause) {

@@ -1,3 +1,4 @@
+import { OPERATOR_RECEIPT_CONFIRMATIONS } from "./operator-confirmation.ts";
 import {
   deriveDiscoveryMaintenance,
   type DiscoveryBatchObservation,
@@ -304,7 +305,7 @@ export const maintainBaseSepoliaDiscovery = async ({
         );
         const receipt = await publicClient.waitForTransactionReceipt({
           hash: transactionHash,
-          confirmations: 2,
+          confirmations: OPERATOR_RECEIPT_CONFIRMATIONS,
         });
         return receipt.status === "success"
           ? { status: "confirmed", transactionHash }
