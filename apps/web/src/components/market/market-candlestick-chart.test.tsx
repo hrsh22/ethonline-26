@@ -6,7 +6,7 @@ import {
   candlesInRange,
   continuousCandlesInRange,
   marketChartSeries,
-  MarketCandleDataTable,
+  displayMarketTime,
   MarketCandlestickChart,
 } from "./market-candlestick-chart";
 
@@ -30,19 +30,35 @@ const candle = (
   ...values,
 });
 
-/**
- * The exact-data disclosure keeps its content in the document (Base UI's
- * `hiddenUntilFound` panel) so browser find-in-page can reach the evidence, so
- * "collapsed" is no longer "absent from the markup": it is a panel carrying
- * `hidden`. The panel is the only element that sets the collapsible height
- * variable, which makes it identifiable without depending on utility classes.
- */
-const collapsiblePanels = (html: string) =>
-  [...html.matchAll(/<div[^>]*--collapsible-panel-height[^>]*>/gu)].map(
-    (match) => match[0],
-  );
-
 describe("WETH/FUEL candlestick chart", () => {
+  it("renders the advanced chart loading surface without a simple chart or OHLCV disclosure", () => {
+    const html = renderToStaticMarkup(
+      <MarketCandlestickChart
+        candles={[candle(1_700_000_000n), candle(1_700_003_600n)]}
+        feeMatchingState="complete"
+        interval="1h"
+        range="all"
+      />,
+    );
+    expect(html).toContain('data-library="tradecanvas"');
+    expect(html).toContain("Loading market chart");
+    expect(html).toContain("traded intervals");
+    expect(html).toContain('role="status"');
+    expect(html).not.toContain("Open advanced chart");
+    expect(html).not.toContain("Show exact");
+    expect(html).not.toContain("<svg");
+    expect(html).not.toContain("<table");
+  });
+
+  it("formats market dates in the supplied time zone", () => {
+    const timestamp = BigInt(
+      Math.floor(Date.parse("2026-09-06T19:12:00Z") / 1_000),
+    );
+    expect(displayMarketTime(timestamp, "Asia/Kolkata")).toContain(
+      "Sep 7, 2026",
+    );
+  });
+
   it("hands the terminal millisecond OHLCV data without inventing idle volume", () => {
     const active = candle(1_700_000_000n);
     const idle = candle(1_700_003_600n, {
@@ -74,86 +90,6 @@ describe("WETH/FUEL candlestick chart", () => {
         volume: 0,
       },
     ]);
-  });
-
-  it("renders price and volume with a screen-reader table and non-color direction", () => {
-    const html = renderToStaticMarkup(
-      <MarketCandlestickChart
-        candles={[
-          candle(1_700_000_000n),
-          candle(1_700_003_600n, {
-            openWethPerLiquidTokenX18: 2n * x18,
-            closeWethPerLiquidTokenX18: x18,
-          }),
-        ]}
-        feeMatchingState="complete"
-        interval="1h"
-        range="all"
-      />,
-    );
-
-    expect(html).toContain('role="img"');
-    expect(html).toContain('data-direction="up"');
-    expect(html).toContain('data-direction="down"');
-    expect(html).toContain("data-chart-axis");
-    expect(html).toContain("WETH volume");
-    expect(html).toContain("Show exact traded hourly OHLCV data");
-    expect(html).toContain('aria-expanded="false"');
-    const panels = collapsiblePanels(html);
-    expect(panels.length).toBeGreaterThan(0);
-    expect(panels.every((panel) => panel.includes('hidden=""'))).toBe(true);
-
-    const table = renderToStaticMarkup(
-      <MarketCandleDataTable candles={[candle(1_700_000_000n)]} />,
-    );
-    expect(table).toContain("Gross trader WETH volume");
-    expect(table).toContain("Hook protocol fee");
-    expect(table).toContain("10 WETH");
-    expect(table).toContain("0.03 WETH");
-  });
-
-  it("renders candle dates in the viewer's supplied time zone", () => {
-    const candleStartUtc = BigInt(
-      Math.floor(Date.parse("2026-09-06T19:12:00Z") / 1_000),
-    );
-    const table = renderToStaticMarkup(
-      <MarketCandleDataTable
-        candles={[candle(candleStartUtc)]}
-        interval="1m"
-        timeZone="Asia/Kolkata"
-      />,
-    );
-
-    expect(table).toContain("Sep 7, 2026");
-    expect(table).toContain("Minute (Asia/Kolkata)");
-  });
-
-  it("carries the prior close through empty intervals with zero volume", () => {
-    const html = renderToStaticMarkup(
-      <MarketCandlestickChart
-        candles={[
-          candle(1_700_000_000n),
-          candle(1_700_003_600n, {
-            openWethPerLiquidTokenX18: undefined,
-            highWethPerLiquidTokenX18: undefined,
-            lowWethPerLiquidTokenX18: undefined,
-            closeWethPerLiquidTokenX18: undefined,
-            grossWethVolume: 0n,
-            protocolFeeWeth: 0n,
-            swapCount: 0,
-            matchedFeeCount: 0,
-          }),
-        ]}
-        feeMatchingState="complete"
-        interval="1h"
-        range="all"
-      />,
-    );
-
-    expect(html).toContain("No swaps · carried close");
-    expect(html).toContain("volume 0 WETH");
-    expect(html).toContain('data-direction="flat"');
-    expect(html).not.toContain("data-candle-gap");
   });
 
   it("densifies sparse trades without inventing volume or swap counts", () => {
@@ -268,30 +204,6 @@ describe("WETH/FUEL candlestick chart", () => {
     expect(html).toContain('aria-live="polite"');
   });
 
-  it("keeps the visual bounded while the exact table retains every interval", () => {
-    const candles = Array.from({ length: 501 }, (_, index) =>
-      candle(1_700_000_000n + BigInt(index) * 3_600n),
-    );
-    const closedChart = renderToStaticMarkup(
-      <MarketCandlestickChart
-        candles={candles}
-        feeMatchingState="complete"
-        interval="1h"
-        range="all"
-      />,
-    );
-    const exactTable = renderToStaticMarkup(
-      <MarketCandleDataTable candles={candles} />,
-    );
-
-    // The full-fidelity table ships with the page so find-in-page can reach it,
-    // but every collapsed panel stays hidden until the reader asks for it.
-    const panels = collapsiblePanels(closedChart);
-    expect(panels.length).toBeGreaterThan(0);
-    expect(panels.every((panel) => panel.includes('hidden=""'))).toBe(true);
-    expect(exactTable.match(/<tr>/gu)).toHaveLength(502);
-  });
-
   it("applies ranges from the indexed-through time rather than the latest trade", () => {
     const latest = 1_700_100_000n;
     const sparse = [candle(latest - 100n * 3_600n), candle(latest)];
@@ -299,38 +211,5 @@ describe("WETH/FUEL candlestick chart", () => {
 
     expect(candlesInRange(sparse, "24h", indexedThrough)).toEqual([]);
     expect(candlesInRange(sparse, "7d", indexedThrough)).toEqual(sparse);
-  });
-
-  it("uses one chart tab stop instead of one per observation", () => {
-    const candles = Array.from({ length: 500 }, (_, index) =>
-      candle(1_700_000_000n + BigInt(index) * 3_600n),
-    );
-    const html = renderToStaticMarkup(
-      <MarketCandlestickChart
-        candles={candles}
-        feeMatchingState="complete"
-        interval="1h"
-        range="all"
-      />,
-    );
-
-    const sparse = renderToStaticMarkup(
-      <MarketCandlestickChart
-        candles={candles.slice(0, 2)}
-        feeMatchingState="complete"
-        interval="1h"
-        range="all"
-      />,
-    );
-
-    // Exactly one graphic tab stop, no matter how many marks it draws. The
-    // remaining stops are the chrome around it — the advanced-chart control and
-    // the disclosure triggers — which are buttons and so do not scale with the
-    // observation count.
-    expect(html.match(/<svg[^>]*tabindex="0"/gu)).toHaveLength(1);
-    expect(html.match(/tabindex="0"/gu)).toEqual(
-      sparse.match(/tabindex="0"/gu),
-    );
-    expect(html).toContain("Open advanced chart");
   });
 });

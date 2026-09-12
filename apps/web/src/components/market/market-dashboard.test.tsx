@@ -321,7 +321,7 @@ describe("plain-language market balances", () => {
     expect(chartIndex).toBeLessThan(educationIndex);
   });
 
-  it("shows a readable chart before offering advanced terminal tools", () => {
+  it("opens the advanced chart directly without OHLCV disclosure controls", () => {
     const x18 = 10n ** 18n;
     const snapshot = {
       ...history("complete"),
@@ -349,8 +349,8 @@ describe("plain-language market balances", () => {
 
     const plot = html.indexOf("<figure");
     expect(plot).toBeGreaterThan(-1);
-    expect(html).not.toContain('data-library="tradecanvas"');
-    expect(html).toContain("Open advanced chart");
+    expect(html).toContain('data-library="tradecanvas"');
+    expect(html).not.toContain("Open advanced chart");
     expect(html).toContain('aria-label="Chart range"');
     expect(html).not.toContain(
       `aria-label="${applicationCopy.exchange.candleLegend}"`,
@@ -359,7 +359,7 @@ describe("plain-language market balances", () => {
     expect(html).toContain("Latest indexed trade");
     expect(html).toContain("Available-range volume");
     expect(html).toContain("Indexed through");
-    expect(html).toContain("Show exact traded minute OHLCV data");
+    expect(html).not.toContain("Show exact traded minute OHLCV data");
     expect(html).toContain("Verify indexed history");
   });
 

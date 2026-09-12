@@ -17,11 +17,15 @@ import { MarketCandlestickChart } from "./market-candlestick-chart";
 vi.mock("@tradecanvas/chart/widget", () => ({
   ChartWidget: class {
     data: DataSeries = [];
+    viewport = document.createElement("div");
     view = document.createElement("input");
     value = document.createElement("output");
     listener:
       ((event: { payload: { from: number; to: number } }) => void) | undefined;
     constructor(container: HTMLElement) {
+      this.viewport.className = "tcw-chart-container";
+      this.viewport.tabIndex = 0;
+      this.viewport.style.outline = "none";
       this.view.setAttribute("aria-label", "Chart first visible timestamp");
       this.view.addEventListener("change", () => {
         const from = this.data.findIndex(
@@ -29,11 +33,13 @@ vi.mock("@tradecanvas/chart/widget", () => ({
         );
         this.listener?.({ payload: { from, to: from + 1 } });
       });
-      container.append(this.view, this.value);
+      this.viewport.append(this.view, this.value);
+      container.append(this.viewport);
     }
     setData(data: DataSeries) {
       this.data = data;
       this.value.textContent = String(data.at(-1)?.close);
+      this.value.dataset.candleCount = String(data.length);
       this.view.value = String(data.at(-1)?.time);
       this.listener?.({
         payload: { from: Math.max(0, data.length - 1), to: data.length },
@@ -55,8 +61,7 @@ vi.mock("@tradecanvas/chart/widget", () => ({
       };
     }
     destroy() {
-      this.view.remove();
-      this.value.remove();
+      this.viewport.remove();
     }
   },
 }));
@@ -76,28 +81,6 @@ const candle = (intervalStart: bigint): MarketCandle => ({
   feeMatchState: "complete",
 });
 
-/**
- * The exact-data table lives in a Base UI collapsible whose panel stays in the
- * document while closed, so opening it means clicking the trigger button rather
- * than toggling a `<details>`.
- */
-const openDisclosure = async (
-  container: HTMLElement,
-  label: string,
-): Promise<HTMLButtonElement> => {
-  const trigger = [...container.querySelectorAll("button")].find((candidate) =>
-    candidate.textContent?.includes(label),
-  );
-  if (trigger === undefined) {
-    throw new Error(`No disclosure trigger containing "${label}".`);
-  }
-  await act(async () => {
-    trigger.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-  return trigger;
-};
-
 describe("hydrated market chart accessibility", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -111,6 +94,8 @@ describe("hydrated market chart accessibility", () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+    vi.stubGlobal("ResizeObserver", vi.fn());
   });
 
   afterEach(() => {
@@ -144,8 +129,6 @@ describe("hydrated market chart accessibility", () => {
   });
 
   it("keeps the chosen chart view while refreshed candles update", async () => {
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
-    vi.stubGlobal("ResizeObserver", vi.fn());
     const render = async (lastClose: bigint) => {
       await act(async () =>
         root.render(
@@ -167,10 +150,6 @@ describe("hydrated market chart accessibility", () => {
       );
     };
     await render(x18);
-    const toggle = [...container.querySelectorAll("button")].find(
-      (button) => button.textContent === "Open advanced chart",
-    );
-    await act(async () => toggle?.click());
     const view = container.querySelector<HTMLInputElement>(
       "input[aria-label='Chart first visible timestamp']",
     );
@@ -186,72 +165,69 @@ describe("hydrated market chart accessibility", () => {
       )?.value,
     ).toBe("7200000");
     expect(container.querySelector("output")?.textContent).toBe("3");
-    await act(async () => toggle?.click());
-    expect(view!.isConnected).toBe(false);
   });
 
-  it("focuses the chart once and reveals its exact table from the keyboard control", async () => {
+  it("opens advanced tools immediately with an accessible summary and no simple-chart or OHLCV controls", async () => {
     await act(async () =>
       root.render(
         <MarketCandlestickChart
-          candles={[candle(1_700_000_000n), candle(1_700_003_600n)]}
+          candles={[candle(3_600n), candle(7_200n)]}
           feeMatchingState="complete"
           interval="1h"
           range="all"
         />,
       ),
     );
-
-    // The chart itself, advanced-chart control, and table disclosure. The point is that
-    // per-observation marks never become tab stops. Controls parked inside a
-    // closed disclosure panel are excluded: `hidden` takes them out of the tab
-    // order. The vendor terminal is loaded client-side and is exercised in the
-    // browser suite.
-    const sequentialStops = [
-      ...container.querySelectorAll(
-        'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])',
-      ),
-    ].filter((node) => node.closest("[hidden]") === null);
-    expect(sequentialStops).toHaveLength(3);
-
-    const chart = container.querySelector<SVGElement>("svg");
-    chart?.focus();
-    expect(document.activeElement).toBe(chart);
-
-    const trigger = await openDisclosure(container, "Show exact");
-
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    expect(trigger.nextElementSibling?.hasAttribute("hidden")).toBe(false);
-    expect(container.querySelectorAll("tbody tr")).toHaveLength(2);
+    const chart = container.querySelector("[data-library='tradecanvas']");
+    expect(chart?.getAttribute("role")).toBe("region");
+    expect(chart?.getAttribute("aria-label")).toContain("traded intervals");
+    expect(chart?.hasAttribute("aria-hidden")).toBe(false);
+    const viewport = chart?.querySelector<HTMLElement>(".tcw-chart-container");
+    expect(viewport?.getAttribute("role")).toBe("img");
+    expect(viewport?.getAttribute("aria-label")).toBe(
+      "Interactive $FUEL market chart",
+    );
+    expect(viewport?.tabIndex).toBe(0);
+    expect(viewport?.style.outline).toBe("");
+    expect(viewport?.style.outlineOffset).toBe("-3px");
+    expect(container.querySelector("svg")).toBeNull();
+    expect(container.querySelector("table")).toBeNull();
+    expect(container.textContent).not.toContain("Open advanced chart");
+    expect(container.textContent).not.toContain("Show exact");
   });
 
-  it("keeps the readable chart as the default and loads terminal tools on demand", async () => {
+  it("offers an accessible retry if the chart cannot initialize", async () => {
+    vi.stubGlobal("ResizeObserver", undefined);
     await act(async () =>
       root.render(
         <MarketCandlestickChart
-          candles={[candle(1_700_000_000n), candle(1_700_003_600n)]}
+          candles={[candle(3_600n), candle(7_200n)]}
           feeMatchingState="complete"
           interval="1h"
           range="all"
         />,
       ),
     );
-
-    expect(container.querySelector("svg[role='img']")).not.toBeNull();
-    expect(container.querySelector("[data-library='tradecanvas']")).toBeNull();
-
-    const button = [...container.querySelectorAll("button")].find(
-      (candidate) => candidate.textContent === "Open advanced chart",
+    expect(container.querySelector("[role='alert']")?.textContent).toContain(
+      "Chart could not load",
     );
-    expect(button).toBeDefined();
-    await act(async () => button?.click());
-
+    expect(container.textContent).toContain("traded intervals");
+    expect(container.querySelector("svg")).toBeNull();
+    vi.stubGlobal("ResizeObserver", vi.fn());
+    const retry = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Retry chart",
+    );
+    expect(retry).toBeDefined();
+    await act(async () => retry?.click());
     expect(
-      container.querySelector("[data-library='tradecanvas']"),
-    ).not.toBeNull();
-    expect(container.querySelector("svg[role='img']")).not.toBeNull();
+      container
+        .querySelector("[data-library='tradecanvas']")
+        ?.getAttribute("role"),
+    ).toBe("region");
+    expect(container.querySelector("[role='alert']")).toBeNull();
   });
-  it("bounds the chart and its data table to the selected range", async () => {
+
+  it("bounds advanced chart observations to the selected range", async () => {
     const candles = Array.from({ length: 200 }, (_, index) =>
       candle(1_700_000_000n + BigInt(index) * 3_600n),
     );
@@ -265,58 +241,7 @@ describe("hydrated market chart accessibility", () => {
         />,
       ),
     );
-
-    await openDisclosure(container, "Show exact");
-
-    // The table follows the range rather than rendering every indexed hour.
-    expect(container.querySelectorAll("tbody tr")).toHaveLength(24);
-    expect(container.querySelectorAll("[role='list'] > *")).toHaveLength(25);
-  });
-
-  it("keeps the price axis clear of the candles it labels", async () => {
-    await act(async () =>
-      root.render(
-        <MarketCandlestickChart
-          candles={Array.from({ length: 24 }, (_, index) =>
-            candle(1_700_000_000n + BigInt(index) * 3_600n),
-          )}
-          feeMatchingState="complete"
-          interval="1h"
-          range="24h"
-        />,
-      ),
-    );
-
-    // Every price tick starts to the right of the rightmost candle. Anchoring
-    // them at the plot's left edge drew the first several candles underneath.
-    const axis = container.querySelector("[data-chart-axis]");
-    const ticks = [...(axis?.querySelectorAll("text") ?? [])]
-      .map((node) => Number(node.getAttribute("x")))
-      .filter((x) => x > 100);
-    const marks = [
-      ...container.querySelectorAll("[role='list'] line, [role='list'] rect"),
-    ].map((node) =>
-      Number(node.getAttribute("x") ?? node.getAttribute("x1") ?? "0"),
-    );
-    expect(ticks.length).toBeGreaterThan(2);
-    expect(marks.length).toBeGreaterThan(0);
-    expect(Math.min(...ticks)).toBeGreaterThan(Math.max(...marks));
-  });
-
-  it("summarises the plotted range for assistive technology", async () => {
-    await act(async () =>
-      root.render(
-        <MarketCandlestickChart
-          candles={[candle(1_700_000_000n), candle(1_700_003_600n)]}
-          feeMatchingState="complete"
-          interval="1h"
-          range="7d"
-        />,
-      ),
-    );
-
-    expect(container.querySelector("desc")?.textContent).toContain(
-      "traded intervals",
-    );
+    expect(container.querySelector("output")?.dataset.candleCount).toBe("25");
+    expect(container.querySelector("table")).toBeNull();
   });
 });

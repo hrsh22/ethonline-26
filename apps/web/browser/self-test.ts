@@ -89,6 +89,10 @@ export const runHarnessSelfTest = async (
     "small-input",
     "balance-overflow",
     "invisible-focus",
+    "unhydrated-chart",
+    "missing-canvas",
+    "unnamed-chart",
+    "missing-chart-focus",
   ] as const) {
     outcomes.push(
       await withPage(origin, "/", async (page) => {
@@ -100,10 +104,14 @@ export const runHarnessSelfTest = async (
         </style>
         <input type="number" aria-label="Amount">
         <dl><dt>Balance</dt><dd>1 WETH</dd></dl>
-        <svg role="img" aria-label="Token market history" tabindex="0" width="200" height="100"></svg>
+        <div data-library="tradecanvas" ${defect === "unhydrated-chart" ? 'aria-hidden="true"' : 'role="region"'} ${defect === "unnamed-chart" ? "" : 'aria-label="Token market history: 2 traded intervals"'}>
+          <div class="tcw-chart-container" role="img" aria-label="Interactive token market chart" tabindex="${defect === "missing-chart-focus" ? -1 : 0}">
+            ${defect === "missing-canvas" ? "" : '<canvas width="200" height="100"></canvas>'}
+          </div>
+        </div>
         <button>After chart</button>
       `);
-        const failures = await renderedStyleFailures(page, defect);
+        const failures = await renderedStyleFailures(page, defect, 250);
         return {
           name: `rendered styles: ${defect}`,
           expected: defect === "none" ? "none" : "accessibility",

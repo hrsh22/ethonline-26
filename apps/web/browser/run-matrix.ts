@@ -20,6 +20,7 @@ import { chromium, type Browser, type Page } from "playwright";
 import { ADMIN_FIXTURE_COOKIE } from "./admin-fixture.ts";
 
 import {
+  awaitAdvancedMarketChart,
   collectorHeaderCollisionFailure,
   collectorFundingVisibilityFailure,
   focusFailure,
@@ -639,9 +640,7 @@ const visit = async (
         .waitFor({ state: "visible" });
     }
     if (input.data === "market") {
-      await page
-        .getByRole("img", { name: /market history$/u })
-        .waitFor({ state: "visible", timeout: 15_000 });
+      await awaitAdvancedMarketChart(page);
     }
     if (input.data === "cached-stale") {
       await page

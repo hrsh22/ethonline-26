@@ -477,10 +477,26 @@ export const focusFailure = async (
       };
 };
 
-/** Check computed styles and rendered geometry, independent of CSS class names. */
+/** A mounted placeholder is not proof that the chart library initialized. */
+export const awaitAdvancedMarketChart = async (
+  page: Page,
+  timeout = 15_000,
+) => {
+  const chart = page
+    .locator(
+      '[data-library="tradecanvas"][role="region"]:not([aria-hidden="true"])',
+    )
+    .first();
+  await chart.waitFor({ state: "visible", timeout });
+  await chart.locator("canvas").first().waitFor({ state: "visible", timeout });
+  return chart;
+};
+
+/** Check computed styles and rendered geometry, independent of CSS utility classes. */
 export const renderedStyleFailures = async (
   page: Page,
   label: string,
+  chartTimeout = 15_000,
 ): Promise<readonly BrowserFailure[]> => {
   const details = await page.evaluate(() => {
     const failures: string[] = [];
@@ -511,23 +527,46 @@ export const renderedStyleFailures = async (
     }
     return failures;
   });
-  const chart = page.getByRole("img", { name: /market history$/u });
-  if ((await chart.count()) > 0) {
-    await chart.first().focus();
-    await page.keyboard.press("Shift+Tab");
-    await page.keyboard.press("Tab");
-    const visibleFocus = await chart.first().evaluate((element) => {
-      const style = getComputedStyle(element);
-      return (
-        document.activeElement === element &&
-        element.matches(":focus-visible") &&
-        style.outlineStyle !== "none" &&
-        Number.parseFloat(style.outlineWidth) > 0 &&
-        style.outlineColor !== "rgba(0, 0, 0, 0)"
-      );
-    });
-    if (!visibleFocus)
-      details.push("keyboard focus on the chart has no visible outline");
+  if ((await page.locator('[data-library="tradecanvas"]').count()) > 0) {
+    try {
+      const chart = await awaitAdvancedMarketChart(page, chartTimeout);
+      if (!(await chart.getAttribute("aria-label"))?.trim())
+        details.push("advanced chart has no accessible market summary");
+      const viewport = chart
+        .locator('.tcw-chart-container[tabindex="0"]')
+        .first();
+      if ((await viewport.count()) === 0) {
+        details.push("advanced chart has no keyboard-focusable viewport");
+      } else {
+        if (!(await viewport.getAttribute("aria-label"))?.trim())
+          details.push(
+            "advanced chart keyboard viewport has no accessible name",
+          );
+        await viewport.focus();
+        await page.keyboard.press("Shift+Tab");
+        await page.keyboard.press("Tab");
+        const visibleFocus = await viewport.evaluate((element) => {
+          const style = getComputedStyle(element);
+          const hasOutline =
+            style.outlineStyle !== "none" &&
+            Number.parseFloat(style.outlineWidth) > 0 &&
+            style.outlineColor !== "rgba(0, 0, 0, 0)";
+          const hasShadow =
+            style.boxShadow !== "none" && style.boxShadow !== "";
+          return (
+            document.activeElement === element &&
+            element.matches(":focus-visible") &&
+            (hasOutline || hasShadow)
+          );
+        });
+        if (!visibleFocus)
+          details.push(
+            "keyboard focus on the advanced chart has no visible indicator",
+          );
+      }
+    } catch {
+      details.push("advanced chart did not hydrate with a visible canvas");
+    }
   }
   return details.map((detail) => ({
     kind: "accessibility",

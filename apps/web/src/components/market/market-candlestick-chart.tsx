@@ -12,20 +12,9 @@ import { formatUnits } from "viem";
 
 import { StateFeedback } from "@/components/state-feedback";
 import { Button } from "@/components/ui/button";
-import { Disclosure } from "@/components/ui/disclosure";
 import { formatTokenAmount } from "@/lib/format";
 import { applicationCopy } from "@/lib/identity";
 
-const CHART_WIDTH = 900;
-const CHART_HEIGHT = 360;
-const CHART_INSET = 40;
-/* The price axis needs its own column. Drawing the labels at the plot's left
-   edge put the first several candles of any full range underneath them. */
-const PRICE_GUTTER = 84;
-const PLOT_RIGHT = CHART_WIDTH - CHART_INSET - PRICE_GUTTER;
-const PRICE_BOTTOM = 250;
-const VOLUME_TOP = 282;
-const VOLUME_BOTTOM = 336;
 const MAX_VISIBLE_CANDLES = 1_000;
 const MAX_TRADING_CANDLES = 500n;
 const TRADING_TIMEFRAMES = [
@@ -58,8 +47,7 @@ const TRADING_TIMEFRAMES = [
 const CHART_INTERVALS = TRADING_TIMEFRAMES.map(({ seconds }) => seconds);
 
 /**
- * Ranges bound how much history is rendered. Without them the chart grew with
- * deployment age and the disclosure table rendered every hour ever indexed.
+ * Ranges bound how much history the chart renders as the deployment ages.
  */
 export const CANDLE_RANGES = [
   { key: "24h", hours: 24, label: applicationCopy.exchange.range24h },
@@ -70,7 +58,7 @@ export const CANDLE_RANGES = [
 
 export type CandleRangeKey = (typeof CANDLE_RANGES)[number]["key"];
 
-/** Applies a range, then the hard render cap that protects the SVG. */
+/** Applies a range, then the hard render cap for source observations. */
 export const candlesInRange = (
   candles: readonly MarketCandle[],
   range: CandleRangeKey,
@@ -408,26 +396,12 @@ const chartSummaryFor = (candles: readonly MarketCandle[]): string => {
   );
 };
 
-const RATIO_SCALE = 1_000_000n;
-const compactNumber = new Intl.NumberFormat("en", {
-  maximumSignificantDigits: 5,
-});
-
 type FeeMatchingState = CanonicalMarketHistorySnapshot["feeMatching"]["state"];
 
 const displayPrice = (value: bigint | undefined) =>
   value === undefined
     ? applicationCopy.common.notObserved
     : `${formatTokenAmount(value, { maximumFractionDigits: 8 }).display} WETH / ${applicationCopy.exchange.token}`;
-
-const displayWeth = (value: bigint) =>
-  `${formatTokenAmount(value, { maximumFractionDigits: 8 }).display} WETH`;
-
-/* Ticks carry digits only; the unit is stated once at the head of the axis so
-   a tick fits the gutter instead of reaching back across the plot. */
-const displayAxisPrice = (value: bigint) =>
-  compactNumber.format(Number(formatUnits(value, 18)));
-const PRICE_AXIS_UNIT = `WETH / ${applicationCopy.exchange.token}`;
 
 export const displayMarketTime = (timestamp: bigint, timeZone = "UTC") =>
   new Intl.DateTimeFormat("en", {
@@ -439,436 +413,6 @@ export const displayMarketTime = (timestamp: bigint, timeZone = "UTC") =>
     timeZoneName: "short",
     year: "numeric",
   }).format(Number(timestamp) * 1_000);
-
-const displayAxisTime = (timestamp: bigint, timeZone: string) =>
-  new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-    timeZoneName: "short",
-  }).format(Number(timestamp) * 1_000);
-
-const observedPrices = (candles: readonly MarketCandle[]) =>
-  candles.flatMap((candle) =>
-    candle.lowWethPerLiquidTokenX18 === undefined ||
-    candle.highWethPerLiquidTokenX18 === undefined
-      ? []
-      : [candle.lowWethPerLiquidTokenX18, candle.highWethPerLiquidTokenX18],
-  );
-
-const minimum = (values: readonly bigint[]) =>
-  values.reduce((result, value) => (value < result ? value : result));
-
-const maximum = (values: readonly bigint[]) =>
-  values.reduce((result, value) => (value > result ? value : result));
-
-const priceBounds = (candles: readonly MarketCandle[]) => {
-  const prices = observedPrices(candles);
-  return prices.length === 0
-    ? undefined
-    : { low: minimum(prices), high: maximum(prices) };
-};
-
-const paddedPriceBounds = (candles: readonly MarketCandle[]) => {
-  const bounds = priceBounds(candles);
-  if (bounds === undefined) return undefined;
-  const spread = bounds.high - bounds.low;
-  const padding = spread === 0n ? bounds.high / 100n || 1n : spread / 10n || 1n;
-  return {
-    low: bounds.low > padding ? bounds.low - padding : 0n,
-    high: bounds.high + padding,
-  };
-};
-
-const ratio = (value: bigint, low: bigint, high: bigint) =>
-  high === low
-    ? 0.5
-    : Number(((value - low) * RATIO_SCALE) / (high - low)) /
-      Number(RATIO_SCALE);
-
-const priceY = (value: bigint, low: bigint, high: bigint) =>
-  PRICE_BOTTOM - ratio(value, low, high) * (PRICE_BOTTOM - CHART_INSET);
-
-const volumeHeight = (volume: bigint, maximumVolume: bigint) =>
-  maximumVolume === 0n
-    ? 0
-    : (Number((volume * RATIO_SCALE) / maximumVolume) / Number(RATIO_SCALE)) *
-      (VOLUME_BOTTOM - VOLUME_TOP);
-
-const direction = (candle: MarketCandle) => {
-  const open = candle.openWethPerLiquidTokenX18;
-  const close = candle.closeWethPerLiquidTokenX18;
-  if (open === undefined || close === undefined) return "empty" as const;
-  if (close === open) return "flat" as const;
-  return close > open ? ("up" as const) : ("down" as const);
-};
-
-interface CandleCoordinate {
-  readonly candle: MarketCandle;
-  readonly x: number;
-  readonly width: number;
-  readonly highY: number | undefined;
-  readonly lowY: number | undefined;
-  readonly openY: number | undefined;
-  readonly closeY: number | undefined;
-  readonly volumeHeight: number;
-  readonly direction: ReturnType<typeof direction>;
-}
-
-const coordinateFor = ({
-  candle,
-  count,
-  firstStart,
-  lastStart,
-  low,
-  high,
-  maximumVolume,
-}: {
-  readonly candle: MarketCandle;
-  readonly count: number;
-  readonly firstStart: bigint;
-  readonly lastStart: bigint;
-  readonly low: bigint;
-  readonly high: bigint;
-  readonly maximumVolume: bigint;
-}): CandleCoordinate => {
-  const plotWidth = PLOT_RIGHT - CHART_INSET;
-  const markInset = 8;
-  const markWidth = plotWidth - markInset * 2;
-  const elapsed = lastStart - firstStart;
-  const timeRatio =
-    elapsed === 0n
-      ? 0.5
-      : Number(((candle.intervalStart - firstStart) * RATIO_SCALE) / elapsed) /
-        Number(RATIO_SCALE);
-  const x = CHART_INSET + markInset + markWidth * timeRatio;
-  const intervalWidth =
-    elapsed === 0n
-      ? plotWidth / Math.max(count, 1)
-      : (Number(
-          ((candle.intervalEnd - candle.intervalStart) * RATIO_SCALE) / elapsed,
-        ) /
-          Number(RATIO_SCALE)) *
-        markWidth;
-  const price = (value: bigint | undefined) =>
-    value === undefined ? undefined : priceY(value, low, high);
-  return {
-    candle,
-    x,
-    width: Math.max(2, Math.min(14, intervalWidth * 0.72)),
-    highY: price(candle.highWethPerLiquidTokenX18),
-    lowY: price(candle.lowWethPerLiquidTokenX18),
-    openY: price(candle.openWethPerLiquidTokenX18),
-    closeY: price(candle.closeWethPerLiquidTokenX18),
-    volumeHeight: volumeHeight(candle.grossWethVolume, maximumVolume),
-    direction: direction(candle),
-  };
-};
-
-const coordinatesFor = (
-  candles: readonly MarketCandle[],
-): readonly CandleCoordinate[] => {
-  const prices = observedPrices(candles);
-  if (prices.length === 0) return [];
-  const bounds = paddedPriceBounds(candles);
-  if (bounds === undefined) return [];
-  const firstStart = candles[0]?.intervalStart;
-  const lastStart = candles.at(-1)?.intervalStart;
-  if (firstStart === undefined || lastStart === undefined) return [];
-  const maximumVolume = maximum(
-    candles.map((candle) => candle.grossWethVolume),
-  );
-  return candles.map((candle) =>
-    coordinateFor({
-      candle,
-      count: candles.length,
-      firstStart,
-      lastStart,
-      low: bounds.low,
-      high: bounds.high,
-      maximumVolume,
-    }),
-  );
-};
-
-const observationLabel = (coordinate: CandleCoordinate, timeZone: string) => {
-  const candle = coordinate.candle;
-  if (candle.swapCount === 0) {
-    return [
-      displayMarketTime(candle.intervalStart, timeZone),
-      applicationCopy.exchange.candleCarried,
-      `close ${displayPrice(candle.closeWethPerLiquidTokenX18)}`,
-      "volume 0 WETH",
-    ].join(", ");
-  }
-  if (coordinate.direction === "empty") {
-    return `${displayMarketTime(candle.intervalStart, timeZone)}: ${applicationCopy.exchange.candleNoSwaps}`;
-  }
-  return [
-    displayMarketTime(candle.intervalStart, timeZone),
-    `open ${displayPrice(candle.openWethPerLiquidTokenX18)}`,
-    `high ${displayPrice(candle.highWethPerLiquidTokenX18)}`,
-    `low ${displayPrice(candle.lowWethPerLiquidTokenX18)}`,
-    `close ${displayPrice(candle.closeWethPerLiquidTokenX18)}`,
-    `volume ${displayWeth(candle.grossWethVolume)}`,
-  ].join(", ");
-};
-
-const wickClass = {
-  up: "stroke-(--chart-positive) stroke-2",
-  down: "stroke-(--chart-negative) stroke-2",
-  flat: "stroke-(--chart-primary) stroke-2",
-} as const;
-
-const bodyClass = {
-  up: "fill-(--chart-surface) stroke-(--chart-positive) stroke-2",
-  down: "fill-(--chart-negative) stroke-(--chart-negative) stroke-2",
-  flat: "fill-(--chart-primary) stroke-(--chart-primary) stroke-2",
-} as const;
-
-function CandleMark({
-  coordinate,
-  timeZone,
-}: {
-  readonly coordinate: CandleCoordinate;
-  readonly timeZone: string;
-}) {
-  const {
-    candle,
-    closeY,
-    direction: trend,
-    highY,
-    lowY,
-    openY,
-    width,
-    x,
-  } = coordinate;
-  if (
-    trend === "empty" ||
-    closeY === undefined ||
-    highY === undefined ||
-    lowY === undefined ||
-    openY === undefined
-  ) {
-    return (
-      <line
-        aria-label={observationLabel(coordinate, timeZone)}
-        className="stroke-(--chart-grid) stroke-3 [stroke-dasharray:3_4]"
-        data-candle-gap
-        role="listitem"
-        x1={x - width / 2}
-        x2={x + width / 2}
-        y1={(CHART_INSET + PRICE_BOTTOM) / 2}
-        y2={(CHART_INSET + PRICE_BOTTOM) / 2}
-      />
-    );
-  }
-  const bodyTop = Math.min(openY, closeY);
-  const bodyHeight = Math.max(3, Math.abs(closeY - openY));
-  return (
-    <g
-      aria-label={observationLabel(coordinate, timeZone)}
-      data-direction={trend}
-      role="listitem"
-    >
-      <line className={wickClass[trend]} x1={x} x2={x} y1={highY} y2={lowY} />
-      <rect
-        className={bodyClass[trend]}
-        height={bodyHeight}
-        width={width}
-        x={x - width / 2}
-        y={bodyTop}
-      />
-      <rect
-        className="fill-(--chart-secondary) opacity-70"
-        height={coordinate.volumeHeight}
-        width={width}
-        x={x - width / 2}
-        y={VOLUME_BOTTOM - coordinate.volumeHeight}
-      />
-      <title>{observationLabel(coordinate, timeZone)}</title>
-      {candle.feeMatchState === "partial" ? (
-        <desc>{applicationCopy.exchange.candleVolumePartial}</desc>
-      ) : null}
-    </g>
-  );
-}
-
-const headerCell =
-  "border-t border-line px-2.5 py-2 font-mono text-label font-medium tracking-[0.1em] whitespace-nowrap text-ink-faint uppercase";
-const bodyCell =
-  "border-t border-line px-2.5 py-2 font-mono text-caption tabular-nums whitespace-nowrap text-ink";
-
-function CandleRow({
-  candle,
-  timeZone,
-}: {
-  readonly candle: MarketCandle;
-  readonly timeZone: string;
-}) {
-  return (
-    <tr>
-      <th className={`${bodyCell} font-medium`} scope="row">
-        {displayMarketTime(candle.intervalStart, timeZone)}
-      </th>
-      {candle.swapCount === 0 ? (
-        <td className={`${bodyCell} text-ink-soft`} colSpan={4}>
-          {applicationCopy.exchange.candleNoSwaps}
-        </td>
-      ) : (
-        <>
-          <td className={bodyCell}>
-            {displayPrice(candle.openWethPerLiquidTokenX18)}
-          </td>
-          <td className={bodyCell}>
-            {displayPrice(candle.highWethPerLiquidTokenX18)}
-          </td>
-          <td className={bodyCell}>
-            {displayPrice(candle.lowWethPerLiquidTokenX18)}
-          </td>
-          <td className={bodyCell}>
-            {displayPrice(candle.closeWethPerLiquidTokenX18)}
-          </td>
-        </>
-      )}
-      <td className={bodyCell}>{displayWeth(candle.grossWethVolume)}</td>
-      <td className={bodyCell}>{displayWeth(candle.protocolFeeWeth)}</td>
-      <td className={bodyCell}>{candle.swapCount}</td>
-    </tr>
-  );
-}
-
-export function MarketCandleDataTable({
-  candles,
-  interval = "1h",
-  timeZone = "UTC",
-}: {
-  readonly candles: readonly MarketCandle[];
-  readonly interval?: CanonicalMarketCandleInterval;
-  readonly timeZone?: string;
-}) {
-  const columns = [
-    applicationCopy.exchange.candleTime(interval, timeZone),
-    applicationCopy.exchange.candleOpen,
-    applicationCopy.exchange.candleHigh,
-    applicationCopy.exchange.candleLow,
-    applicationCopy.exchange.candleClose,
-    applicationCopy.exchange.candleVolume,
-    applicationCopy.exchange.candleProtocolFee,
-    applicationCopy.exchange.candleSwaps,
-  ];
-  return (
-    /* A horizontally scrolling table holds nothing focusable, so a keyboard
-       could reach the columns off its right edge only with a pointer. The
-       region takes the tab stop itself and names what it holds. */
-    <div
-      aria-label={applicationCopy.exchange.candleData(interval)}
-      className="overflow-x-auto"
-      role="region"
-      tabIndex={0}
-    >
-      <table className="w-full min-w-[56rem] border-collapse text-left">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th className={headerCell} key={column} scope="col">
-                {column}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {candles.map((candle) => (
-            <CandleRow
-              candle={candle}
-              key={candle.intervalStart.toString()}
-              timeZone={timeZone}
-            />
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-const rawCandleJson = (candles: readonly MarketCandle[]) =>
-  JSON.stringify(
-    candles.map((candle) => ({
-      intervalStartSeconds: candle.intervalStart.toString(),
-      intervalEndSeconds: candle.intervalEnd.toString(),
-      openWethPerFuelX18: candle.openWethPerLiquidTokenX18?.toString() ?? null,
-      highWethPerFuelX18: candle.highWethPerLiquidTokenX18?.toString() ?? null,
-      lowWethPerFuelX18: candle.lowWethPerLiquidTokenX18?.toString() ?? null,
-      closeWethPerFuelX18:
-        candle.closeWethPerLiquidTokenX18?.toString() ?? null,
-      grossWethVolumeWei: candle.grossWethVolume.toString(),
-      protocolFeeWethWei: candle.protocolFeeWeth.toString(),
-      swapCount: candle.swapCount,
-    })),
-    null,
-    2,
-  );
-
-/** Mounted only while its disclosure is open, so the JSON is built on demand. */
-function RawCandleData({
-  candles,
-}: {
-  readonly candles: readonly MarketCandle[];
-}) {
-  const [copied, setCopied] = useState(false);
-  const raw = useMemo(() => rawCandleJson(candles), [candles]);
-  return (
-    <div className="grid gap-3">
-      <Button
-        onClick={() => {
-          if (navigator.clipboard === undefined) return;
-          void navigator.clipboard
-            .writeText(raw)
-            .then(() => setCopied(true))
-            .catch(() => setCopied(false));
-        }}
-        type="button"
-        variant="outline"
-      >
-        {copied
-          ? applicationCopy.market.copiedRaw
-          : applicationCopy.market.copyRaw}
-      </Button>
-      <pre className="max-h-80 overflow-auto rounded-[var(--radius-control)] border border-line bg-canvas p-3 font-mono text-caption whitespace-pre-wrap [overflow-wrap:anywhere]">
-        {raw}
-      </pre>
-    </div>
-  );
-}
-
-function CandleTable({
-  candles,
-  interval,
-  timeZone,
-}: {
-  readonly candles: readonly MarketCandle[];
-  readonly interval: CanonicalMarketCandleInterval;
-  readonly timeZone: string;
-}) {
-  return (
-    <Disclosure
-      className="mt-3"
-      searchable
-      title={applicationCopy.exchange.candleData(interval)}
-    >
-      <MarketCandleDataTable
-        candles={candles}
-        interval={interval}
-        timeZone={timeZone}
-      />
-      <Disclosure className="mt-3" title={applicationCopy.market.rawUnits}>
-        <RawCandleData candles={candles} />
-      </Disclosure>
-    </Disclosure>
-  );
-}
 
 const chartPrice = (value: bigint) => Number(formatUnits(value, 18));
 
@@ -957,16 +501,17 @@ const mountTradingChart = ({
 
 function InteractiveTradingChart({
   candles,
-  fallback,
   intervalSeconds,
 }: {
   readonly candles: readonly MarketCandle[];
-  readonly fallback: React.ReactNode;
   readonly intervalSeconds: bigint;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<ChartWidgetInstance | undefined>(undefined);
-  const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">(
+    "loading",
+  );
+  const [retry, setRetry] = useState(0);
   const data = useMemo(() => marketChartSeries(candles), [candles]);
   const latestData = useRef(data);
   const firstVisibleTime = useRef<number | undefined>(undefined);
@@ -991,16 +536,14 @@ function InteractiveTradingChart({
 
   useEffect(() => {
     const container = containerRef.current;
-    if (
-      container === null ||
-      container.clientWidth === 0 ||
-      typeof ResizeObserver === "undefined"
-    ) {
+    if (container === null) return;
+    if (container.clientWidth === 0 || typeof ResizeObserver === "undefined") {
+      setStatus("failed");
       return;
     }
     let disposed = false;
     firstVisibleTime.current = undefined;
-    setReady(false);
+    setStatus("loading");
     void mountTradingChart({ container, initialTimeframe, timeframes })
       .then((widget) => {
         if (disposed) {
@@ -1009,178 +552,71 @@ function InteractiveTradingChart({
         }
         widgetRef.current = widget;
         const chart = widget.getChart();
+        const viewport = container.querySelector<HTMLElement>(
+          ".tcw-chart-container",
+        );
+        if (viewport !== null) {
+          viewport.setAttribute("role", "img");
+          viewport.setAttribute(
+            "aria-label",
+            `Interactive ${applicationCopy.exchange.token} market chart`,
+          );
+          // The vendor suppresses the canvas keyboard ring with inline CSS.
+          // Restore the application focus treatment and keep it inside the plot.
+          viewport.style.removeProperty("outline");
+          viewport.style.outlineOffset = "-3px";
+        }
         chart.on("visibleRangeChange", ({ payload: range }) => {
           firstVisibleTime.current = chart.getData()[range.from]?.time;
         });
         widget.setData(latestData.current);
         chart.fitContent();
-        setReady(true);
+        setStatus("ready");
       })
       .catch(() => {
-        if (!disposed) setReady(false);
+        if (!disposed) setStatus("failed");
       });
     return () => {
       disposed = true;
       widgetRef.current?.destroy();
       widgetRef.current = undefined;
     };
-  }, [initialTimeframe, timeframes]);
+  }, [initialTimeframe, retry, timeframes]);
 
   return (
     <div className="relative h-[clamp(34rem,68vh,44rem)] min-h-[34rem]">
       <div
-        aria-hidden={ready ? undefined : true}
-        aria-label={ready ? chartSummaryFor(candles) : undefined}
+        aria-hidden={status === "ready" ? undefined : true}
+        aria-label={status === "ready" ? chartSummaryFor(candles) : undefined}
         className="absolute inset-0 min-w-0 aria-hidden:invisible"
         data-library="tradecanvas"
         ref={containerRef}
-        role={ready ? "region" : undefined}
+        role={status === "ready" ? "region" : undefined}
       />
-      {ready ? null : fallback}
-    </div>
-  );
-}
-
-function ProgressiveTradingChart({
-  candles,
-  fallback,
-  intervalSeconds,
-}: {
-  readonly candles: readonly MarketCandle[];
-  readonly fallback: React.ReactNode;
-  readonly intervalSeconds: bigint;
-}) {
-  const [advanced, setAdvanced] = useState(false);
-  return (
-    <div>
-      {advanced ? (
-        <InteractiveTradingChart
-          candles={candles}
-          fallback={fallback}
-          intervalSeconds={intervalSeconds}
-        />
-      ) : (
-        fallback
-      )}
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <Button
-          aria-expanded={advanced}
-          onClick={() => setAdvanced((current) => !current)}
-          type="button"
-          variant="outline"
-        >
-          {advanced
-            ? applicationCopy.exchange.advancedChartClose
-            : applicationCopy.exchange.advancedChartOpen}
-        </Button>
-        <p className="max-w-[38rem] text-body-sm text-ink-soft">
-          {applicationCopy.exchange.advancedChartDescription}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function CandleAxis({
-  bounds,
-  firstCandle,
-  lastCandle,
-  timeZone,
-}: {
-  readonly bounds: { readonly low: bigint; readonly high: bigint };
-  readonly firstCandle: MarketCandle;
-  readonly lastCandle: MarketCandle;
-  readonly timeZone: string;
-}) {
-  return (
-    <g
-      className="fill-(--chart-label) font-mono text-label tracking-[0.05em] tabular-nums uppercase"
-      data-chart-axis
-    >
-      <text x={PLOT_RIGHT + 10} y={CHART_INSET - 10}>
-        {PRICE_AXIS_UNIT}
-      </text>
-      <text x={PLOT_RIGHT + 10} y={CHART_INSET + 14}>
-        {displayAxisPrice(bounds.high)}
-      </text>
-      <text x={PLOT_RIGHT + 10} y={PRICE_BOTTOM - 6}>
-        {displayAxisPrice(bounds.low)}
-      </text>
-      <text x={PLOT_RIGHT + 10} y={VOLUME_TOP + 13}>
-        WETH volume
-      </text>
-      <text textAnchor="start" x={CHART_INSET} y={CHART_HEIGHT - 7}>
-        {displayAxisTime(firstCandle.intervalStart, timeZone)}
-      </text>
-      <text textAnchor="end" x={PLOT_RIGHT} y={CHART_HEIGHT - 7}>
-        {displayAxisTime(lastCandle.intervalStart, timeZone)}
-      </text>
-    </g>
-  );
-}
-
-/**
- * The readable default: one SVG, one tab stop, sized to the panel rather than
- * the viewport. The ring on focus is the global one; only its offset moves
- * inward so the plate's clipped corners cannot swallow it.
- */
-function CandlePlot({
-  intervalLabel,
-  timeZone,
-  visible,
-}: {
-  readonly intervalLabel: string;
-  readonly timeZone: string;
-  readonly visible: readonly MarketCandle[];
-}) {
-  const coordinates = coordinatesFor(visible);
-  const bounds = priceBounds(visible);
-  const firstCandle = visible[0];
-  const lastCandle = visible.at(-1);
-  return (
-    <div className="overflow-x-auto" data-chart-scroll>
-      <svg
-        aria-describedby="market-candle-description"
-        aria-labelledby="market-candle-title"
-        className="block h-auto max-h-[clamp(22rem,48vh,30rem)] w-full min-w-[40rem] rounded-[var(--radius-surface)] focus-visible:-outline-offset-4"
-        role="img"
-        tabIndex={0}
-        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-      >
-        <title id="market-candle-title">
-          {applicationCopy.exchange.candleChart}
-        </title>
-        <desc id="market-candle-description">{chartSummaryFor(visible)}</desc>
-        {bounds !== undefined &&
-        firstCandle !== undefined &&
-        lastCandle !== undefined ? (
-          <CandleAxis
-            bounds={bounds}
-            firstCandle={firstCandle}
-            lastCandle={lastCandle}
-            timeZone={timeZone}
+      {status === "ready" ? null : (
+        <div className="p-4">
+          <StateFeedback
+            action={
+              status === "failed" ? (
+                <Button
+                  onClick={() => setRetry((value) => value + 1)}
+                  type="button"
+                  variant="outline"
+                >
+                  Retry chart
+                </Button>
+              ) : undefined
+            }
+            description={chartSummaryFor(candles)}
+            title={
+              status === "failed"
+                ? "Chart could not load"
+                : "Loading market chart"
+            }
+            tone={status === "failed" ? "error" : "loading"}
           />
-        ) : null}
-        <line
-          className="stroke-(--chart-grid) stroke-1"
-          x1={CHART_INSET}
-          x2={PLOT_RIGHT}
-          y1={VOLUME_TOP - 12}
-          y2={VOLUME_TOP - 12}
-        />
-        <g
-          aria-label={applicationCopy.market.observationsLabel(intervalLabel)}
-          role="list"
-        >
-          {coordinates.map((coordinate) => (
-            <CandleMark
-              coordinate={coordinate}
-              key={coordinate.candle.intervalStart.toString()}
-              timeZone={timeZone}
-            />
-          ))}
-        </g>
-      </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -1188,10 +624,8 @@ function CandlePlot({
 export function MarketCandlestickChart({
   candles,
   feeMatchingState,
-  interval,
   range,
   throughTime,
-  timeZone = "UTC",
 }: {
   readonly candles: readonly MarketCandle[];
   readonly feeMatchingState: FeeMatchingState;
@@ -1202,10 +636,6 @@ export function MarketCandlestickChart({
 }) {
   const continuous = useMemo(
     () => continuousCandlesInRange(candles, range, throughTime),
-    [candles, range, throughTime],
-  );
-  const traded = useMemo(
-    () => candlesInRange(candles, range, throughTime),
     [candles, range, throughTime],
   );
   if (candles.length === 0) {
@@ -1223,18 +653,10 @@ export function MarketCandlestickChart({
     );
   }
   return (
-    /* The readable SVG is the default. TradeCanvas and its terminal controls
-       are an explicit secondary mode, while exact source rows stay below. */
+    /* The interactive chart is the single chart view; its module loads after hydration. */
     <div>
-      <ProgressiveTradingChart
+      <InteractiveTradingChart
         candles={continuous.candles}
-        fallback={
-          <CandlePlot
-            intervalLabel={continuous.intervalLabel}
-            timeZone={timeZone}
-            visible={continuous.candles}
-          />
-        }
         intervalSeconds={continuous.intervalSeconds}
       />
       {feeMatchingState === "partial" ? (
@@ -1242,7 +664,6 @@ export function MarketCandlestickChart({
           {applicationCopy.exchange.candleVolumePartial}
         </p>
       ) : null}
-      <CandleTable candles={traded} interval={interval} timeZone={timeZone} />
     </div>
   );
 }

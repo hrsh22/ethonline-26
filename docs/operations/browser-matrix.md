@@ -98,7 +98,8 @@ successful page response and the API's `/readyz` response before browser checks.
 - a request to a protected admin path before a session exists;
 - an Axe WCAG 2.1 A/AA violation, run **after** hydration.
 - a numeric input smaller than 16px, an exact base-unit balance overflowing its
-  metric cell, or a rendered keyboard-focusable chart without a visible outline;
+  metric cell, or an advanced chart without a hydrated canvas, accessible summary,
+  keyboard-focusable viewport, and visible keyboard-focus indicator;
 - a fixture state whose expected wallet indicator, heading, or action never appears;
 - an incorrect HTTP status, protected-route redirect, CSP, or frame policy.
 
@@ -131,7 +132,7 @@ indexed-history reader, and funding responses checked by the shared Effect schem
 RPC chain identity is valid; unsupported chain reads explicitly fail. These cases
 do not claim to cover healthy onchain balances. A separate market-history case
 supplies two canonical swaps with matching fee records and requires a rendered
-priced chart before inspecting its keyboard focus and layout.
+advanced chart with a rendered canvas before inspecting its keyboard focus and layout.
 
 Every interactive page must handle a real dialog interaction before inspection.
 The static global 404 is checked as a recovery document, without a wallet shell. Connected
