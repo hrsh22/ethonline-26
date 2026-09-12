@@ -49,6 +49,8 @@ import {
 
 import {
   recoverCollectorTransactionHash,
+  recoverCollectorApproval,
+  readCollectorApprovalReview,
   type RecoveredReceipt,
 } from "@/lib/collector-transaction-recovery";
 
@@ -333,10 +335,12 @@ type ProtocolClientContextValue = {
         readonly actionType: string;
         readonly createdAt: number;
         readonly canRecoverHash?: boolean;
+        readonly isApproval?: boolean;
       }
     | undefined;
   readonly clearTransaction?: () => void;
   readonly recoverTransactionHash?: (hash: string) => Promise<void>;
+  readonly resumeApproval?: () => Promise<void>;
 
   /**
    * A bare refresh reads once. A caller that knows a balance or holding changed
@@ -364,6 +368,44 @@ type ProtocolClientContextValue = {
 const canonicalRecoveryTargets = Object.values(
   protocolDeploymentManifest?.contracts ?? {},
 );
+const canonicalApprovalTokens = [
+  protocolDeploymentManifest?.contracts.weth,
+  protocolDeploymentManifest?.contracts.fuelCore,
+].filter((token): token is Address => token !== undefined);
+
+const interruptedApprovalInput = ({
+  state,
+  phase,
+  metadata,
+  address,
+  persist,
+}: {
+  readonly state: TransactionState;
+  readonly phase: SubmittedTransactionPhase | undefined;
+  readonly metadata: CollectorTransactionMetadata | undefined;
+  readonly address: Address | undefined;
+  readonly persist: boolean;
+}): Parameters<typeof recoverCollectorApproval>[0] | undefined => {
+  const spender = protocolDeploymentManifest?.contracts.canonicalRouter as
+    Address | undefined;
+  if (
+    state.status !== "submission-unknown" ||
+    phase?.kind !== "approval" ||
+    metadata === undefined ||
+    address === undefined ||
+    spender === undefined ||
+    !persist
+  )
+    return;
+  return {
+    metadata,
+    address,
+    chainId: protocolChain.id,
+    tokens: canonicalApprovalTokens,
+    spender,
+    reader: protocolTransactionClient,
+  };
+};
 
 const ProtocolClientContext = createContext<ProtocolClientContextValue | null>(
   null,
@@ -1564,6 +1606,7 @@ const collectorMetadata = (
 
 const displayedTransactionMetadata = (
   metadata: CollectorTransactionMetadata | undefined,
+  phase?: SubmittedTransactionPhase,
 ): ProtocolClientContextValue["transactionMetadata"] =>
   metadata === undefined
     ? undefined
@@ -1573,6 +1616,7 @@ const displayedTransactionMetadata = (
         actionType: metadata.actionType,
         createdAt: metadata.createdAt,
         canRecoverHash: metadata.preparedCall !== undefined,
+        isApproval: phase?.kind === "approval",
       };
 
 const actionPreparationMessage = (cause: unknown): string =>
@@ -1671,7 +1715,9 @@ export function ProtocolClientProvider({
         return;
       transactionRef.current = state;
       setTransaction(state);
-      setTransactionMetadata(displayedTransactionMetadata(metadata));
+      setTransactionMetadata(
+        displayedTransactionMetadata(metadata, record.phase),
+      );
       setTransactionPersistenceAvailable(stored);
       if (record.scope !== undefined)
         setCompletedTransactions(
@@ -1746,7 +1792,9 @@ export function ProtocolClientProvider({
     // Synchronize the external wallet-scoped storage before painting another wallet's activity.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTransaction(state);
-    setTransactionMetadata(displayedTransactionMetadata(saved));
+    setTransactionMetadata(
+      displayedTransactionMetadata(saved, submittedTransactionPhase.current),
+    );
     setCompletedTransactions(
       walletRecordScope === undefined
         ? []
@@ -2292,11 +2340,22 @@ export function ProtocolClientProvider({
             failureStep,
             label: stepLabel,
             onPrepared: (call) => {
+              const approval =
+                prepared.functionName === "approve" &&
+                typeof prepared.args[0] === "string" &&
+                typeof prepared.args[1] === "bigint" &&
+                prepared.args[1] > 0n
+                  ? {
+                      spender: prepared.args[0] as Address,
+                      amount: prepared.args[1].toString(),
+                    }
+                  : undefined;
               executionMetadata = {
                 ...executionMetadata,
                 preparedCall: {
                   ...call,
                   afterBlock: transactionRuntime.currentBlock.toString(),
+                  ...(approval === undefined ? {} : { approval }),
                 },
               };
               if (privacyIsCurrent() && scopeIsCurrent())
@@ -2508,7 +2567,12 @@ export function ProtocolClientProvider({
         if (activeExecution.current === reconciliationExecution) {
           activeExecution.current = undefined;
         }
-        updateTransaction(settled);
+        updateTransaction(settled, {
+          scope: reconciliationScope,
+          phase,
+          persist,
+          metadata,
+        });
         return settled;
       } finally {
         if (privacyGeneration === transactionPrivacyGenerationRef.current)
@@ -2558,6 +2622,9 @@ export function ProtocolClientProvider({
         message:
           "The supplied transaction matches the saved call. Checking its receipt; no new transaction will be sent.",
       } as const;
+      // Recovery owns the final result. A delayed wallet callback must not
+      // continue the original approval into a second wallet request.
+      transactionPrivacyGenerationRef.current += 1;
       transactionMetadataRef.current = {
         ...metadata,
         recoveredHash: checkedHash,
@@ -2567,6 +2634,112 @@ export function ProtocolClientProvider({
     },
     [retryUnknownOutcome, updateTransaction],
   );
+
+  const reconcileInterruptedApproval = useCallback(
+    async (resumeReview = false): Promise<void> => {
+      const current = transactionRef.current;
+      const scope = recordScopeRef.current;
+      const generation = transactionPrivacyGenerationRef.current;
+      const input = interruptedApprovalInput({
+        state: current,
+        metadata: transactionMetadataRef.current,
+        phase: submittedTransactionPhase.current,
+        address: transactionScopeRef.current.address,
+        persist: transactionPersistRef.current,
+      });
+      if (input === undefined) {
+        if (resumeReview) throw new Error("No interrupted approval is active.");
+        return;
+      }
+      const { metadata } = input;
+      const proof = resumeReview
+        ? {
+            status: "review-ready" as const,
+            ...(await readCollectorApprovalReview(input)),
+          }
+        : await recoverCollectorApproval(input);
+      const isCurrent = () =>
+        mountedRef.current &&
+        generation === transactionPrivacyGenerationRef.current &&
+        scope === recordScopeRef.current &&
+        transactionRef.current === current &&
+        transactionMetadataRef.current?.operationId === metadata.operationId;
+      if (!isCurrent()) return;
+      if (proof.status === "mined") {
+        await recoverTransactionHash(proof.hash);
+        return;
+      }
+      if (proof.status === "unresolved") return;
+      // A fresh read invalidates the old quote. The collector chooses a new trade;
+      // neither allowance evidence nor continuing review authorizes a purchase.
+      await refresh();
+      if (!isCurrent()) return;
+      transactionPrivacyGenerationRef.current += 1;
+      transactionMetadataRef.current = {
+        ...metadata,
+        approvalResolvedAtBlock: proof.blockNumber.toString(),
+      };
+      activeExecution.current = undefined;
+      reconciliationInFlight.current = false;
+      lastAttempt.current = undefined;
+      setExchangeQuoteRevision((revision) => revision + 1);
+      updateTransaction(createTransactionState(), {
+        scope,
+        phase: { kind: "approval" },
+        persist: true,
+        metadata: transactionMetadataRef.current,
+      });
+      submittedTransactionPhase.current = undefined;
+    },
+    [recoverTransactionHash, refresh, updateTransaction],
+  );
+
+  const resumeApproval = useCallback(async () => {
+    try {
+      await reconcileInterruptedApproval(true);
+    } catch {
+      throw new Error(
+        "We couldn’t refresh your approval. Try again in a moment.",
+      );
+    }
+  }, [reconcileInterruptedApproval]);
+
+  useEffect(() => {
+    if (
+      collectorRecordScope === undefined ||
+      transaction.status !== "submission-unknown" ||
+      transactionMetadata?.isApproval !== true
+    )
+      return;
+    let cancelled = false;
+    let delay = 5_000;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = async () => {
+      if (cancelled || recordScopeRef.current !== collectorRecordScope) return;
+      try {
+        await reconcileInterruptedApproval();
+      } catch {
+        /* Public RPC can recover on the next poll. */
+      }
+      if (
+        !cancelled &&
+        transactionRef.current.status === "submission-unknown"
+      ) {
+        timer = setTimeout(() => void check(), delay);
+        delay = Math.min(delay * 2, 30_000);
+      }
+    };
+    timer = setTimeout(() => void check(), 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    collectorRecordScope,
+    reconcileInterruptedApproval,
+    transaction.status,
+    transactionMetadata?.isApproval,
+  ]);
 
   const retry = useCallback(
     async (authorize?: TransactionAuthorization) => {
@@ -2753,6 +2926,7 @@ export function ProtocolClientProvider({
       markCompletedTransactionsRead,
       clearTransaction,
       recoverTransactionHash,
+      resumeApproval,
       refresh,
       refreshWallet,
       refreshMarketHistory,
@@ -2788,6 +2962,7 @@ export function ProtocolClientProvider({
       markCompletedTransactionsRead,
       clearTransaction,
       recoverTransactionHash,
+      resumeApproval,
       walletSynchronizing,
       minimumCollectibleBlock,
       walletRead,

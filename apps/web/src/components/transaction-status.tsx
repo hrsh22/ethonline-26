@@ -9,7 +9,7 @@ const statusLabel = {
   idle: applicationCopy.transaction.idle,
   pending: applicationCopy.transaction.pending,
   simulated: applicationCopy.transaction.simulated,
-  "submission-unknown": "Check your wallet activity",
+  "submission-unknown": "Wallet response interrupted",
   submitted: applicationCopy.transaction.submitted,
   "outcome-unknown": applicationCopy.transaction.outcomeUnknown,
   confirmed: applicationCopy.transaction.confirmed,

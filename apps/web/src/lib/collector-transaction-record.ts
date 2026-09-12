@@ -10,11 +10,17 @@ export interface PreparedCollectorCall {
   readonly dataHash: `0x${string}`;
   readonly value: string;
   readonly afterBlock: string;
+  readonly approval?: {
+    readonly spender: `0x${string}`;
+    readonly amount: string;
+  };
 }
 
 export interface CollectorTransactionMetadata {
   readonly preparedCall?: PreparedCollectorCall;
   readonly recoveredHash?: `0x${string}`;
+  /** Allowance evidence releases an approval prerequisite, never proves a receipt. */
+  readonly approvalResolvedAtBlock?: string;
 
   readonly operationId: string;
   readonly identityIds: readonly number[];
@@ -94,6 +100,11 @@ const validText = (value: unknown, pattern: RegExp): value is string =>
   typeof value === "string" && pattern.test(value);
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
+const validApproval = (value: unknown): boolean =>
+  value === undefined ||
+  (isObject(value) &&
+    validText(value.spender, /^0x[0-9a-fA-F]{40}$/u) &&
+    validText(value.amount, /^[1-9][0-9]{0,77}$/u));
 const validPreparedCall = (value: unknown): value is PreparedCollectorCall =>
   isObject(value) &&
   validTime(value.chainId) &&
@@ -102,7 +113,8 @@ const validPreparedCall = (value: unknown): value is PreparedCollectorCall =>
   validText(value.to, /^0x[0-9a-fA-F]{40}$/u) &&
   validText(value.dataHash, hashPattern) &&
   validText(value.value, /^(0|[1-9][0-9]{0,77})$/u) &&
-  validText(value.afterBlock, /^(0|[1-9][0-9]{0,19})$/u);
+  validText(value.afterBlock, /^(0|[1-9][0-9]{0,19})$/u) &&
+  validApproval(value.approval);
 
 const validMetadata = (value: Record<string, unknown>): boolean =>
   validText(value.operationId, /^[a-zA-Z0-9-]{1,80}$/u) &&
@@ -185,14 +197,8 @@ const parseCollectorRecord = (
     if (!validEnvelope(value)) return;
     const kind = value.phase.kind;
     if (kind !== "action" && kind !== "approval") return;
-    let state = restoreState(value.state);
+    const state = restorePhaseState(value.state, kind);
     if (state === undefined) return;
-    if (kind === "approval" && state.status === "confirmed")
-      state = {
-        ...state,
-        message:
-          "Approval confirmed. Review the trade again; no exchange was submitted.",
-      };
     return {
       version: 1,
       state,
@@ -206,6 +212,9 @@ const parseCollectorRecord = (
       ...(validText(value.recoveredHash, hashPattern)
         ? { recoveredHash: value.recoveredHash as `0x${string}` }
         : {}),
+      ...(validText(value.approvalResolvedAtBlock, /^(0|[1-9][0-9]{0,19})$/u)
+        ? { approvalResolvedAtBlock: value.approvalResolvedAtBlock }
+        : {}),
       ...(validPreparedCall(value.preparedCall)
         ? { preparedCall: value.preparedCall }
         : {}),
@@ -214,6 +223,23 @@ const parseCollectorRecord = (
     return undefined;
   }
 };
+
+function restorePhaseState(
+  value: unknown,
+  kind: "action" | "approval",
+): TransactionState | undefined {
+  const state = restoreState(value);
+  if (kind !== "approval") return state;
+  if (state?.status === "confirmed")
+    return {
+      ...state,
+      message:
+        "Approval confirmed. Review the trade again; no exchange was submitted.",
+    };
+  if (state?.status === "submission-unknown")
+    return { ...state, message: "Checking your approval on Base Sepolia…" };
+  return state;
+}
 
 export const readCollectorTransaction = (
   scope: string,
@@ -276,10 +302,16 @@ const rememberCompletedTransaction = (
 export const isObsoleteRecoveryCallback = (
   incoming: CollectorTransactionMetadata | undefined,
   current: CollectorTransactionMetadata | undefined,
-): boolean =>
-  current?.recoveredHash !== undefined &&
-  incoming?.operationId === current.operationId &&
-  incoming?.recoveredHash !== current.recoveredHash;
+): boolean => {
+  if (incoming === undefined || current === undefined) return false;
+  return (
+    incoming.operationId === current.operationId &&
+    ((current.recoveredHash !== undefined &&
+      incoming.recoveredHash !== current.recoveredHash) ||
+      (current.approvalResolvedAtBlock !== undefined &&
+        incoming.approvalResolvedAtBlock !== current.approvalResolvedAtBlock))
+  );
+};
 
 function ignoreLateRecoveryWrite(
   existing: string | null,
@@ -290,8 +322,10 @@ function ignoreLateRecoveryWrite(
   const saved = JSON.parse(existing) as Record<string, unknown>;
   return (
     saved.operationId === metadata.operationId &&
-    validText(saved.recoveredHash, hashPattern) &&
-    saved.recoveredHash !== metadata.recoveredHash
+    ((validText(saved.recoveredHash, hashPattern) &&
+      saved.recoveredHash !== metadata.recoveredHash) ||
+      (validText(saved.approvalResolvedAtBlock, /^(0|[1-9][0-9]{0,19})$/u) &&
+        saved.approvalResolvedAtBlock !== metadata.approvalResolvedAtBlock))
   );
 }
 

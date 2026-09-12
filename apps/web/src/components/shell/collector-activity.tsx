@@ -8,7 +8,50 @@ import { LaunchCompletion } from "./launch-completion";
 
 import { TransactionStatus } from "@/components/transaction-status";
 import { Button } from "@/components/ui/button";
+import { Disclosure } from "@/components/ui/disclosure";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
+
+function ResumeApproval({
+  onResume,
+}: {
+  readonly onResume: () => Promise<void>;
+}) {
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string>();
+  return (
+    <div className="mt-2 grid gap-2">
+      <p className="text-body-sm text-ink-soft">
+        We’re checking whether token spending is already approved. You can
+        continue with a fresh trade review.
+      </p>
+      <div>
+        <Button
+          disabled={checking}
+          onClick={() => {
+            setChecking(true);
+            setError(undefined);
+            void onResume()
+              .catch(() =>
+                setError(
+                  "The network check did not finish. Try again in a moment.",
+                ),
+              )
+              .finally(() => setChecking(false));
+          }}
+          size="sm"
+          variant="outline"
+        >
+          {checking ? "Checking approval…" : "Continue trade"}
+        </Button>
+      </div>
+      {error === undefined ? null : (
+        <p role="alert" className="text-body-sm text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function InterruptedWalletPrompt({
   onClear,
@@ -198,23 +241,22 @@ export function WalletTransactionActivity({
         onRetry={() => void retry()}
       />
       <LaunchCompletion protocol={protocol} />
-      {transaction.status === "confirmed" ? null : (
-        <CollectorHelp topic="transaction" />
-      )}
       {transactionPersistenceAvailable === false ? (
         <p className="mt-2 text-body text-warning">
           Browser storage is unavailable. Keep this tab open and save the
           transaction link while we check its outcome.
         </p>
       ) : null}
-      {transaction.status === "submission-unknown" &&
-      clearTransaction !== undefined ? (
-        <InterruptedWalletPrompt
-          key={`${protocol.address}:${protocol.chainId}:${protocol.transactionMetadata?.operationId}`}
-          onClear={clearTransaction}
-          onRecover={protocol.recoverTransactionHash}
-          canRecover={protocol.transactionMetadata?.canRecoverHash === true}
-        />
+      <InterruptedTransactionRecovery protocol={protocol} />
+      {[
+        "failed",
+        "retriable",
+        "submission-unknown",
+        "outcome-unknown",
+      ].includes(transaction.status) ? (
+        <Disclosure className="mt-2" title="Help and transaction details">
+          <CollectorHelp topic="transaction" />
+        </Disclosure>
       ) : null}
       {["confirmed", "failed"].includes(transaction.status) &&
       clearTransaction !== undefined ? (
@@ -228,5 +270,32 @@ export function WalletTransactionActivity({
         </Button>
       ) : null}
     </>
+  );
+}
+
+function InterruptedTransactionRecovery({
+  protocol,
+}: {
+  readonly protocol: ReturnType<typeof useProtocolClient>;
+}) {
+  if (
+    protocol.transaction.status !== "submission-unknown" ||
+    protocol.clearTransaction === undefined
+  )
+    return null;
+  if (
+    protocol.transactionMetadata?.isApproval === true &&
+    protocol.resumeApproval !== undefined
+  )
+    return <ResumeApproval onResume={protocol.resumeApproval} />;
+  return (
+    <Disclosure className="mt-2" title="Recovery options">
+      <InterruptedWalletPrompt
+        key={`${protocol.address}:${protocol.chainId}:${protocol.transactionMetadata?.operationId}`}
+        onClear={protocol.clearTransaction}
+        onRecover={protocol.recoverTransactionHash}
+        canRecover={protocol.transactionMetadata?.canRecoverHash === true}
+      />
+    </Disclosure>
   );
 }

@@ -1,6 +1,9 @@
 /** @vitest-environment jsdom */
 
 import { selectIdentityConfiguration } from "@orbit/config/identity";
+import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
+import { protocolDeploymentManifest } from "@/lib/deployment";
+import { writeCollectorTransaction } from "@/lib/collector-transaction-record";
 import { protocolAbis } from "@orbit/protocol/contracts";
 import {
   prepareProtocolTransaction,
@@ -17,6 +20,8 @@ import {
   CallExecutionError,
   encodeErrorResult,
   encodeFunctionData,
+  erc20Abi,
+  keccak256,
   InvalidParamsRpcError,
   RawContractError,
   RpcRequestError,
@@ -142,6 +147,16 @@ const testState = vi.hoisted(() => {
     },
     sendTransaction: vi.fn(async () => hash),
     transactionClient: {
+      getBlockNumber: vi.fn(async () => 102n),
+      getLogs: vi.fn(
+        async () =>
+          [] as {
+            args: { owner: string; spender: string; value: bigint };
+            transactionHash: string;
+            removed: boolean;
+          }[],
+      ),
+      readContract: vi.fn(async () => 0n),
       getChainId: vi.fn(async () => 84532),
       getTransaction: vi.fn(async () => ({
         hash,
@@ -223,7 +238,11 @@ vi.mock("@/lib/deployment", () => ({
   deploymentEnvironment: { chainId: 84_532 },
   protocolDeploymentManifest: {
     launch: { transactionHash: testState.hash },
-    contracts: { fuelCore: testState.address },
+    contracts: {
+      fuelCore: testState.address,
+      weth: "0x0000000000000000000000000000000000000016",
+      canonicalRouter: "0x0000000000000000000000000000000000000014",
+    },
   },
 }));
 
@@ -362,6 +381,41 @@ function ProtocolCapture() {
   return null;
 }
 
+const saveInterruptedExchangeApproval = (withPrerequisite: boolean) => {
+  const token = protocolDeploymentManifest!.contracts.weth as `0x${string}`;
+  const spender = protocolDeploymentManifest!.contracts
+    .canonicalRouter as `0x${string}`;
+  const data = encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [spender, 1_000n],
+  });
+  const scope = `${deploymentManifestFingerprint(protocolDeploymentManifest!)}:84532:${testState.address}`;
+  writeCollectorTransaction(
+    scope,
+    { status: "simulated", label: "Approve WETH for exchange" },
+    { kind: "approval" },
+    {
+      operationId: "lost-approval",
+      actionType: "swap-exact-input",
+      identityIds: [],
+      affectedIdentityIds: [],
+      createdAt: Date.now(),
+      preparedCall: {
+        chainId: 84532,
+        from: testState.address as `0x${string}`,
+        to: token,
+        value: "0",
+        dataHash: keccak256(data),
+        afterBlock: "100",
+        ...(withPrerequisite ? { approval: { spender, amount: "1000" } } : {}),
+      },
+    },
+    true,
+  );
+  return { token, spender, data };
+};
+
 describe("protocol client transaction coordination", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -410,6 +464,11 @@ describe("protocol client transaction coordination", () => {
       );
     testState.sendTransaction.mockReset().mockResolvedValue(testState.hash);
     testState.transactionClient.call.mockReset().mockResolvedValue(undefined);
+    testState.transactionClient.getBlockNumber
+      .mockReset()
+      .mockResolvedValue(102n);
+    testState.transactionClient.getLogs.mockReset().mockResolvedValue([]);
+    testState.transactionClient.readContract.mockReset().mockResolvedValue(0n);
     testState.transactionClient.estimateGas
       .mockReset()
       .mockResolvedValue(100_000n);
@@ -436,6 +495,150 @@ describe("protocol client transaction coordination", () => {
     container.remove();
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it("automatically clears the interrupted approval barrier after discovering its exact mined transaction", async () => {
+    vi.useFakeTimers();
+    await act(async () => root.unmount());
+    testState.pathname = "/trade";
+    const { token, spender, data } = saveInterruptedExchangeApproval(false);
+    testState.transactionClient.getLogs.mockResolvedValue([
+      {
+        args: { owner: testState.address, spender, value: 1_000n },
+        transactionHash: testState.hash,
+        removed: false,
+      },
+    ]);
+    testState.transactionClient.getTransaction.mockResolvedValue({
+      hash: testState.hash,
+      from: testState.address,
+      to: token,
+      input: data,
+      value: 0n,
+      blockNumber: 102n,
+      blockHash: testState.hash,
+    });
+    testState.transactionClient.getBlock.mockResolvedValue({
+      hash: testState.hash as `0x${string}`,
+      number: 102n,
+      timestamp: BigInt(Math.floor(Date.now() / 1000)),
+    });
+    testState.transactionClient.waitForTransactionReceipt.mockResolvedValue({
+      transactionHash: testState.hash,
+      blockHash: testState.hash,
+      blockNumber: 102n,
+      status: "success",
+    } as Awaited<
+      ReturnType<typeof testState.transactionClient.waitForTransactionReceipt>
+    >);
+    testState.walletQuery.refetch.mockResolvedValue({
+      data: {
+        ...testState.wallet,
+        observedBlock: 102n,
+        collectibles: {
+          ...testState.wallet.collectibles,
+          permanentObservedBlock: 102n,
+        },
+      },
+    });
+    testState.nativeBalanceQuery.refetch.mockResolvedValue({
+      data: { ...testState.nativeBalance, observedBlock: 102n },
+    });
+    root = createRoot(container);
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    expect(currentProtocol.transaction).toMatchObject({
+      status: "confirmed",
+      hash: testState.hash,
+    });
+    expect(testState.sendTransaction).not.toHaveBeenCalled();
+    expect(currentProtocol.completedTransactions).toHaveLength(0);
+  });
+
+  it.each(["allowance-satisfied", "continue-review", "legacy-review"] as const)(
+    "returns an interrupted approval to a fresh quote via %s without submitting a purchase or inventing a receipt",
+    async (mode) => {
+      vi.useFakeTimers();
+      await act(async () => root.unmount());
+      testState.pathname = "/trade";
+      saveInterruptedExchangeApproval(mode === "allowance-satisfied");
+      if (mode === "legacy-review") {
+        const key = Object.keys(localStorage).find((key) =>
+          key.startsWith("orbit:collector-transaction:"),
+        )!;
+        const saved = JSON.parse(localStorage.getItem(key)!);
+        delete saved.preparedCall;
+        localStorage.setItem(key, JSON.stringify(saved));
+      }
+      testState.transactionClient.readContract.mockResolvedValue(
+        mode === "allowance-satisfied" ? 1_000n : 0n,
+      );
+      root = createRoot(container);
+      await act(async () =>
+        root.render(
+          <ProtocolClientProvider>
+            <ProtocolCapture />
+          </ProtocolClientProvider>,
+        ),
+      );
+      expect(currentProtocol.transactionMetadata?.isApproval).toBe(true);
+      expect(currentProtocol.transaction).toMatchObject({
+        status: "submission-unknown",
+        message: "Checking your approval on Base Sepolia…",
+      });
+      await act(async () => vi.advanceTimersByTimeAsync(0));
+      if (mode !== "allowance-satisfied") {
+        expect(currentProtocol.transaction.status).toBe("submission-unknown");
+        await act(async () => currentProtocol.resumeApproval?.());
+      }
+      expect(currentProtocol.transaction.status).toBe("idle");
+      expect(currentProtocol.exchangeQuoteRevision).toBeGreaterThan(0);
+      expect(testState.sendTransaction).not.toHaveBeenCalled();
+      expect(currentProtocol.completedTransactions).toHaveLength(0);
+    },
+  );
+
+  it("never clears another wallet’s pending activity when approval recovery finishes late", async () => {
+    vi.useFakeTimers();
+    await act(async () => root.unmount());
+    testState.pathname = "/trade";
+    saveInterruptedExchangeApproval(true);
+    let resolveAllowance: (amount: bigint) => void = () => {};
+    testState.transactionClient.readContract.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveAllowance = resolve;
+        }),
+    );
+    root = createRoot(container);
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    testState.connection.address = "0x0000000000000000000000000000000000000002";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    await act(async () => {
+      resolveAllowance(1_000n);
+    });
+    expect(currentProtocol.transaction.status).toBe("idle");
+    expect(currentProtocol.exchangeQuoteRevision).toBe(0);
+    expect(testState.sendTransaction).not.toHaveBeenCalled();
   });
 
   it("restores a collector submission after reload and reconciles the original hash automatically", async () => {

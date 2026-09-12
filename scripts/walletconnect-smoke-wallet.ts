@@ -50,6 +50,10 @@ const WalletEnvironmentSchema = Schema.Struct({
     Schema.BooleanFromString,
     { default: () => false },
   ),
+  SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS: Schema.optionalWith(
+    Schema.String,
+    { default: () => "0" },
+  ),
   SMOKE_WALLET_ALLOW_ADMIN_SIGN_IN: Schema.optionalWith(
     Schema.BooleanFromString,
     { default: () => false },
@@ -81,6 +85,20 @@ const parseOptionalNumber = (value: string | undefined) =>
 const validOptionalPositiveInteger = (value: number | undefined): boolean =>
   value === undefined || (Number.isSafeInteger(value) && value > 0);
 
+const parseApprovalResponseDelay = (input: string): number => {
+  const milliseconds = Number(input);
+  if (
+    !/^\d+$/.test(input) ||
+    !Number.isSafeInteger(milliseconds) ||
+    milliseconds > 60_000
+  ) {
+    throw new Error(
+      "SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS must be an integer from 0 through 60000",
+    );
+  }
+  return milliseconds;
+};
+
 const selectPrivateKey = (requested: string | undefined) =>
   requested === undefined ? generatePrivateKey() : requested;
 
@@ -92,6 +110,28 @@ const errorMessage = (error: unknown) =>
 
 const valueOrFallback = <Value>(value: Value | undefined, fallback: Value) =>
   value === undefined ? fallback : value;
+
+const currentPairingUri = (input: string): string => {
+  const uri = input.trim();
+  if (!uri.startsWith("wc:")) {
+    throw new Error(
+      "WALLETCONNECT_URI must contain a WalletConnect pairing URI",
+    );
+  }
+  const expiry = new URLSearchParams(uri.split("?")[1]).get("expiryTimestamp");
+  if (expiry !== null) {
+    const expirySeconds = Number(expiry);
+    if (!/^\d+$/.test(expiry) || !Number.isSafeInteger(expirySeconds)) {
+      throw new Error("WalletConnect pairing link has an invalid expiry");
+    }
+    if (expirySeconds <= Math.floor(Date.now() / 1_000)) {
+      throw new Error(
+        "WalletConnect pairing link has expired. Open a new connection in the application and copy its fresh link before starting the smoke wallet.",
+      );
+    }
+  }
+  return uri;
+};
 
 const sameAddress = (left: unknown, right: unknown): boolean =>
   typeof left === "string" &&
@@ -143,7 +183,10 @@ runMain(
       "WalletConnect smoke environment is invalid",
     );
     const projectId = environment.NEXT_PUBLIC_REOWN_PROJECT_ID;
-    const pairingUri = environment.WALLETCONNECT_URI;
+    const pairingUri = yield* validate(
+      "WalletConnect pairing link is invalid",
+      () => currentPairingUri(environment.WALLETCONNECT_URI),
+    );
     const requestedPrivateKey = environment.SMOKE_WALLET_PRIVATE_KEY;
     const chainId = Number(environment.SMOKE_WALLET_CHAIN_ID);
     const deploymentEnvironment = yield* validate(
@@ -157,6 +200,13 @@ runMain(
     const emittedChainIdText = environment.SMOKE_WALLET_EMIT_CHAIN_ID;
     const emittedChainId = parseOptionalNumber(emittedChainIdText);
     const allowTransactions = environment.SMOKE_WALLET_ALLOW_TRANSACTIONS;
+    const approvalResponseDelayMs = yield* validate(
+      "Smoke wallet approval response delay is invalid",
+      () =>
+        parseApprovalResponseDelay(
+          environment.SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS,
+        ),
+    );
     const allowAdminSignIn = environment.SMOKE_WALLET_ALLOW_ADMIN_SIGN_IN;
     const allowFundingProof = environment.SMOKE_WALLET_ALLOW_FUNDING_PROOF;
     const postSignAccountSwitch =
@@ -198,10 +248,6 @@ runMain(
     const isSupportedAction = (action: string): action is SupportedAction =>
       supportedActions.has(action as SupportedAction);
 
-    yield* ensure(
-      pairingUri.startsWith("wc:"),
-      "WALLETCONNECT_URI must contain a WalletConnect pairing URI",
-    );
     yield* ensure(
       Number.isSafeInteger(chainId) && chainId > 0,
       "SMOKE_WALLET_CHAIN_ID must be a positive integer",
@@ -412,10 +458,13 @@ runMain(
         throw new Error(`Smoke wallet action ${action} is not enabled`);
       }
     };
-    const requireDeadline = (deadline: bigint): void => {
+    const requireDeadline = (
+      deadline: bigint,
+      maximumAheadSeconds = 3_600n,
+    ): void => {
       const now = BigInt(Math.floor(Date.now() / 1_000));
       const value = BigInt(deadline);
-      if (value < now - 120n || value > now + 3_600n) {
+      if (value < now - 120n || value > now + maximumAheadSeconds) {
         throw new Error(
           "Smoke wallet transaction deadline is outside its test window",
         );
@@ -498,7 +547,9 @@ runMain(
       if (!safeApproval) {
         throw new Error("Smoke wallet rejected unsafe auction approval");
       }
-      requireDeadline(BigInt(decoded.args[3]));
+      // The auction grants one day of spending permission, unlike the short
+      // execution deadline on swaps. Allow two minutes of clock skew.
+      requireDeadline(BigInt(decoded.args[3]), 86_400n + 120n);
       return transaction;
     };
     const validateTrade = (transaction: SmokeTransaction) => {
@@ -509,7 +560,8 @@ runMain(
       });
       const params = decoded.args[0];
       requireDeadline(params.deadline);
-      const expectedValue = params.useNative ? params.amountIn : 0n;
+      const expectedValue =
+        params.useNative && !params.fuelForWeth ? params.amountIn : 0n;
       const safeTrade =
         sameAddress(params.recipient, account.address) &&
         params.amountIn > 0n &&
@@ -887,6 +939,7 @@ runMain(
         }) as unknown as Parameters<
           NonNullable<typeof walletClient>["sendTransaction"]
         >[0];
+      let approvalResponseDelayConsumed = false;
       const sendSmokeTransaction = async (
         requestChainId: string,
         params: unknown,
@@ -899,10 +952,24 @@ runMain(
         }
         const transactionInput = Array.isArray(params) ? params[0] : undefined;
         const transaction = validateTransaction(transactionInput);
+        const isErc20Approval = validateApproval(transaction) !== undefined;
         const result = await walletClient.sendTransaction(
           sendRequest(transaction),
         );
         console.log(`Broadcast smoke transaction ${result}`);
+        if (
+          isErc20Approval &&
+          approvalResponseDelayMs > 0 &&
+          !approvalResponseDelayConsumed
+        ) {
+          approvalResponseDelayConsumed = true;
+          console.log(
+            `Delaying first approval response for ${approvalResponseDelayMs}ms; reload the application now to verify recovery.`,
+          );
+          await new Promise<void>((resolve) =>
+            setTimeout(resolve, approvalResponseDelayMs),
+          );
+        }
         return result;
       };
 

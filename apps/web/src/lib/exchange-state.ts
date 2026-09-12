@@ -113,8 +113,19 @@ const deriveBalanceEligibleIntent = (
 ) => {
   const buying = input.direction === "buy";
   const useNative = input.settlementMode === "native";
-  if (buying && useNative && wallet.nativeBalanceWei === undefined) {
+  if (wallet.nativeBalanceWei === undefined) {
     return { status: "balance-unavailable", quoteEnabled: false } as const;
+  }
+  // Token balances cannot pay network fees. Native buys reserve gas below;
+  // token buys and every sale still need ETH before opening a wallet request.
+  if (!(buying && useNative) && wallet.nativeBalanceWei === 0n) {
+    return {
+      status: "insufficient-gas",
+      quoteEnabled: false,
+      recovery: "faucet",
+      asset: "native",
+      availableBalanceWei: 0n,
+    } as const;
   }
   const availableBalanceWei = availableExchangeBalance(
     wallet,

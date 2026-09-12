@@ -9,10 +9,14 @@ const state = vi.hoisted(() => ({
   transaction: { status: "submission-unknown" } as TransactionState,
   pending: undefined as number | undefined,
   reference: undefined as string | undefined,
+  isApproval: false,
+  resumeApproval: vi.fn(),
 }));
 beforeEach(() => {
   state.pending = undefined;
   state.reference = undefined;
+  state.isApproval = false;
+  state.resumeApproval.mockReset();
   state.transaction = {
     status: "submission-unknown",
     label: "Claim rewards",
@@ -24,7 +28,11 @@ vi.mock("@/providers/protocol-client-provider", () => ({
     address: state.address,
     chainId: 84532,
     transaction: state.transaction,
-    transactionMetadata: { operationId: state.operationId },
+    transactionMetadata: {
+      operationId: state.operationId,
+      isApproval: state.isApproval,
+    },
+    resumeApproval: state.resumeApproval,
     walletRead:
       state.pending === undefined
         ? { status: "unavailable" }
@@ -55,25 +63,60 @@ import { CollectorActivity } from "./collector-activity";
 (
   globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
+it("lets an interrupted approval continue without requiring manual wallet investigation", async () => {
+  state.isApproval = true;
+  state.transaction = {
+    status: "submission-unknown",
+    label: "Approve WETH for exchange",
+    message: "Checking your approval on Base Sepolia…",
+  };
+  state.resumeApproval.mockResolvedValue(undefined);
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  try {
+    await act(async () => root.render(<CollectorActivity />));
+    expect(container.querySelector("input[type=checkbox]")).toBeNull();
+    expect(container.textContent).not.toContain(
+      "Transaction hash from your wallet",
+    );
+    const resume = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Continue trade",
+    );
+    expect(resume).toBeDefined();
+    await act(async () => resume?.click());
+    expect(state.resumeApproval).toHaveBeenCalledOnce();
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
 it("requires a new wallet-activity acknowledgement after wallet or operation change", async () => {
   const container = document.createElement("div");
   const root = createRoot(container);
   await act(async () => root.render(<CollectorActivity />));
   await act(async () =>
+    [...container.querySelectorAll("button")]
+      .find((button) => button.textContent === "Recovery options")
+      ?.click(),
+  );
+  await act(async () =>
     container.querySelector<HTMLInputElement>("input")?.click(),
   );
-  expect(container.querySelector<HTMLButtonElement>("button")?.disabled).toBe(
-    false,
-  );
+  expect(
+    [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Return to review",
+    )?.disabled,
+  ).toBe(false);
   state.address = "0xdef";
   state.operationId = "second";
   await act(async () => root.render(<CollectorActivity />));
   expect(container.querySelector<HTMLInputElement>("input")?.checked).toBe(
     false,
   );
-  expect(container.querySelector<HTMLButtonElement>("button")?.disabled).toBe(
-    true,
-  );
+  expect(
+    [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Return to review",
+    )?.disabled,
+  ).toBe(true);
   await act(async () => root.unmount());
 });
 
@@ -142,7 +185,18 @@ it("keeps recovery support visible for unresolved wallet activity", async () => 
   const root = createRoot(container);
   try {
     await act(async () => root.render(<CollectorActivity />));
+    expect(container.textContent).toContain("Help and transaction details");
+    await act(async () =>
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Help and transaction details")
+        ?.click(),
+    );
     expect(container.textContent).toContain("Help with this wallet action");
+    await act(async () =>
+      [...container.querySelectorAll("button")]
+        .find((button) => button.textContent === "Recovery options")
+        ?.click(),
+    );
     expect(container.textContent).toContain("I checked my wallet activity");
   } finally {
     await act(async () => root.unmount());

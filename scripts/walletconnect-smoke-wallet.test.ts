@@ -5,6 +5,7 @@ import {
   encodeFunctionData,
   getAddress,
   parseAbi,
+  parseEther,
   recoverMessageAddress,
   stringToHex,
   type Address,
@@ -58,6 +59,7 @@ beforeEach(() => {
   vi.stubEnv("SMOKE_WALLET_ALLOW_ADMIN_SIGN_IN", "false");
   vi.stubEnv("SMOKE_WALLET_ALLOW_FUNDING_PROOF", undefined);
   vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "false");
+  vi.stubEnv("SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS", undefined);
   vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "");
   vi.stubEnv("SMOKE_WALLET_TRANSFER_RECIPIENT", undefined);
 });
@@ -166,6 +168,8 @@ const stagingAuction = getAddress(
 const stagingEscrowFactory = getAddress(
   stagingDeployment.contracts.ccaBidEscrowFactory!,
 );
+const stagingRouter = getAddress(stagingDeployment.contracts.canonicalRouter!);
+const stagingFuel = getAddress(stagingDeployment.contracts.fuelCore!);
 const mirror = getAddress(
   decodeProtocolDeploymentManifest(
     JSON.parse(
@@ -191,6 +195,9 @@ const approvalData = (spender: Address, amount: bigint) =>
 const auctionPolicyAbi = parseAbi([
   "function deployEscrow(address beneficiary) returns (address escrow)",
   "function approve(address token,address spender,uint160 amount,uint48 expiration)",
+]);
+const tradeAbi = parseAbi([
+  "function swapExactInput((bool fuelForWeth,uint256 amountIn,uint256 amountOutMinimum,address recipient,uint256 deadline,bool useNative) params) payable returns (uint256 amountOut)",
 ]);
 const transferData = (
   from = account.address,
@@ -310,7 +317,7 @@ it("allows only bounded nonzero Permit2 allowance for the staging auction", asyn
     }),
     value: "0x0",
   });
-  const expiration = Math.floor(Date.now() / 1_000) + 600;
+  const expiration = Math.floor(Date.now() / 1_000) + 86_400;
   expect(
     await requestTransaction(
       permitApproval(stagingWeth, stagingAuction, 10n, expiration),
@@ -319,13 +326,242 @@ it("allows only bounded nonzero Permit2 allowance for the staging auction", asyn
   for (const rejected of [
     permitApproval(stagingWeth, stagingAuction, 0n, expiration),
     permitApproval(stagingWeth, getAddress(recipient), 10n, expiration),
-    permitApproval(stagingWeth, stagingAuction, 10n, expiration + 7_200),
+    permitApproval(stagingWeth, stagingAuction, 10n, expiration + 600),
+    permitApproval(
+      stagingWeth,
+      stagingAuction,
+      10n,
+      Math.floor(Date.now() / 1_000) - 121,
+    ),
   ]) {
     expect(await requestTransaction(rejected)).toMatchObject({
       error: { code: -32_000 },
     });
   }
   expect(wallet.sendTransaction).toHaveBeenCalledOnce();
+});
+
+it("supports staging buy and sell approvals only for the canonical router", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+  vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+  vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+  vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "approve,trade");
+  await connect();
+  for (const token of [stagingWeth, stagingFuel]) {
+    expect(
+      await requestTransaction({
+        from: account.address,
+        to: token,
+        data: approvalData(stagingRouter, parseEther("0.001")),
+        value: "0x0",
+      }),
+    ).toMatchObject({ result: `0x${"a".repeat(64)}` });
+  }
+  expect(
+    await requestTransaction({
+      from: account.address,
+      to: stagingWeth,
+      data: approvalData(stagingPermit2, 1n),
+      value: "0x0",
+    }),
+  ).toMatchObject({ error: { code: -32_000 } });
+  expect(wallet.sendTransaction).toHaveBeenCalledTimes(2);
+});
+
+it.each(["-1", "60001", "1.5", "Infinity", "NaN", "1e3", "", " 5 "])(
+  "refuses an invalid approval-response delay before pairing (%s)",
+  async (configuredDelay) => {
+    const previousExitCode = process.exitCode;
+    const diagnostic = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    try {
+      vi.stubEnv(
+        "SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS",
+        configuredDelay,
+      );
+      await import("./walletconnect-smoke-wallet.ts");
+      await vi.waitFor(() => expect(process.exitCode).toBe(1), {
+        timeout: 100,
+      });
+      expect(diagnostic).toHaveBeenCalledWith(
+        expect.stringContaining(
+          "SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS",
+        ),
+      );
+      expect(wallet.pair).not.toHaveBeenCalled();
+    } finally {
+      process.exitCode = previousExitCode;
+      diagnostic.mockRestore();
+    }
+  },
+);
+
+it("delays only the first broadcast ERC20 approval response, leaving trades and later approvals immediate", async () => {
+  vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+  vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+  vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+  vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "approve,trade");
+  vi.stubEnv("SMOKE_WALLET_DELAY_FIRST_APPROVAL_RESPONSE_MS", "60000");
+  await connect();
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  const diagnostic = vi
+    .spyOn(console, "log")
+    .mockImplementation(() => undefined);
+  try {
+    const trade = {
+      from: account.address,
+      to: stagingRouter,
+      data: encodeFunctionData({
+        abi: tradeAbi,
+        functionName: "swapExactInput",
+        args: [
+          {
+            fuelForWeth: false,
+            useNative: false,
+            amountIn: 1n,
+            amountOutMinimum: 1n,
+            recipient: account.address,
+            deadline: BigInt(Math.floor(Date.now() / 1_000) + 600),
+          },
+        ],
+      }),
+      value: "0x0",
+    };
+    expect(await requestTransaction(trade)).toMatchObject({
+      result: `0x${"a".repeat(64)}`,
+    });
+    const approval = {
+      from: account.address,
+      to: stagingWeth,
+      data: approvalData(stagingRouter, 1n),
+      value: "0x0",
+    };
+    // Rejected or failed submissions must not consume the one-shot delay.
+    wallet.sendTransaction.mockRejectedValueOnce(
+      new Error("Temporary send failure"),
+    );
+    expect(await requestTransaction(approval)).toMatchObject({
+      error: { code: -32_000 },
+    });
+    let firstCompleted = false;
+    const delayed = requestTransaction(approval).then((result) => {
+      firstCompleted = true;
+      return result;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(firstCompleted).toBe(false);
+    expect(wallet.sendTransaction).toHaveBeenCalledTimes(3);
+    expect(wallet.respondSessionRequest).toHaveBeenCalledTimes(2);
+    expect(diagnostic).toHaveBeenCalledWith(
+      `Broadcast smoke transaction 0x${"a".repeat(64)}`,
+    );
+    expect(diagnostic).toHaveBeenCalledWith(
+      expect.stringContaining("Delaying first approval response for 60000ms"),
+    );
+    expect(await requestTransaction(approval)).toMatchObject({
+      result: `0x${"a".repeat(64)}`,
+    });
+    expect(await requestTransaction(trade)).toMatchObject({
+      result: `0x${"a".repeat(64)}`,
+    });
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(firstCompleted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await delayed).toMatchObject({ result: `0x${"a".repeat(64)}` });
+    expect(firstCompleted).toBe(true);
+    expect(wallet.sendTransaction).toHaveBeenCalledTimes(5);
+  } finally {
+    vi.useRealTimers();
+    diagnostic.mockRestore();
+  }
+});
+
+it.each([
+  { fuelForWeth: false, useNative: false, value: "0x0" },
+  {
+    fuelForWeth: false,
+    useNative: true,
+    value: `0x${parseEther("0.001").toString(16)}`,
+  },
+  { fuelForWeth: true, useNative: false, value: "0x0" },
+  { fuelForWeth: true, useNative: true, value: "0x0" },
+])(
+  "supports the exact $fuelForWeth/$useNative trade envelope",
+  async ({ fuelForWeth, useNative, value }) => {
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT", "staging");
+    vi.stubEnv("SMOKE_WALLET_ALLOW_TRANSACTIONS", "true");
+    vi.stubEnv("BASE_SEPOLIA_RPC_URL", "http://127.0.0.1:1");
+    vi.stubEnv("SMOKE_WALLET_ALLOWED_ACTIONS", "approve,trade");
+    await connect();
+    const params = {
+      fuelForWeth,
+      useNative,
+      amountIn: parseEther("0.001"),
+      amountOutMinimum: 1n,
+      recipient: account.address,
+      deadline: BigInt(Math.floor(Date.now() / 1_000) + 600),
+    };
+    const transaction = (
+      overrides: Partial<typeof params> = {},
+      sentValue = value,
+    ) => ({
+      from: account.address,
+      to: stagingRouter,
+      data: encodeFunctionData({
+        abi: tradeAbi,
+        functionName: "swapExactInput",
+        args: [{ ...params, ...overrides }],
+      }),
+      value: sentValue,
+    });
+    expect(await requestTransaction(transaction())).toMatchObject({
+      result: `0x${"a".repeat(64)}`,
+    });
+    for (const rejected of [
+      transaction({ recipient: getAddress(recipient) }),
+      transaction({ amountIn: 0n }),
+      transaction({ amountIn: parseEther("3") }),
+      transaction({ deadline: params.deadline + 3_600n }),
+      transaction({}, value === "0x0" ? "0x1" : "0x0"),
+    ]) {
+      expect(await requestTransaction(rejected)).toMatchObject({
+        error: { code: -32_000 },
+      });
+    }
+    expect(wallet.sendTransaction).toHaveBeenCalledOnce();
+  },
+);
+
+it("rejects expired pairing links before starting the wallet without exposing their contents", async () => {
+  const previousExitCode = process.exitCode;
+  const diagnostic = vi
+    .spyOn(process.stderr, "write")
+    .mockImplementation(() => true);
+  const pairingUri = `wc:${"c".repeat(64)}@2?relay-protocol=irn&symKey=${"d".repeat(64)}&expiryTimestamp=1`;
+  try {
+    vi.stubEnv("WALLETCONNECT_URI", pairingUri);
+    await import("./walletconnect-smoke-wallet.ts");
+    await vi.waitFor(() => expect(process.exitCode).toBe(1));
+    expect(wallet.pair).not.toHaveBeenCalled();
+    const output = diagnostic.mock.calls
+      .map(([message]) => String(message))
+      .join("");
+    expect(output).toContain("pairing link has expired");
+    expect(output).not.toContain(pairingUri);
+    expect(output).not.toContain("d".repeat(64));
+  } finally {
+    process.exitCode = previousExitCode;
+    diagnostic.mockRestore();
+  }
+});
+
+it("pairs a fresh clipboard link after trimming surrounding whitespace", async () => {
+  const expiry = Math.floor(Date.now() / 1_000) + 300;
+  const pairingUri = `wc:${"c".repeat(64)}@2?relay-protocol=irn&symKey=${"d".repeat(64)}&expiryTimestamp=${expiry}`;
+  vi.stubEnv("WALLETCONNECT_URI", ` ${pairingUri}\n`);
+  await connect();
+  expect(wallet.pair).toHaveBeenCalledWith({ uri: pairingUri });
 });
 
 it("sends only an enabled transfer from its own account to the configured recipient", async () => {

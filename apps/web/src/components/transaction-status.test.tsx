@@ -4,6 +4,23 @@ import { describe, expect, it, vi } from "vitest";
 import { TransactionStatus } from "./transaction-status";
 
 describe("transaction status", () => {
+  it("describes an interrupted approval without requiring wallet investigation", () => {
+    const html = renderToStaticMarkup(
+      <TransactionStatus
+        automaticRecovery
+        onRetry={vi.fn()}
+        state={{
+          status: "submission-unknown",
+          label: "Approve WETH for exchange",
+          message: "Checking your approval on Base Sepolia…",
+        }}
+      />,
+    );
+    expect(html).toContain("Wallet response interrupted");
+    expect(html).toContain("Checking your approval on Base Sepolia");
+    expect(html).not.toContain("Check your wallet activity");
+  });
+
   it("shows automatic receipt recovery without asking the collector to retry", () => {
     const html = renderToStaticMarkup(
       <TransactionStatus

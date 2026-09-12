@@ -164,6 +164,43 @@ describe("Exchange panel", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    vi.useRealTimers();
+  });
+
+  it("renews an entered quote automatically and pauses renewal during a wallet action", async () => {
+    vi.useFakeTimers();
+    const protocol = createProtocol();
+    testState.protocol = protocol;
+    const render = () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      );
+    await act(async () => render());
+    await act(async () =>
+      enterAmount(
+        container.querySelector<HTMLInputElement>("#exchange-amount")!,
+        "1",
+      ),
+    );
+    await act(async () => vi.advanceTimersByTimeAsync(300));
+    expect(testState.quoteExactInput).toHaveBeenCalledTimes(1);
+    await act(async () => vi.advanceTimersByTimeAsync(15_000));
+    expect(testState.quoteExactInput).toHaveBeenCalledTimes(2);
+    testState.protocol = {
+      ...protocol,
+      transaction: { status: "simulated", label: "Approve WETH for exchange" },
+    };
+    await act(async () => render());
+    await act(async () => vi.advanceTimersByTimeAsync(30_000));
+    expect(testState.quoteExactInput).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain(
+      "Your wallet action is in progress.",
+    );
+    expect(container.textContent).not.toContain(
+      "Enter an amount to get an automatic live quote.",
+    );
   });
 
   it("offers truthful test funding beside a blank order", async () => {
@@ -182,6 +219,37 @@ describe("Exchange panel", () => {
       container.querySelector("a[href='/faucet?returnTo=/exchange']")
         ?.textContent,
     ).toBe("Get test funds");
+  });
+
+  it("offers test ETH before a WETH approval when network-fee balance is empty", async () => {
+    const protocol = createProtocol();
+    protocol.nativeBalanceRead.balance.rawWei = 0n;
+    testState.protocol = protocol;
+    await act(async () =>
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <ExchangePanel />
+        </QueryClientProvider>,
+      ),
+    );
+    await act(async () =>
+      enterAmount(
+        container.querySelector<HTMLInputElement>("#exchange-amount")!,
+        "0.001",
+      ),
+    );
+    expect(container.textContent).toContain(
+      "You need Base Sepolia ETH for network fees.",
+    );
+    expect(
+      [...container.querySelectorAll("a")].some(
+        (link) =>
+          link.textContent === "Get test ETH" &&
+          link.getAttribute("href") === "/faucet?returnTo=/exchange",
+      ),
+    ).toBe(true);
+    expect(testState.quoteExactInput).not.toHaveBeenCalled();
+    expect(protocol.execute).not.toHaveBeenCalled();
   });
 
   it("aborts the obsolete quote as soon as the input changes, before debounce", async () => {

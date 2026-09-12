@@ -304,6 +304,11 @@ export const exchangeAccessQuoteMessage = (
 const staticReviewFeedback: Partial<
   Record<ExchangeReviewState["status"], ReviewFeedback>
 > = {
+  "transaction-pending": {
+    message:
+      "Your wallet action is in progress. We’ll update your balances when it confirms.",
+    role: "status",
+  },
   "quote-unavailable": {
     message: applicationCopy.exchange.quoteUnavailable,
     role: "alert",

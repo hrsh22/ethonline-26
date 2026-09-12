@@ -250,6 +250,14 @@ const quoteWalletScopeKey = (intent: ExchangeIntent): string =>
       ].join(":")
     : intent.status;
 
+const intentAccessMessage = (
+  intent: ExchangeIntent,
+  status: Parameters<typeof exchangeAccessQuoteMessage>[0],
+) =>
+  intent.status === "insufficient-gas"
+    ? "Get test ETH to cover the network fee before trading."
+    : exchangeAccessQuoteMessage(status);
+
 function DiscoveryShortfall({
   protocol,
   direction,
@@ -337,9 +345,14 @@ const useMarketQuote = (
       amount === quoteAmount &&
       intent.quoteEnabled &&
       protocol.address !== undefined,
-    // Recover visible failed reads only. Settled quotes remain idle and expire locally.
+    // Keep a visible, eligible order current while the collector reviews it.
+    // Stop renewal during wallet actions; the next review gets fresh evidence.
     refetchInterval: (query) =>
-      query.state.status === "error" ? 30_000 : false,
+      isTransactionInFlight(protocol.transaction)
+        ? false
+        : query.state.status === "error"
+          ? 30_000
+          : 15_000,
     refetchOnWindowFocus: "always",
     retry: webProtocolQueryRetryCount,
   });
@@ -539,6 +552,23 @@ function ExchangeIntentFeedback({
   readonly intent: ExchangeIntent;
   readonly onBuyRecovery: () => void;
 }) {
+  if (intent.status === "insufficient-gas") {
+    return (
+      <div
+        id="exchange-amount-feedback"
+        className="grid gap-1 text-body-sm text-danger"
+        role="alert"
+      >
+        <p>You need Base Sepolia ETH for network fees.</p>
+        <TestFundsLink
+          className={recoveryLinkClassName}
+          href="/faucet?returnTo=/exchange"
+        >
+          Get test ETH
+        </TestFundsLink>
+      </div>
+    );
+  }
   if (intent.status === "insufficient-balance") {
     return (
       <InsufficientBalanceFeedback
@@ -782,7 +812,7 @@ export function ExchangePanel() {
         />
         <div className="grid gap-3">
           <ExchangeActions
-            accessMessage={exchangeAccessQuoteMessage(reviewState.status)}
+            accessMessage={intentAccessMessage(intent, reviewState.status)}
             canSubmit={reviewState.submitEnabled}
             direction={direction}
             onQuote={quoteState.refresh}

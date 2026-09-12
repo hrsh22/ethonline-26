@@ -213,6 +213,75 @@ describe("exchange intent", () => {
     });
   });
 
+  it.each([
+    { direction: "buy", settlementMode: "wrapped" },
+    { direction: "sell", settlementMode: "wrapped" },
+    { direction: "sell", settlementMode: "native" },
+  ] as const)(
+    "blocks a $direction paid through $settlementMode without ETH for network fees",
+    ({ direction, settlementMode }) => {
+      const intent = deriveExchangeIntent({
+        accessState: "ready",
+        amount: "0.001",
+        direction,
+        readerAvailable: true,
+        settlementMode,
+        wallet: { ...loadedWallet, nativeBalanceWei: 0n },
+      });
+
+      expect(intent).toEqual({
+        status: "insufficient-gas",
+        quoteEnabled: false,
+        recovery: "faucet",
+        asset: "native",
+        availableBalanceWei: 0n,
+      });
+      expect(
+        deriveExchangeReviewState({
+          intent,
+          nowMilliseconds: reviewNowMilliseconds,
+          observedBlock: 100n,
+          quoteRead: { status: "idle" },
+          transactionPending: false,
+        }),
+      ).toEqual({ status: "insufficient-gas", submitEnabled: false });
+    },
+  );
+
+  it.each([
+    { direction: "buy", settlementMode: "wrapped" },
+    { direction: "buy", settlementMode: "native" },
+    { direction: "sell", settlementMode: "wrapped" },
+    { direction: "sell", settlementMode: "native" },
+  ] as const)(
+    "waits for native balance evidence before quoting $direction with $settlementMode",
+    ({ direction, settlementMode }) => {
+      expect(
+        deriveExchangeIntent({
+          accessState: "ready",
+          amount: "0.001",
+          direction,
+          readerAvailable: true,
+          settlementMode,
+          wallet: { ...loadedWallet, nativeBalanceWei: undefined },
+        }),
+      ).toEqual({ status: "balance-unavailable", quoteEnabled: false });
+    },
+  );
+
+  it("leaves nonzero token-trade gas amounts to the transaction estimate", () => {
+    expect(
+      deriveExchangeIntent({
+        accessState: "ready",
+        amount: "0.001",
+        direction: "buy",
+        readerAvailable: true,
+        settlementMode: "wrapped",
+        wallet: { ...loadedWallet, nativeBalanceWei: 1n },
+      }),
+    ).toMatchObject({ status: "ready", quoteEnabled: true });
+  });
+
   it("blocks a FUEL sale that exceeds the exact observed balance without offering the WETH faucet", () => {
     expect(
       deriveExchangeIntent({

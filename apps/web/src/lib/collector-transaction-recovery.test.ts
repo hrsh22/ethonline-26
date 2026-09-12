@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { beforeEach, expect, it, vi } from "vitest";
-import { keccak256, type Hash } from "viem";
+import { encodeFunctionData, erc20Abi, keccak256, type Hash } from "viem";
 import {
   readCollectorTransaction,
   writeCollectorTransaction,
@@ -8,6 +8,8 @@ import {
 } from "./collector-transaction-record";
 import {
   recoverCollectorTransactionHash,
+  recoverCollectorApproval,
+  readCollectorApprovalPrerequisite,
   type CollectorRecoveryReader,
 } from "./collector-transaction-recovery";
 
@@ -59,6 +61,189 @@ const input = (rpc = reader()) => ({
   reader: rpc,
 });
 beforeEach(() => localStorage.clear());
+
+const approvalRecoveryInput = (withPrerequisite = true) => {
+  const approvalData = encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [address, 1_000n],
+  });
+  return {
+    metadata: {
+      ...metadata,
+      actionType: "swap-exact-input",
+      preparedCall: {
+        ...metadata.preparedCall!,
+        value: "0",
+        dataHash: keccak256(approvalData),
+        ...(withPrerequisite
+          ? { approval: { spender: address, amount: "1000" } }
+          : {}),
+      },
+    },
+    address,
+    chainId: 84532,
+    tokens: [target],
+    spender: address,
+    reader: {
+      ...reader(),
+      getBlockNumber: vi.fn(async () => 110n),
+      getLogs: vi.fn(async () => []),
+      readContract: vi.fn(async () => 1_000n),
+    },
+  };
+};
+
+it("releases only a proven allowance prerequisite without inventing a transaction receipt", async () => {
+  const input = approvalRecoveryInput();
+  expect(await recoverCollectorApproval(input)).toEqual({
+    status: "satisfied",
+    blockNumber: 110n,
+  });
+  expect(input.reader.getTransactionReceipt).not.toHaveBeenCalled();
+  expect(input.reader.getLogs).not.toHaveBeenCalled();
+  expect(input.reader.readContract).toHaveBeenCalledWith(
+    expect.objectContaining({
+      address: target,
+      args: [address, address],
+      blockNumber: 110n,
+    }),
+  );
+});
+
+it("does not accept a different amount, spender, chain, wallet or token as approval evidence", async () => {
+  const differentAmount = approvalRecoveryInput();
+  differentAmount.metadata.preparedCall.approval = {
+    spender: address,
+    amount: "999",
+  };
+  expect(await recoverCollectorApproval(differentAmount)).toEqual({
+    status: "unresolved",
+  });
+  const lowAllowance = approvalRecoveryInput();
+  lowAllowance.reader.readContract.mockResolvedValue(999n);
+  expect(await recoverCollectorApproval(lowAllowance)).toEqual({
+    status: "unresolved",
+  });
+  const wrongSpender = approvalRecoveryInput();
+  wrongSpender.metadata.preparedCall.approval = {
+    spender: target,
+    amount: "1000",
+  };
+  expect(await recoverCollectorApproval(wrongSpender)).toEqual({
+    status: "unresolved",
+  });
+  const wrongChain = approvalRecoveryInput();
+  vi.mocked(wrongChain.reader.getChainId).mockResolvedValue(1);
+  await expect(recoverCollectorApproval(wrongChain)).rejects.toThrow(
+    "different network",
+  );
+  await expect(
+    recoverCollectorApproval({ ...approvalRecoveryInput(), address: target }),
+  ).rejects.toThrow("wallet and deployment");
+  await expect(
+    recoverCollectorApproval({ ...approvalRecoveryInput(), tokens: [] }),
+  ).rejects.toThrow("wallet and deployment");
+});
+
+it("offers a fresh review for a legacy approval without claiming its transaction succeeded", async () => {
+  const input = approvalRecoveryInput(false);
+  input.reader.readContract.mockResolvedValue(0n);
+  expect(await readCollectorApprovalPrerequisite(input)).toEqual({
+    blockNumber: 110n,
+    satisfied: false,
+  });
+  expect(await recoverCollectorApproval(input)).toEqual({
+    status: "unresolved",
+  });
+});
+
+it("bounds old approval searches and uses only owner/spender-filtered log ranges", async () => {
+  const input = approvalRecoveryInput(false);
+  input.reader.getBlockNumber.mockResolvedValue(100_000n);
+  await recoverCollectorApproval(input);
+  expect(input.reader.getLogs).toHaveBeenCalledTimes(9);
+  expect(input.reader.getLogs).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      address: target,
+      args: { owner: address, spender: address },
+      fromBlock: 40_101n,
+      toBlock: 43_300n,
+    }),
+  );
+});
+
+it("ignores late callbacks after an approval returns to a fresh review", () => {
+  const resolved = { ...metadata, approvalResolvedAtBlock: "110" };
+  writeCollectorTransaction(
+    "scope",
+    { status: "idle" },
+    { kind: "approval" },
+    resolved,
+    true,
+  );
+  writeCollectorTransaction(
+    "scope",
+    { status: "submitted", hash, label: "Old approval" },
+    { kind: "approval" },
+    metadata,
+  );
+  expect(readCollectorTransaction("scope")).toMatchObject({
+    state: { status: "idle" },
+    approvalResolvedAtBlock: "110",
+  });
+});
+
+it("automatically recovers a mined WETH approval after reload without asking for its lost hash", async () => {
+  const approvalData = encodeFunctionData({
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [address, 1_000n],
+  });
+  const approvalMetadata = {
+    ...metadata,
+    actionType: "swap-exact-input",
+    preparedCall: {
+      ...metadata.preparedCall!,
+      value: "0",
+      dataHash: keccak256(approvalData),
+    },
+  };
+  writeCollectorTransaction(
+    "scope",
+    { status: "simulated", label: "Approve WETH" },
+    { kind: "approval" },
+    approvalMetadata,
+    true,
+  );
+  const rpc = {
+    ...reader(),
+    getBlockNumber: vi.fn(async () => 110n),
+    getLogs: vi.fn(async () => [
+      {
+        args: { owner: address, spender: address, value: 1_000n },
+        transactionHash: hash,
+        removed: false,
+      },
+    ]),
+    readContract: vi.fn(async () => 1_000n),
+  };
+  vi.mocked(rpc.getTransaction).mockResolvedValue({
+    ...transaction,
+    input: approvalData,
+    value: 0n,
+  });
+  expect(
+    await recoverCollectorApproval({
+      metadata: readCollectorTransaction("scope")!,
+      address,
+      chainId: 84532,
+      tokens: [target],
+      spender: address,
+      reader: rpc,
+    }),
+  ).toEqual({ status: "mined", hash });
+});
 
 it("restores an interrupted prompt and recovers only its exact mined call without a submit capability", async () => {
   writeCollectorTransaction(

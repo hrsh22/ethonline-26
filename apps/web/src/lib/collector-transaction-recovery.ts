@@ -1,4 +1,12 @@
-import { keccak256, type Address, type Hash, type Hex } from "viem";
+import {
+  encodeFunctionData,
+  erc20Abi,
+  keccak256,
+  parseAbiItem,
+  type Address,
+  type Hash,
+  type Hex,
+} from "viem";
 import type { CollectorTransactionMetadata } from "./collector-transaction-record";
 
 export interface CollectorRecoveryReader {
@@ -25,6 +33,191 @@ export interface RecoveredReceipt {
   readonly blockNumber: bigint;
   readonly blockHash: Hash;
   readonly status: "success" | "reverted";
+}
+
+const approvalEvent = parseAbiItem(
+  "event Approval(address indexed owner,address indexed spender,uint256 value)",
+);
+export interface CollectorApprovalRecoveryReader extends CollectorRecoveryReader {
+  readonly getBlockNumber: () => Promise<bigint>;
+  readonly getLogs: (args: {
+    readonly address: Address;
+    readonly event: typeof approvalEvent;
+    readonly args: { readonly owner: Address; readonly spender: Address };
+    readonly fromBlock: bigint;
+    readonly toBlock: bigint;
+  }) => Promise<
+    readonly {
+      readonly args: {
+        readonly owner?: Address | undefined;
+        readonly spender?: Address | undefined;
+        readonly value?: bigint | undefined;
+      };
+      readonly transactionHash: Hash | null;
+      readonly removed: boolean;
+    }[]
+  >;
+  readonly readContract: (args: {
+    readonly address: Address;
+    readonly abi: typeof erc20Abi;
+    readonly functionName: "allowance";
+    readonly args: readonly [Address, Address];
+    readonly blockNumber: bigint;
+  }) => Promise<bigint>;
+}
+
+interface CollectorApprovalRecoveryInput {
+  readonly metadata: CollectorTransactionMetadata;
+  readonly address: Address;
+  readonly chainId: number;
+  readonly tokens: readonly string[];
+  readonly spender: Address;
+  readonly reader: CollectorApprovalRecoveryReader;
+}
+
+/** Legacy approval bookmarks can return to review after fresh network evidence.
+ * The next explicit trade attempt rechecks its exact allowance before any send. */
+export async function readCollectorApprovalReview(
+  input: CollectorApprovalRecoveryInput,
+): Promise<{ readonly blockNumber: bigint }> {
+  if (input.metadata.preparedCall !== undefined)
+    return readCollectorApprovalPrerequisite(input);
+  const [chainId, blockNumber] = await Promise.all([
+    input.reader.getChainId(),
+    input.reader.getBlockNumber(),
+  ]);
+  if (chainId !== input.chainId)
+    throw new Error("The approval reader is on a different network.");
+  await Promise.all(
+    input.tokens.map((token) =>
+      input.reader.readContract({
+        address: token as Address,
+        abi: erc20Abi,
+        functionName: "allowance",
+        args: [input.address, input.spender],
+        blockNumber,
+      }),
+    ),
+  );
+  return { blockNumber };
+}
+
+function matchesApprovalLog(
+  log: Awaited<ReturnType<CollectorApprovalRecoveryReader["getLogs"]>>[number],
+  input: CollectorApprovalRecoveryInput,
+): boolean {
+  return (
+    !log.removed &&
+    log.transactionHash !== null &&
+    log.args.value !== undefined &&
+    log.args.owner?.toLowerCase() === input.address.toLowerCase() &&
+    log.args.spender?.toLowerCase() === input.spender.toLowerCase() &&
+    keccak256(
+      encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [input.spender, log.args.value],
+      }),
+    ) === input.metadata.preparedCall?.dataHash
+  );
+}
+
+/** A scoped allowance check is also enough to offer a fresh approval review. */
+export async function readCollectorApprovalPrerequisite(
+  input: CollectorApprovalRecoveryInput,
+): Promise<{
+  readonly blockNumber: bigint;
+  readonly satisfied: boolean;
+}> {
+  const { metadata, address, chainId, tokens, spender, reader } = input;
+  const call = metadata.preparedCall;
+  if (call === undefined)
+    throw new Error("This approval has no saved network evidence.");
+  validateRecoveryScope(call, address, chainId, tokens);
+  if (call.value !== "0") throw new Error("This call is not a token approval.");
+  const [observedChain, blockNumber] = await Promise.all([
+    reader.getChainId(),
+    reader.getBlockNumber(),
+  ]);
+  if (observedChain !== chainId)
+    throw new Error("The approval reader is on a different network.");
+  if (blockNumber < BigInt(call.afterBlock))
+    throw new Error("Waiting for the network to catch up with this approval.");
+  const amount = await reader.readContract({
+    address: call.to,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [address, spender],
+    blockNumber,
+  });
+  const approval = call.approval;
+  const savedApprovalMatches =
+    approval !== undefined &&
+    approval.spender.toLowerCase() === spender.toLowerCase() &&
+    keccak256(
+      encodeFunctionData({
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [spender, BigInt(approval.amount)],
+      }),
+    ) === call.dataHash;
+  return {
+    blockNumber,
+    satisfied: savedApprovalMatches && amount >= BigInt(approval.amount),
+  };
+}
+
+/** Find a lost approval by exact call evidence; never sends or repeats a trade. */
+export async function recoverCollectorApproval(
+  input: CollectorApprovalRecoveryInput,
+): Promise<
+  | { readonly status: "mined"; readonly hash: Hash }
+  | { readonly status: "satisfied"; readonly blockNumber: bigint }
+  | { readonly status: "unresolved" }
+> {
+  if (input.metadata.preparedCall === undefined)
+    return { status: "unresolved" };
+  const prerequisite = await readCollectorApprovalPrerequisite(input);
+  if (prerequisite.satisfied)
+    return { status: "satisfied", blockNumber: prerequisite.blockNumber };
+  const { metadata, address, chainId, tokens, spender, reader } = input;
+  const call = metadata.preparedCall!;
+  // Pin the search to the first day after preflight (43,200 Base blocks), in
+  // provider-friendly ranges. This bounds old bookmarks without scanning the chain.
+  const lastBlock = BigInt(call.afterBlock) + 43_200n;
+  const toBlock =
+    prerequisite.blockNumber < lastBlock ? prerequisite.blockNumber : lastBlock;
+  for (
+    let fromBlock = BigInt(call.afterBlock) + 1n;
+    fromBlock <= toBlock;
+    fromBlock += 5_000n
+  ) {
+    const rangeEnd = fromBlock + 4_999n;
+    const logs = await reader.getLogs({
+      address: call.to,
+      event: approvalEvent,
+      args: { owner: address, spender },
+      fromBlock,
+      toBlock: rangeEnd < toBlock ? rangeEnd : toBlock,
+    });
+    for (const log of logs.slice(0, 128)) {
+      if (!matchesApprovalLog(log, input)) continue;
+      try {
+        const hash = await recoverCollectorTransactionHash({
+          hash: log.transactionHash!,
+          metadata,
+          address,
+          chainId,
+          canonicalTargets: tokens,
+          reader,
+        });
+        return { status: "mined", hash };
+      } catch {
+        // Reorgs and unrelated event emitters are not proof of this exact call.
+      }
+    }
+  }
+  return { status: "unresolved" };
 }
 
 /** Read-only proof for a lost hash. Never prepares, authorizes or sends a transaction. */

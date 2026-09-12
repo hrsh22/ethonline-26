@@ -20,10 +20,13 @@ const staticIntentStatuses: ReadonlySet<ExchangeIntent["status"]> = new Set([
 ]);
 
 const rejected = (intent: ExchangeIntent): boolean =>
-  intent.status === "invalid" || intent.status === "insufficient-balance";
+  intent.status === "invalid" ||
+  intent.status === "insufficient-balance" ||
+  intent.status === "insufficient-gas";
 
 const describedBy = (intent: ExchangeIntent): string | undefined =>
   intent.status === "insufficient-balance" ||
+  intent.status === "insufficient-gas" ||
   staticIntentStatuses.has(intent.status)
     ? "exchange-amount-feedback"
     : undefined;

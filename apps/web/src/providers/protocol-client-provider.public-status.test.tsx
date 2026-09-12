@@ -150,6 +150,11 @@ vi.mock("@/lib/deployment", () => ({
   deploymentEnvironment: { chainId: 84_532 },
   protocolDeploymentManifest: {
     launch: { transactionHash: testState.manifestHash },
+    contracts: {
+      fuelCore: "0x0000000000000000000000000000000000000010",
+      weth: "0x0000000000000000000000000000000000000016",
+      canonicalRouter: "0x0000000000000000000000000000000000000014",
+    },
   },
 }));
 
