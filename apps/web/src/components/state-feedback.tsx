@@ -86,7 +86,7 @@ export function StateFeedback({
       aria-busy={tone === "loading" || undefined}
       aria-live={semantic.live}
       className={cn(
-        "grid grid-cols-[0.1875rem_minmax(0,1fr)] items-start gap-3 rounded-[var(--radius-control)] border p-3",
+        "grid grid-cols-[0.1875rem_minmax(0,1fr)] items-start gap-3 rounded-[var(--radius-control)] border p-3.5",
         // No enter animation: these mount and unmount as reads resolve, on the
         // trade route several times a minute.
         frame.chrome,
@@ -107,7 +107,7 @@ export function StateFeedback({
         )}
       />
       <div className="min-w-0">
-        <strong className="block font-mono text-body-sm font-semibold leading-snug">
+        <strong className="block font-sans text-body-sm font-semibold leading-snug">
           {title}
         </strong>
         <p className={cn("mt-0.5 max-w-[65ch] text-body-sm", frame.body)}>

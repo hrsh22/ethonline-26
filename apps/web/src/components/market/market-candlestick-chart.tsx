@@ -14,6 +14,7 @@ import { StateFeedback } from "@/components/state-feedback";
 import { Button } from "@/components/ui/button";
 import { formatTokenAmount } from "@/lib/format";
 import { applicationCopy } from "@/lib/identity";
+import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE_CANDLES = 1_000;
 const MAX_TRADING_CANDLES = 500n;
@@ -501,9 +502,11 @@ const mountTradingChart = ({
 
 function InteractiveTradingChart({
   candles,
+  className,
   intervalSeconds,
 }: {
   readonly candles: readonly MarketCandle[];
+  readonly className: string;
   readonly intervalSeconds: bigint;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -584,7 +587,7 @@ function InteractiveTradingChart({
   }, [initialTimeframe, retry, timeframes]);
 
   return (
-    <div className="relative h-[clamp(34rem,68vh,44rem)] min-h-[34rem]">
+    <div className={cn("relative", className)}>
       <div
         aria-hidden={status === "ready" ? undefined : true}
         aria-label={status === "ready" ? chartSummaryFor(candles) : undefined}
@@ -623,11 +626,14 @@ function InteractiveTradingChart({
 
 export function MarketCandlestickChart({
   candles,
+  className = "h-[clamp(24rem,55vh,36rem)]",
   feeMatchingState,
   range,
   throughTime,
 }: {
   readonly candles: readonly MarketCandle[];
+  /** The plot height. The trade route sizes it to sit beside the order form. */
+  readonly className?: string;
   readonly feeMatchingState: FeeMatchingState;
   readonly interval: CanonicalMarketCandleInterval;
   readonly range: CandleRangeKey;
@@ -657,6 +663,7 @@ export function MarketCandlestickChart({
     <div>
       <InteractiveTradingChart
         candles={continuous.candles}
+        className={className}
         intervalSeconds={continuous.intervalSeconds}
       />
       {feeMatchingState === "partial" ? (

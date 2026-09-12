@@ -107,19 +107,19 @@
 
   /* Canvas and layered surfaces. Surface 1 is a panel; 2 is a panel header
    * or the sidebar; 3 is a well or an input. */
-  --canvas: #0b111b;
-  --surface-1: #111b28;
-  --surface-2: #162232;
-  --surface-3: #1d2c3e;
+  --canvas: #0a0d12;
+  --surface-1: #10151c;
+  --surface-2: #151b24;
+  --surface-3: #1c242f;
 
   /* Text hierarchy: warm white, then muted blue-gray. */
-  --text-primary: #e9edf3;
-  --text-secondary: #a7b7c9;
-  --text-tertiary: #9caabd;
+  --text-primary: #eef1f5;
+  --text-secondary: #a3afbe;
+  --text-tertiary: #97a3b3;
 
   /* Rules, focus, and interaction */
-  --border-subtle: #2c3b4e;
-  --border-strong: #707680;
+  --border-subtle: #232c38;
+  --border-strong: #6f7885;
   /* A signal-tinted hairline for regions holding a live or owned state. */
   --accent-border: #7a4423;
   --focus-ring: #ff7a2f;
@@ -147,12 +147,12 @@
   --state-partial-text: #f2b84b;
 
   /* Charts sit on a plate one step below the panel. */
-  --chart-surface: #12141a;
+  --chart-surface: #0c1016;
   --chart-primary: #ff7a2f;
   --chart-secondary: #7fb4ff;
   --chart-positive: #5fd39a;
   --chart-negative: #ff7b6b;
-  --chart-grid: #2c3138;
+  --chart-grid: #1f2732;
   --chart-value: var(--text-primary);
   --chart-label: var(--text-secondary);
 
@@ -185,8 +185,8 @@
   --space-8: 2rem;
   /* Boxed shape: corners are nearly square because panels are drawn with
    * hairlines, and a large radius would read as a card system. */
-  --radius-surface: 4px;
-  --radius-control: 3px;
+  --radius-surface: 10px;
+  --radius-control: 6px;
   --radius-pill: 999px;
   --motion-fast: 120ms;
   --motion-standard: 180ms;
@@ -194,7 +194,8 @@
   --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
   --control-min-size: 44px;
   --sidebar-width: 15rem;
-  --shadow-raised: 0 1px 0 rgb(0 0 0 / 0.4), 0 12px 32px -16px rgb(0 0 0 / 0.6);
+  --shadow-raised:
+    0 0 0 1px rgb(255 255 255 / 0.02), 0 8px 24px -12px rgb(0 0 0 / 0.55);
   --shadow-overlay:
     0 2px 8px rgb(0 0 0 / 0.5), 0 32px 80px -24px rgb(0 0 0 / 0.8);
   --scrim: color-mix(in srgb, #06070a, transparent 30%);
@@ -236,9 +237,9 @@
   font-size: 1rem;
   background:
     radial-gradient(
-      circle at 72% 18%,
-      rgba(255, 106, 31, 0.055),
-      transparent 27rem
+      ellipse 80% 40% at 50% -10%,
+      rgba(255, 122, 47, 0.07),
+      transparent 70%
     ),
     var(--canvas);
 }

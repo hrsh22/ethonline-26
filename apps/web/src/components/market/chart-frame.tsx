@@ -87,7 +87,7 @@ export function ChartFrame({
       >
         {children}
       </div>
-      <figcaption className="mt-3 text-body-sm text-ink-soft">
+      <figcaption className="mt-2 px-1 text-caption text-ink-faint">
         {caption}
       </figcaption>
     </figure>

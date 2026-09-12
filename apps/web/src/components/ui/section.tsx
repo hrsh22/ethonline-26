@@ -32,7 +32,7 @@ export function Section({
       <div className="flex flex-col gap-1 border-b border-line-strong pb-2 tablet:flex-row tablet:items-baseline tablet:justify-between tablet:gap-6">
         <div className="min-w-0">
           <Heading
-            className="font-mono text-title-sm font-semibold tracking-[0.06em] text-ink uppercase"
+            className="font-heading text-title font-semibold text-ink"
             id={headingId}
           >
             {title}
@@ -44,7 +44,7 @@ export function Section({
           )}
         </div>
         {meta === undefined ? null : (
-          <div className="flex flex-none items-baseline gap-4 font-mono text-label tracking-[0.08em] text-ink-faint uppercase">
+          <div className="flex flex-none items-baseline gap-4 text-caption text-ink-faint">
             {meta}
           </div>
         )}

@@ -35,10 +35,10 @@ function PrimaryNavigation({
             <Link
               aria-current={destination.active ? "page" : undefined}
               className={cn(
-                "flex min-h-11 items-center border-b-2 px-3 text-[1rem] font-normal transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none laptop:px-4",
+                "relative flex min-h-11 items-center px-3 text-[0.9375rem] font-medium transition-colors duration-[var(--motion-fast)] after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:rounded-full after:bg-signal after:opacity-0 after:transition-opacity after:duration-[var(--motion-fast)] motion-reduce:transition-none laptop:px-4 laptop:after:inset-x-4",
                 destination.active
-                  ? "border-signal text-ink"
-                  : "border-transparent text-ink-soft hover:text-ink",
+                  ? "text-ink after:opacity-100"
+                  : "text-ink-soft hover:text-ink",
               )}
               href={destination.href}
             >
@@ -59,7 +59,7 @@ function MobileNavigation({
   return (
     <nav
       aria-label="Mobile collector navigation"
-      className="fixed inset-x-0 bottom-0 z-40 grid auto-cols-fr grid-flow-col border-t border-line bg-surface-1 pb-[env(safe-area-inset-bottom)] min-[901px]:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid auto-cols-fr grid-flow-col border-t border-line bg-surface-1/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md min-[901px]:hidden"
       data-mobile-navigation
     >
       {destinations.map((destination) => {
@@ -67,7 +67,7 @@ function MobileNavigation({
           <Link
             aria-current={destination.active ? "page" : undefined}
             className={cn(
-              "relative flex min-h-16 items-center justify-center border-t-2 px-1 text-[0.875rem]",
+              "relative flex min-h-16 items-center justify-center border-t-2 px-1 text-[0.875rem] font-medium",
               destination.active
                 ? "border-signal text-ink"
                 : "border-transparent text-ink-soft",
@@ -176,9 +176,9 @@ export function CollectorShell({
       data-shell="collector"
     >
       <ShellSkipLink />
-      <header className="collector-topbar sticky top-0 z-40 border-b border-line bg-canvas/95 backdrop-blur-md">
+      <header className="collector-topbar sticky top-0 z-40 border-b border-line bg-canvas/90 backdrop-blur-md">
         <div className="mx-auto w-full max-w-[85rem] px-4 min-[901px]:px-8">
-          <div className="flex min-h-[4.75rem] flex-wrap items-center gap-x-2 py-2 min-[901px]:grid min-[901px]:grid-cols-[minmax(8rem,1fr)_auto_minmax(8rem,1fr)] min-[901px]:gap-3 min-[901px]:py-0">
+          <div className="flex min-h-16 flex-wrap items-center gap-x-2 py-2 min-[901px]:grid min-[901px]:grid-cols-[minmax(8rem,1fr)_auto_minmax(8rem,1fr)] min-[901px]:gap-3 min-[901px]:py-0">
             <div className="flex shrink-0 items-center" data-collector-brand>
               <Link
                 aria-label={`${identity.brand}: ${applicationCopy.shell.home}`}
@@ -207,7 +207,7 @@ export function CollectorShell({
         </div>
       </header>
       <CollectorActivity />
-      <div className="flex min-h-[calc(100dvh-4.75rem)] flex-col">
+      <div className="flex min-h-[calc(100dvh-4rem)] flex-col">
         <div className="flex-1">{children}</div>
         <CollectorFooter utility={navigation.utility} />
       </div>

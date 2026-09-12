@@ -54,7 +54,7 @@ export function SettlementModeControl({
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
       <p
-        className="font-mono text-label font-medium tracking-[0.1em] text-ink-faint uppercase"
+        className="text-body-sm font-medium text-ink-soft"
         id="settlement-mode-label"
       >
         {label}

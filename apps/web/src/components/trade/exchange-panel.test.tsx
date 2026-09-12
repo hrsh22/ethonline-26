@@ -146,7 +146,6 @@ describe("Exchange panel", () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    localStorage.removeItem("orbit:advanced-chart");
     (
       globalThis as typeof globalThis & {
         IS_REACT_ACT_ENVIRONMENT?: boolean;

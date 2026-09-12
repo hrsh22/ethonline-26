@@ -31,14 +31,14 @@ export function Panel({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col rounded-[var(--radius-surface)] border bg-surface-1",
+        "flex min-w-0 flex-col rounded-[var(--radius-surface)] border bg-surface-1 shadow-[var(--shadow-raised)]",
         tone === "live" ? "border-[var(--accent-border)]" : "border-line",
         className,
       )}
       data-panel
     >
       {title === undefined && meta === undefined ? null : (
-        <div className="flex min-h-12 items-center justify-between gap-4 px-5 pt-4 pb-1">
+        <div className="flex min-h-12 items-center justify-between gap-4 px-5 pt-4 pb-2">
           {title === undefined ? (
             <span />
           ) : (

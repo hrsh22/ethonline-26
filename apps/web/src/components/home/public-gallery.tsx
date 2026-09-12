@@ -15,7 +15,7 @@ import { useProtocolClient } from "@/providers/protocol-client-provider";
 type Entry = (typeof collectionManifestArtifact.entries)[number];
 const pageSize = 12;
 const inputClass =
-  "min-h-11 w-full rounded border border-line bg-canvas px-3 text-[16px]";
+  "min-h-11 w-full rounded-[var(--radius-control)] border border-line bg-canvas px-3 text-[16px] transition-[border-color] duration-[var(--motion-fast)] focus:border-[var(--accent-fill)] focus:outline-none motion-reduce:transition-none";
 
 const galleryState = (read: ReturnType<typeof useCollectibleRead>) => {
   if (read.isError) return "State unavailable";
@@ -33,9 +33,9 @@ function GalleryCard({ entry }: { readonly entry: Entry }) {
     <Link
       href={`/fleet/${entry.identityId}?from=explore`}
       prefetch={false}
-      className="group flex min-w-0 flex-col gap-3 rounded-lg bg-surface-1 p-4 transition-colors hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring"
+      className="group flex min-w-0 flex-col gap-2 rounded-[var(--radius-surface)] border border-line bg-surface-1 p-3 transition-[border-color,background-color] duration-[var(--motion-fast)] hover:border-line-strong hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring motion-reduce:transition-none"
     >
-      <div className="aspect-square w-full rounded-md bg-[radial-gradient(ellipse_at_center,var(--surface-3),var(--canvas))]">
+      <div className="aspect-square w-full overflow-hidden rounded-[calc(var(--radius-surface)-4px)] bg-[radial-gradient(ellipse_at_center,var(--surface-3),var(--canvas))]">
         <CraftArt
           className="size-full"
           decorative
@@ -51,13 +51,13 @@ function GalleryCard({ entry }: { readonly entry: Entry }) {
           track={entry.track}
         />
       </div>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 px-1">
         <span className="font-mono text-body font-semibold">
-          #{entry.identityId}
+          #{String(entry.identityId).padStart(4, "0")}
         </span>
         <span className="text-caption text-ink-soft">{state}</span>
       </div>
-      <span className="text-body-sm text-ink-soft">
+      <span className="px-1 pb-1 text-body-sm text-ink-soft">
         {entry.track === 0
           ? entry.identityId === 4444
             ? identity.terms.indicatorRelic
