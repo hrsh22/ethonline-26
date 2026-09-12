@@ -522,7 +522,7 @@ describe("collection surfaces", () => {
       await render(<FleetPanel />);
 
       expect(container.querySelector("a[href='/exchange']")?.textContent).toBe(
-        "Trade FUEL",
+        "Buy FUEL",
       );
       expect(container.querySelector("a[href='/explore']")?.textContent).toBe(
         "Explore craft",

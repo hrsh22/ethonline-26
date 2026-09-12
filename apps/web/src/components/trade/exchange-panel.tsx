@@ -797,15 +797,15 @@ export function ExchangePanel() {
   /* DOM order is the reading order a trader needs: inputs, the current quote
    * summary, the submit button, then the full terms as evidence. */
   return (
-    <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 laptop:grid-cols-12 laptop:items-start">
+    <div className="grid min-w-0 grid-cols-1 gap-4 laptop:grid-cols-12 laptop:items-start">
       <div className="min-w-0 laptop:col-span-12">
         <CollectorReturnLink />
       </div>
       <Panel
         bodyClassName="grid gap-4"
-        className="laptop:col-span-5 laptop:col-start-8 laptop:row-start-2"
-        title={applicationCopy.exchange.orderTitle}
+        className="laptop:col-span-5 laptop:col-start-8 laptop:row-start-2 nav:col-span-4 nav:col-start-9"
       >
+        <h2 className="sr-only">{applicationCopy.exchange.orderTitle}</h2>
         {accessNoticeVisible(protocol, intent.status) ? (
           <AccessNotice compact />
         ) : null}
@@ -896,7 +896,7 @@ export function ExchangePanel() {
           protocol={protocol}
         />
       </Panel>
-      <div className="min-w-0 laptop:col-span-7 laptop:col-start-1 laptop:row-start-2 laptop:sticky laptop:top-24">
+      <div className="min-w-0 laptop:col-span-7 laptop:col-start-1 laptop:row-start-2 laptop:sticky laptop:top-[5.5rem] nav:col-span-8">
         <TradeMarketContext
           history={protocol.marketHistory}
           onRefresh={protocol.refreshMarketHistory}

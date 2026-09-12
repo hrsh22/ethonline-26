@@ -342,10 +342,7 @@ export async function checkTradeStagesJourney(
   page: Page,
   fixture: CollectorFixture,
 ) {
-  // A fresh Trade entry loads market history; advanced controls are optional.
-  await page
-    .getByRole("button", { name: "Advanced chart", exact: true })
-    .click();
+  // A fresh Trade entry loads market history with the interactive chart.
   await page.getByRole("group", { name: "Chart range", exact: true }).waitFor();
   fixture.receiptAvailable = true;
   const input = page.getByLabel("You pay", { exact: true });

@@ -52,7 +52,7 @@ export function PageHeading({
   return (
     <header
       className={cn(
-        "flex flex-col gap-4 py-7 tablet:flex-row tablet:items-end tablet:justify-between",
+        "flex flex-col gap-4 py-6 tablet:flex-row tablet:items-end tablet:justify-between",
         className,
       )}
     >
@@ -62,11 +62,11 @@ export function PageHeading({
             {eyebrow}
           </p>
         )}
-        <h1 className="mt-1.5 font-mono text-display font-semibold text-balance text-ink [overflow-wrap:anywhere]">
+        <h1 className="mt-1 font-display text-heading font-semibold text-balance text-ink [overflow-wrap:anywhere]">
           {title}
         </h1>
         {lede === undefined ? null : (
-          <p className="mt-2 text-body text-ink-soft">{lede}</p>
+          <p className="mt-1.5 text-body-sm text-ink-soft">{lede}</p>
         )}
       </div>
       {actions === undefined ? null : (

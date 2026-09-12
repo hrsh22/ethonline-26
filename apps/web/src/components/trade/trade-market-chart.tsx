@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { ChartFrame } from "@/components/market/chart-frame";
@@ -12,15 +13,18 @@ import {
 import { StateFeedback } from "@/components/state-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Panel } from "@/components/ui/panel";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Rate, Unavailable } from "@/components/ui/value";
 import { applicationCopy } from "@/lib/identity";
 import type { IndexedMarketHistoryRead } from "@/lib/market-history-state";
+import { cn } from "@/lib/utils";
 
-const historyStatus = (
-  history: Extract<IndexedMarketHistoryRead, { status: "loaded" | "stale" }>,
-) => {
+type ConfirmedHistory = Extract<
+  IndexedMarketHistoryRead,
+  { status: "loaded" | "stale" }
+>;
+
+const historyStatus = (history: ConfirmedHistory) => {
   if (history.status === "stale") {
     return (
       <Badge dot tone="warning">
@@ -38,6 +42,45 @@ const historyStatus = (
     </Badge>
   );
 };
+
+/** The pair and its live price: the first line of the trade route. */
+function PairHeader({
+  children,
+  priceWei,
+}: {
+  readonly children?: React.ReactNode;
+  readonly priceWei: bigint | undefined;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-b border-line px-5 py-4">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-heading text-title-sm font-semibold text-ink">
+            {applicationCopy.exchange.token}
+            <span className="text-ink-faint"> / WETH</span>
+          </h2>
+          <Link
+            className="text-caption text-ink-soft underline-offset-4 hover:text-ink hover:underline"
+            href="/market"
+          >
+            Market details →
+          </Link>
+        </div>
+        <p className="mt-1 font-mono text-heading font-medium text-ink tabular-nums">
+          {priceWei === undefined ? (
+            <Unavailable reason={applicationCopy.common.notObserved} />
+          ) : (
+            <Rate value={priceWei} />
+          )}
+          <span className="ml-2 text-body-sm font-normal text-ink-soft">
+            WETH per {applicationCopy.exchange.token}
+          </span>
+        </p>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 /**
  * The trade-sized view of the project-owned Canonical Market history. It uses
@@ -57,29 +100,35 @@ export function TradeMarketChartContent({
 
   if (history === undefined || history.status === "loading") {
     return (
-      <Panel className="min-h-64" title={applicationCopy.exchange.marketTitle}>
-        <StateFeedback
-          description={applicationCopy.exchange.historyLoadingDetail}
-          title={applicationCopy.exchange.historyLoading}
-          tone="loading"
-        />
-      </Panel>
+      <>
+        <PairHeader priceWei={priceWei} />
+        <div className="p-5">
+          <StateFeedback
+            description={applicationCopy.exchange.historyLoadingDetail}
+            title={applicationCopy.exchange.historyLoading}
+            tone="loading"
+          />
+        </div>
+      </>
     );
   }
   if (history.status === "failed") {
     return (
-      <Panel className="min-h-64" title={applicationCopy.exchange.marketTitle}>
-        <StateFeedback
-          action={
-            <Button onClick={onRefresh} type="button" variant="outline">
-              {applicationCopy.exchange.historyRetry}
-            </Button>
-          }
-          description={applicationCopy.exchange.historyUnavailableDetail}
-          title={applicationCopy.exchange.historyUnavailable}
-          tone="error"
-        />
-      </Panel>
+      <>
+        <PairHeader priceWei={priceWei} />
+        <div className="p-5">
+          <StateFeedback
+            action={
+              <Button onClick={onRefresh} type="button" variant="outline">
+                {applicationCopy.exchange.historyRetry}
+              </Button>
+            }
+            description={applicationCopy.exchange.historyUnavailableDetail}
+            title={applicationCopy.exchange.historyUnavailable}
+            tone="error"
+          />
+        </div>
+      </>
     );
   }
 
@@ -92,38 +141,41 @@ export function TradeMarketChartContent({
   );
 
   return (
-    <Panel
-      bodyClassName="grid content-start gap-3"
-      className="min-w-0 [&>div:first-child]:flex-wrap [&>div:first-child>div]:max-w-full [&>div:first-child_span]:whitespace-normal"
-      meta={historyStatus(history)}
-      title={applicationCopy.exchange.marketTitle}
-    >
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-body-sm text-ink-soft">
-            WETH / {applicationCopy.exchange.token}
-          </p>
-          <div className="mt-1 font-mono text-title text-ink tabular-nums">
-            {priceWei === undefined ? (
-              <Unavailable reason={applicationCopy.common.notObserved} />
-            ) : (
-              <Rate value={priceWei} />
-            )}
+    <>
+      <PairHeader priceWei={priceWei}>
+        <div className="flex min-w-0 flex-col items-end gap-2">
+          <SegmentedControl
+            className="w-auto min-w-[16rem] [&_button]:min-w-0 [&_button]:px-2"
+            label={applicationCopy.exchange.rangeLabel}
+            onValueChange={setRange}
+            options={CANDLE_RANGES.map(({ key, label }) => ({
+              label,
+              value: key,
+            }))}
+            size="compact"
+            value={range}
+          />
+          <div className="flex items-center gap-2">
+            {historyStatus(history)}
+            {history.status === "stale" ? (
+              <Button
+                onClick={onRefresh}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {applicationCopy.exchange.historyRetry}
+              </Button>
+            ) : null}
           </div>
         </div>
-        <SegmentedControl
-          className="w-full min-w-0 [&_button]:min-w-0 [&_button]:px-1 compact:max-w-[22rem]"
-          label={applicationCopy.exchange.rangeLabel}
-          onValueChange={setRange}
-          options={CANDLE_RANGES.map(({ key, label }) => ({
-            label,
-            value: key,
-          }))}
-          size="compact"
-          value={range}
-        />
-      </div>
-      <div className="[&_svg]:!min-w-0">
+      </PairHeader>
+      <div
+        className={cn(
+          "flex-1 p-3 [&_svg]:!min-w-0",
+          visible.candles.length === 0 && "grid content-center",
+        )}
+      >
         <ChartFrame
           caption={applicationCopy.exchange.candleDescription}
           emptyDescription={applicationCopy.exchange.candleEmptyDetail}
@@ -135,6 +187,7 @@ export function TradeMarketChartContent({
         >
           <MarketCandlestickChart
             candles={snapshot.candles}
+            className="h-[20rem] compact:h-[24rem] laptop:h-[clamp(24rem,52vh,34rem)]"
             feeMatchingState={snapshot.feeMatching.state}
             interval={snapshot.interval}
             range={range}
@@ -142,17 +195,6 @@ export function TradeMarketChartContent({
           />
         </ChartFrame>
       </div>
-      {history.status === "stale" ? (
-        <Button
-          className="justify-self-start"
-          onClick={onRefresh}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          {applicationCopy.exchange.historyRetry}
-        </Button>
-      ) : null}
-    </Panel>
+    </>
   );
 }

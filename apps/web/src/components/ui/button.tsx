@@ -14,7 +14,7 @@ const buttonVariants = cva(
         default:
           "bg-primary text-primary-foreground hover:brightness-110 disabled:border-[var(--border-subtle)] data-disabled:border-[var(--border-subtle)] disabled:bg-[var(--surface-3)] data-disabled:bg-[var(--surface-3)] disabled:text-[var(--text-tertiary)] data-disabled:text-[var(--text-tertiary)]",
         outline:
-          "border-[var(--border-strong)] bg-transparent text-ink hover:bg-surface-3 aria-expanded:bg-surface-3 disabled:text-ink-faint data-disabled:text-ink-faint",
+          "border-line-strong/70 bg-transparent text-ink hover:border-line-strong hover:bg-surface-2 aria-expanded:bg-surface-3 disabled:text-ink-faint data-disabled:text-ink-faint",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_8%)] aria-expanded:bg-secondary disabled:text-ink-faint data-disabled:text-ink-faint",
         ghost:
@@ -26,7 +26,7 @@ const buttonVariants = cva(
       size: {
         default: "px-4 py-2",
         xs: "gap-1 px-2 py-1 text-xs [&_svg:not([class*='size-'])]:size-3",
-        sm: "gap-1.5 px-3 py-2 text-label",
+        sm: "gap-1.5 px-3 py-1.5 text-caption",
         lg: "min-h-12 px-5 py-3 text-body",
         icon: "size-11 px-0",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",

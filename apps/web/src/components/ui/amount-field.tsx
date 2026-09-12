@@ -43,23 +43,23 @@ export function AmountField({
   return (
     <Field.Root className={cn("w-full", className)}>
       <Field.Label
-        className="font-mono text-label font-medium tracking-[0.1em] text-ink-faint uppercase"
+        className="text-body-sm font-medium text-ink-soft"
         htmlFor={id}
       >
         {label}
       </Field.Label>
       <div
         className={cn(
-          "mt-1.5 flex items-center gap-3 rounded-[var(--radius-control)] border bg-canvas px-3 py-2 transition-[border-color] duration-[var(--motion-fast)] focus-within:border-[var(--accent-fill)] motion-reduce:transition-none",
-          invalid ? "border-[var(--status-danger-text)]" : "border-line-strong",
-          readOnly && "border-line",
+          "mt-1.5 flex items-center gap-3 rounded-[var(--radius-control)] border bg-canvas px-4 py-3 transition-[border-color,box-shadow] duration-[var(--motion-fast)] focus-within:border-[var(--accent-fill)] focus-within:shadow-[0_0_0_3px_color-mix(in_oklch,var(--accent-fill)_20%,transparent)] motion-reduce:transition-none",
+          invalid ? "border-[var(--status-danger-text)]" : "border-line",
+          readOnly && "border-transparent bg-surface-2",
         )}
       >
         <Field.Control
           aria-describedby={describedBy}
           aria-invalid={invalid || undefined}
           autoComplete="off"
-          className="w-full min-w-0 flex-1 bg-transparent font-mono text-[1.75rem] leading-none font-medium tracking-[-0.02em] text-ink tabular-nums outline-none read-only:text-ink-soft placeholder:text-ink-faint/70"
+          className="w-full min-w-0 flex-1 bg-transparent font-mono text-[1.75rem] leading-none font-medium tracking-[-0.02em] text-ink tabular-nums outline-none read-only:text-ink placeholder:text-ink-faint/60"
           id={id}
           inputMode="decimal"
           onChange={(event) => onValueChange?.(event.target.value)}
@@ -73,7 +73,7 @@ export function AmountField({
           value={value}
         />
         {action}
-        <span className="flex-none font-mono text-label font-semibold tracking-[0.1em] text-ink-faint uppercase">
+        <span className="flex-none rounded-[var(--radius-control)] bg-surface-3 px-2 py-1 font-sans text-body-sm font-semibold text-ink">
           {unit}
         </span>
       </div>

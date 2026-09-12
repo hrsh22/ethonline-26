@@ -13,6 +13,7 @@ import type { FleetCraft } from "@/components/fleet/fleet-craft-card";
 import { FleetHangar } from "@/components/fleet/fleet-hangar";
 import { StateFeedback } from "@/components/state-feedback";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { CraftArt } from "@/components/ui/craft-art";
 import { Metric, MetricGroup } from "@/components/ui/metric";
 import { Amount, Count, Unavailable } from "@/components/ui/value";
 import { applicationCopy, identity } from "@/lib/identity";
@@ -199,14 +200,29 @@ function UnloadedCollection({
   if (blocked.connectable) {
     return (
       <section
-        className="fleet-empty"
+        className="fleet-empty fleet-empty-stage"
         data-state={blocked.tone}
         role="status"
         aria-live="polite"
       >
-        <h2 className="sr-only">{blocked.title}</h2>
-        <p>Connect a wallet to see your craft and rewards.</p>
-        <ConnectWalletAction />
+        <div>
+          <h2 className="sr-only">{blocked.title}</h2>
+          <p className="fleet-empty-title">Your hangar is waiting.</p>
+          <p>Connect a wallet to see your craft and rewards.</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <ConnectWalletAction />
+            <ButtonLink href="/explore" variant="ghost">
+              Browse the collection
+            </ButtonLink>
+          </div>
+        </div>
+        <CraftArt
+          className="fleet-empty-art"
+          decorative
+          identityId={1207}
+          kind="transient"
+          track={3}
+        />
       </section>
     );
   }
@@ -234,17 +250,24 @@ function EmptyCollection({
     );
   }
   return (
-    <section className="fleet-empty">
-      <h2>No craft in your fleet.</h2>
-      <p>Your collected craft appear here.</p>
-      <div className="flex flex-wrap gap-3">
-        <ButtonLink href="/explore" size="sm">
-          Explore craft
-        </ButtonLink>
-        <ButtonLink href="/exchange" size="sm" variant="outline">
-          Trade FUEL
-        </ButtonLink>
+    <section className="fleet-empty fleet-empty-stage">
+      <div>
+        <h2>No craft in your fleet.</h2>
+        <p>Every whole FUEL you hold discovers one craft. It appears here.</p>
+        <div className="flex flex-wrap gap-3">
+          <ButtonLink href="/exchange">Buy FUEL</ButtonLink>
+          <ButtonLink href="/explore" variant="outline">
+            Explore craft
+          </ButtonLink>
+        </div>
       </div>
+      <CraftArt
+        className="fleet-empty-art"
+        decorative
+        identityId={23}
+        kind="transient"
+        track={1}
+      />
     </section>
   );
 }

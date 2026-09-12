@@ -1,13 +1,15 @@
 # Application design foundations
 
-The application ships a single dark visual identity called **Graphite**.
-The collector uses the **Hangar** composition: one featured craft with a
-selector, readable product typography, and quiet surrounding controls.
+The application ships a single dark visual identity called **Graphite**: a
+neutral near-black canvas with signal orange, composed like a refined trading
+terminal. The collector uses the **Hangar** composition: one featured craft
+with a selector, readable product typography, and quiet surrounding controls.
 The operator console remains a dense, data-first instrument. Both make
 irreversible decisions calmly and keep the same semantic status colors.
 
-Structure comes from restrained hairlines on a near-black canvas.
-The single accent — signal orange
+Structure comes from restrained hairlines and one step of surface tint on a
+near-black canvas; a panel may add the soft `--shadow-raised` so it separates
+from the canvas without a heavier border. The single accent — signal orange
 — is reserved for live values, the primary action, the current destination and
 a lit Orbiter. Purple or pink Web3 gradients, glass panels, glow effects,
 scanline textures, and marquee tickers are outside this system.
@@ -35,8 +37,8 @@ canvas. Components use semantic tokens according to their role:
 
 - Canvas and layers: `--canvas`, `--surface-1`, `--surface-2`, and
   `--surface-3`. Surface 1 is a panel; 2 is a panel header or the rail; 3 is a
-  well or an input. Elevation is expressed by one step of tint and a hairline,
-  never by shadow alone.
+  well or an input. Elevation is expressed by one step of tint and a hairline;
+  `--shadow-raised` may reinforce a panel but never replaces the hairline.
 - Text: `--text-primary`, `--text-secondary`, and `--text-tertiary`.
 - Rules: `--border-subtle`, `--border-strong`, and `--focus-ring`.
 - Signal: `--accent-fill` (orange) with `--accent-fill-text` for the one filled
@@ -63,9 +65,11 @@ read custom properties, the literals are asserted against the token map by
 
 ## Typography
 
-- Barlow carries collector prose, headings, and actions. IBM Plex Mono
-  carries Fleet identifiers and measured values; other collector surfaces retain JetBrains Mono. Collector headings and actions
-  use sentence case, not instrument-style uppercase labels.
+- Barlow carries collector prose, headings, actions, field labels and
+  segmented controls. IBM Plex Mono carries Fleet identifiers and measured
+  values; other collector surfaces retain JetBrains Mono. Collector headings,
+  actions, field labels and segment labels use sentence case. Caps mono is
+  reserved for units, badges, metric labels and page eyebrows.
 - The operator retains JetBrains Mono for every role. Root font bindings
   stay mono; the collector scope changes only its own sans/display bindings.
 
@@ -89,9 +93,14 @@ filters, balance beside the Collection/Rewards tabs, and a compact reward strip.
 Completed activity belongs in Notifications, not a permanent page-wide banner;
 pending and unresolved actions keep their recovery controls visible.
 An empty collection has fixed Explore and Trade links, independent of balances.
-Advanced filters and technical evidence are secondary. Trade keeps its live
-chart and form together: side by side on desktop, compact chart above the
-form on mobile. Home is an editorial introduction, not an accounting board.
+Advanced filters and technical evidence are secondary. Trade is chart-led:
+the interactive candlestick chart is the only chart view and takes eight of
+twelve columns beside a four-column order panel on wide screens (seven and
+five at laptop width); on mobile the order panel comes first and the chart
+follows at a fixed 20rem height. The chart panel opens with the pair, its
+live price and the range control. Home is an editorial introduction, not an
+accounting board. Disconnected and empty collections show a craft on a stage
+with one action, never a bare sentence.
 Prose stays concise and below 80 characters per line.
 
 Admin screens use density level 8 of 10. Put related facts in shared boards,
@@ -108,11 +117,11 @@ longer label can never shift its neighbour's value.
 
 ## Shape
 
-The system has one restrained radius rule, nearly square because structure
-comes from hairlines:
+The system has one restrained radius rule, softly rounded so panels read as
+plates rather than as a card system:
 
-- Panels use `--radius-surface` at 4px.
-- Controls use `--radius-control` at 3px.
+- Panels use `--radius-surface` at 10px.
+- Controls use `--radius-control` at 6px.
 - `--radius-pill` is reserved for a state dot.
 
 Do not mix arbitrary rounded values inside one composition.
@@ -144,8 +153,8 @@ Never render a raw exception, RPC payload, or server response into it.
 Use `DisabledReason` next to a disabled action, connected with
 `aria-describedby`. A disabled control says what condition will enable it.
 
-A selected segment lifts to the panel surface with a strong hairline; the rest
-stay recessed. Exactly one active treatment exists per navigation set: the
+A selected segment lifts to the panel surface with a subtle hairline and a
+semibold sentence-case label; the rest stay recessed. Exactly one active treatment exists per navigation set: the
 signal rule.
 
 Wallet surfaces distinguish disconnected, connecting, wrong network, switching,

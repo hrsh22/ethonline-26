@@ -54,6 +54,50 @@
   min-height: 15rem;
   padding: 0.875rem 0;
 }
+/* The empty hangar still shows a craft: a silhouette on the stage, so the
+ * page reads as a place for objects rather than a blank form. */
+.fleet-empty-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 22rem);
+  align-items: center;
+  gap: 2rem;
+  padding: 2rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-surface);
+  background:
+    radial-gradient(
+      ellipse 60% 80% at 80% 50%,
+      rgba(255, 122, 47, 0.06),
+      transparent 70%
+    ),
+    var(--surface-1);
+}
+.fleet-empty .fleet-empty-title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.7rem, 3vw, 2.7rem);
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+.fleet-empty-art {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  opacity: 0.85;
+  filter: drop-shadow(0 25px 22px rgba(0, 0, 0, 0.48));
+}
+@media (max-width: 780px) {
+  .fleet-empty-stage {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1.25rem;
+  }
+  .fleet-empty-art {
+    max-width: 14rem;
+    margin: 0 auto;
+    order: -1;
+  }
+}
 .fleet-empty h2 {
   margin: 1rem 0;
   font-size: clamp(1.7rem, 3vw, 2.7rem);

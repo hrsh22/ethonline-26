@@ -57,7 +57,8 @@ describe("Trade market chart", () => {
       />,
     );
 
-    expect(html).toContain("WETH / $FUEL");
+    expect(html).toContain("$FUEL");
+    expect(html).toContain("/ WETH");
     expect(html).toContain("24H");
     expect(html).toContain('aria-label="$FUEL market history"');
     expect(html).toContain("Complete history");
