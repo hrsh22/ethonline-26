@@ -79,6 +79,9 @@ const click = async (name: string) => {
   await act(async () => button?.click());
 };
 const enterRecipient = async () => {
+  if (!document.querySelector("#craft-transfer-recipient")) {
+    await click("Transfer collectible");
+  }
   const input = document.querySelector<HTMLInputElement>(
     "#craft-transfer-recipient",
   )!;

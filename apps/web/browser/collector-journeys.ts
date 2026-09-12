@@ -114,6 +114,12 @@ export async function checkLaunchJourney(
   );
   await page.getByRole("link", { name: "Rewards", exact: true }).click();
   await page
+    .getByRole("button", {
+      name: "How your rewards are progressing",
+      exact: true,
+    })
+    .click();
+  await page
     .getByRole("heading", {
       name: "When will my Orbiter receive rewards?",
       exact: true,
@@ -213,7 +219,9 @@ export async function checkQuoteRecoveryJourney(
   await input.fill("0.02");
   await aborted;
   await input.fill("0.03");
-  await page.getByText(/You pay 0.03/).waitFor({ timeout: 15_000 });
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor({ timeout: 15_000 });
   assert.ok(fixture.quoteAborts >= 1);
   assert.ok(
     fixture.quoteRequests <= 4,
@@ -261,7 +269,9 @@ export async function checkFundingDiscoveryJourney(
     .getByRole("link", { name: "Buy $FUEL on Trade", exact: true })
     .click();
   await page.getByLabel("You pay", { exact: true }).fill("0.01");
-  await page.getByText(/You pay 0.01/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   await page
     .getByRole("button", { name: "Buy $FUEL", exact: true })
     .and(page.locator(":not([aria-pressed])"))
@@ -280,7 +290,7 @@ export async function checkFundingDiscoveryJourney(
     .filter({ visible: true })
     .click();
   await page
-    .getByText(/Randomness is taking longer than expected/i)
+    .getByText(/Your Discovery is taking longer than usual/i)
     .first()
     .waitFor();
   assert.ok(
@@ -332,7 +342,10 @@ export async function checkTradeStagesJourney(
   page: Page,
   fixture: CollectorFixture,
 ) {
-  // A fresh Trade entry must load indexed history without visiting Market first.
+  // A fresh Trade entry loads market history; advanced controls are optional.
+  await page
+    .getByRole("button", { name: "Advanced chart", exact: true })
+    .click();
   await page.getByRole("group", { name: "Chart range", exact: true }).waitFor();
   fixture.receiptAvailable = true;
   const input = page.getByLabel("You pay", { exact: true });
@@ -342,7 +355,9 @@ export async function checkTradeStagesJourney(
       .and(page.locator(":not([aria-pressed])"));
   await page.getByRole("button", { name: "ETH", exact: true }).click();
   await input.fill("0.01");
-  await page.getByText(/You pay 0.01 ETH/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   fixture.rejectNextSubmission = true;
   await submit("Buy $FUEL").click();
   await page
@@ -353,7 +368,9 @@ export async function checkTradeStagesJourney(
   assert.equal(fixture.submissions.length, 0);
   await page.getByRole("button", { name: "ETH", exact: true }).click();
   await input.fill("0.01");
-  await page.getByText(/You pay 0.01 ETH/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   await submit("Buy $FUEL").click();
   await page
     .getByText("Confirmed on Base Sepolia", { exact: true })
@@ -372,7 +389,9 @@ export async function checkTradeStagesJourney(
   fixture.allowance = 0n;
   await page.getByRole("button", { name: "WETH", exact: true }).click();
   await input.fill("0.02");
-  await page.getByText(/You pay 0.02 WETH/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   await submit("Buy $FUEL").click();
   await page
     .getByText("Confirmed on Base Sepolia", { exact: true })
@@ -393,7 +412,9 @@ export async function checkTradeStagesJourney(
     .and(page.locator("[aria-pressed]"))
     .click();
   await input.fill("0.1");
-  await page.getByText(/You pay 0.1 .*FUEL/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   await submit("Sell $FUEL").click();
   await page
     .getByText("Confirmed on Base Sepolia", { exact: true })
@@ -412,7 +433,9 @@ export async function checkApprovalReloadJourney(
 ) {
   fixture.allowance = 0n;
   await page.getByLabel("You pay", { exact: true }).fill("0.01");
-  await page.getByText(/You pay 0.01 WETH/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   const buy = page
     .getByRole("button", { name: "Buy $FUEL", exact: true })
     .and(page.locator(":not([aria-pressed])"));
@@ -433,7 +456,9 @@ export async function checkApprovalReloadJourney(
     .getByRole("button", { name: "Dismiss completed activity", exact: true })
     .click();
   await page.getByLabel("You pay", { exact: true }).fill("0.01");
-  await page.getByText(/You pay 0.01 WETH/).waitFor();
+  await page
+    .getByRole("region", { name: "Review trade", exact: true })
+    .waitFor();
   await buy.click();
   await page
     .getByText("Confirmed on Base Sepolia", { exact: true })

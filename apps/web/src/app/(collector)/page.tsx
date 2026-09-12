@@ -1,4 +1,6 @@
-import Image from "next/image";
+import Link from "next/link";
+import { CraftArt } from "@/components/ui/craft-art";
+import { collectionManifestArtifact } from "@orbit/config/collection-manifest";
 
 import { ButtonLink } from "@/components/ui/button";
 import { PageFrame } from "@/components/ui/page";
@@ -27,20 +29,72 @@ export default function Home() {
             </ButtonLink>
           </div>
         </div>
-        <figure className="min-w-0">
-          <Image
-            alt={applicationCopy.home.heroAlt}
-            src={applicationCopy.home.heroAsset}
-            width={1024}
-            height={1024}
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            preload
-            className="aspect-square w-full rounded-[var(--radius-surface)] object-cover"
+        <figure className="relative grid min-w-0 place-items-center overflow-hidden rounded-xl bg-[radial-gradient(ellipse_at_center,var(--surface-3),var(--canvas))]">
+          <CraftArt
+            className="aspect-square w-full max-w-[34rem]"
+            identityId={23}
+            track={collectionManifestArtifact.entries[22]!.track}
+            kind="transient"
           />
-          <figcaption className="mt-3 text-caption text-ink-soft">
-            Editorial artwork · browse identities in Explore
+          <figcaption className="absolute bottom-5 flex w-full items-center justify-between px-6 text-body-sm text-ink-soft">
+            <span>Identity #0023</span>
+            <Link
+              href="/fleet/23?from=explore"
+              className="underline underline-offset-4"
+            >
+              Meet this identity →
+            </Link>
           </figcaption>
         </figure>
+      </section>
+      <section
+        aria-labelledby="collecting-loop"
+        className="space-y-8 border-t border-line py-10"
+      >
+        <h2
+          id="collecting-loop"
+          className="font-display text-display font-semibold"
+        >
+          From first Discovery to forever.
+        </h2>
+        <ol className="grid gap-8 tablet:grid-cols-3">
+          <li className="space-y-3">
+            <span className="font-mono text-caption text-ink-faint">
+              01 · BUY
+            </span>
+            <h3 className="text-title font-semibold">Start with FUEL</h3>
+            <p className="max-w-[38ch] text-body text-ink-soft">
+              Each whole FUEL you hold pairs with one Grounded Craft.
+            </p>
+          </li>
+          <li className="space-y-3">
+            <span className="font-mono text-caption text-ink-faint">
+              02 · DISCOVER
+            </span>
+            <h3 className="text-title font-semibold">Meet your craft</h3>
+            <p className="max-w-[38ch] text-body text-ink-soft">
+              A random Discovery reveals its identity, reward track and tier in
+              your Fleet.
+            </p>
+          </li>
+          <li className="space-y-3">
+            <span className="font-mono text-caption text-ink-faint">
+              03 · LAUNCH
+            </span>
+            <h3 className="text-title font-semibold">Keep a favorite</h3>
+            <p className="max-w-[38ch] text-body text-ink-soft">
+              Launch burns one FUEL to make that craft a permanent Orbiter. Its
+              identity stays the same.
+            </p>
+          </li>
+        </ol>
+        <p className="max-w-[74ch] text-body text-ink-soft">
+          Trading fees fund the collection’s reward tracks. Rewards attach to
+          each craft and can be claimed by its eligible owner.{" "}
+          <Link href="/learn#rules" className="underline underline-offset-4">
+            See how rewards work →
+          </Link>
+        </p>
       </section>
     </PageFrame>
   );

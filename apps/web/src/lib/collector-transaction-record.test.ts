@@ -20,6 +20,26 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+it("does not claim the source tab closed when another tab reads its pending request", () => {
+  writeCollectorTransaction(
+    "scope",
+    { status: "simulated", label: "Launch #42" },
+    { kind: "action" },
+    metadata,
+    true,
+  );
+  const restored = readCollectorTransaction("scope");
+  expect(restored?.state).toMatchObject({ status: "submission-unknown" });
+  expect(restored?.state).toHaveProperty(
+    "message",
+    expect.stringContaining("another tab"),
+  );
+  expect(restored?.state).not.toHaveProperty(
+    "message",
+    expect.stringContaining("app closed"),
+  );
+});
+
 it("restores only receipt evidence in its wallet and deployment scope", () => {
   writeCollectorTransaction(
     "deployment:wallet-a",

@@ -130,6 +130,9 @@ it("shows a confirmation toast with approval consequences and deduplicates the s
       .click(),
   );
   expect(state.clear).toHaveBeenCalledTimes(1);
+  expect(document.activeElement?.getAttribute("aria-label")).toBe(
+    "Notifications (1 unread)",
+  );
   expect(state.records).toHaveLength(1);
   await open();
   expect(

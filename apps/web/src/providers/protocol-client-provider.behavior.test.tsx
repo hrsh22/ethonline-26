@@ -3,7 +3,10 @@
 import { selectIdentityConfiguration } from "@orbit/config/identity";
 import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest";
 import { protocolDeploymentManifest } from "@/lib/deployment";
-import { writeCollectorTransaction } from "@/lib/collector-transaction-record";
+import {
+  collectorTransactionStorageKey,
+  writeCollectorTransaction,
+} from "@/lib/collector-transaction-record";
 import { protocolAbis } from "@orbit/protocol/contracts";
 import {
   prepareProtocolTransaction,
@@ -2873,6 +2876,115 @@ describe("protocol client transaction coordination", () => {
     expect(testState.sendTransaction).toHaveBeenCalledTimes(1);
     expect(currentProtocol.transaction.status).toBe("confirmed");
   });
+  it("offers recovery for a stalled wallet response without sending the action twice", async () => {
+    vi.useFakeTimers();
+    testState.pathname = "/fleet/1639";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    let complete!: (hash: `0x${string}`) => void;
+    testState.sendTransaction.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    let execution!: ReturnType<ProtocolClient["execute"]>;
+    await act(async () => {
+      execution = currentProtocol.execute(
+        { type: "commit-collectible", identityId: 1639 },
+        "Launch #1639",
+      );
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(currentProtocol.transaction.status).toBe("simulated");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+    });
+    expect(currentProtocol.transaction.status).toBe("submission-unknown");
+    expect(
+      currentProtocol.getActionState({
+        type: "commit-collectible",
+        identityId: 1639,
+      }).enabled,
+    ).toBe(false);
+    await act(async () => {
+      complete(testState.hash as `0x${string}`);
+      await execution;
+    });
+    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(testState.sendTransaction).toHaveBeenCalledOnce();
+  });
+
+  it("follows another tab's confirmed receipt without another signature and ignores unrelated scopes", async () => {
+    testState.pathname = "/fleet";
+    await act(async () =>
+      root.render(
+        <ProtocolClientProvider>
+          <ProtocolCapture />
+        </ProtocolClientProvider>,
+      ),
+    );
+    const scope = `${deploymentManifestFingerprint(protocolDeploymentManifest!)}:84532:${testState.address}`;
+    const metadata = {
+      operationId: "other-tab-launch",
+      actionType: "commit-collectible",
+      identityIds: [1639],
+      affectedIdentityIds: [1639],
+      createdAt: Date.now(),
+    };
+    const key = collectorTransactionStorageKey(scope);
+    writeCollectorTransaction(
+      scope,
+      { status: "simulated", label: "Launch #1639" },
+      { kind: "action" },
+      metadata,
+      true,
+    );
+    await act(async () =>
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: `${key}:other-wallet`,
+          storageArea: localStorage,
+        }),
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("idle");
+    await act(async () =>
+      window.dispatchEvent(
+        new StorageEvent("storage", { key, storageArea: localStorage }),
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("submission-unknown");
+    expect(
+      currentProtocol.getActionState({
+        type: "commit-collectible",
+        identityId: 1639,
+      }).enabled,
+    ).toBe(false);
+    writeCollectorTransaction(
+      scope,
+      {
+        status: "confirmed",
+        label: "Launch #1639",
+        hash: testState.hash as `0x${string}`,
+      },
+      { kind: "action" },
+      metadata,
+    );
+    await act(async () =>
+      window.dispatchEvent(
+        new StorageEvent("storage", { key, storageArea: localStorage }),
+      ),
+    );
+    expect(currentProtocol.transaction.status).toBe("confirmed");
+    expect(testState.sendTransaction).not.toHaveBeenCalled();
+  });
+
   it("keeps uncertain wallet submission locked through navigation and reload", async () => {
     testState.pathname = "/fleet/1639";
     await act(async () =>

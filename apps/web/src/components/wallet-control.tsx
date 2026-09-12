@@ -1,6 +1,12 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
+import Link from "next/link";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { type ReactNode, useId } from "react";
 import { useConnection, useSwitchChain } from "wagmi";
 
@@ -222,34 +228,54 @@ function ConnectedWalletControl({
       : applicationCopy.shell.disconnectWallet;
   return (
     <WalletStateFrame state="connected">
-      {/* Below the rail breakpoint this pair shares one 56px bar with the
-          brand and the menu toggle, and the spelled-out button pushed it onto
-          a second line: the address floated above the wordmark and the header
-          grew to 96px on every route a wallet was connected on. The chip
-          drops its indicator and tightens, and the action becomes its icon. */}
-      <span
-        aria-label={applicationCopy.shell.connectedWallet}
-        className="wallet-address flex min-h-11 min-w-0 items-center gap-2 rounded-[var(--radius-control)] border border-line bg-canvas px-2 font-mono text-caption tracking-[0.02em] text-ink tabular-nums compact:px-3 compact:text-body-sm compact:tracking-[0.04em]"
-      >
-        <span
-          aria-hidden="true"
-          className="hidden size-1.5 flex-none rounded-full bg-[var(--status-success-fill)] laptop:inline-block"
-        />
-        {compactAddress(address)}
-      </span>
-      <Button
-        aria-busy={disconnecting || undefined}
-        aria-label={label}
-        className="px-3 laptop:px-4"
-        disabled={disconnecting}
-        onClick={onDisconnect}
-        size="sm"
-        type="button"
-        variant="ghost"
-      >
-        <LogOut aria-hidden="true" className="size-4 laptop:hidden" />
-        <span className="hidden laptop:inline">{label}</span>
-      </Button>
+      <Popover>
+        <PopoverTrigger
+          render={<Button variant="outline" size="sm" />}
+          aria-label={`Wallet ${compactAddress(address)}`}
+        >
+          <span
+            aria-label={applicationCopy.shell.connectedWallet}
+            className="font-mono text-caption"
+          >
+            {compactAddress(address)}
+          </span>
+          <ChevronDown aria-hidden="true" className="size-3" />
+        </PopoverTrigger>
+        <PopoverContent align="end" aria-label="Wallet account">
+          <p className="text-title-sm font-semibold">Your wallet</p>
+          <p className="mt-2 break-all font-mono text-body-sm">{address}</p>
+          <p className="mt-2 text-body-sm text-ink-soft">
+            {deploymentEnvironment.chainLabel} · Test assets have no value
+          </p>
+          <div className="mt-4 grid gap-1 border-t border-line pt-3">
+            <Link
+              href="/fleet"
+              className="flex min-h-11 items-center text-body"
+            >
+              View balances and Fleet
+            </Link>
+            <Link
+              href="/faucet"
+              className="flex min-h-11 items-center text-body"
+            >
+              Get test funds
+            </Link>
+            <Button
+              aria-busy={disconnecting || undefined}
+              aria-label={label}
+              className="justify-start px-0"
+              disabled={disconnecting}
+              onClick={onDisconnect}
+              size="sm"
+              type="button"
+              variant="ghost"
+            >
+              <LogOut aria-hidden="true" className="size-4" />
+              {label}
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
       {disconnecting || failed ? (
         <StateFeedback
           compact

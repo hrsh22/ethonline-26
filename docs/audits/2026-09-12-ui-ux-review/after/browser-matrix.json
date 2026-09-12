@@ -1,0 +1,573 @@
+{
+  "cases": [
+    {
+      "failures": [],
+      "label": "http:routes-and-security"
+    },
+    {
+      "failures": [],
+      "label": "home@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "explore@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "start@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "faucet@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "exchange@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "market@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "fleet@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-invalid@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-malformed@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-leading-zero@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards-legacy@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "relics@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "status@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "learn@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "global-404@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-sign-in@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-protected@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-diagnostics-protected@375/dark"
+    },
+    {
+      "failures": [],
+      "label": "home@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "explore@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "start@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "faucet@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "exchange@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "market@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "fleet@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-invalid@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-malformed@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-leading-zero@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards-legacy@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "relics@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "status@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "learn@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "global-404@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-sign-in@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-protected@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-diagnostics-protected@768/dark"
+    },
+    {
+      "failures": [],
+      "label": "home@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "explore@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "start@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "faucet@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "exchange@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "market@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "fleet@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-invalid@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-malformed@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-leading-zero@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards-legacy@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "relics@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "status@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "learn@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "global-404@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-sign-in@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-protected@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-diagnostics-protected@1024/dark"
+    },
+    {
+      "failures": [],
+      "label": "home@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "explore@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "start@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "faucet@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "exchange@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "market@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "fleet@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-invalid@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-malformed@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "craft-detail-leading-zero@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "rewards-legacy@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "relics@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "status@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "learn@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "global-404@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-sign-in@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-protected@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "admin-diagnostics-protected@1440/dark"
+    },
+    {
+      "failures": [],
+      "label": "shell/@320"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@320"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@320"
+    },
+    {
+      "failures": [],
+      "label": "shell/@390"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@390"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@390"
+    },
+    {
+      "failures": [],
+      "label": "shell/@768"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@768"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@768"
+    },
+    {
+      "failures": [],
+      "label": "shell/@900"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@900"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@900"
+    },
+    {
+      "failures": [],
+      "label": "shell/@901"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@901"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@901"
+    },
+    {
+      "failures": [],
+      "label": "shell/@1024"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@1024"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@1024"
+    },
+    {
+      "failures": [],
+      "label": "shell/@1200"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@1200"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@1200"
+    },
+    {
+      "failures": [],
+      "label": "shell/@1279"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@1279"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@1279"
+    },
+    {
+      "failures": [],
+      "label": "shell/@1280"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@1280"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@1280"
+    },
+    {
+      "failures": [],
+      "label": "shell/@1440"
+    },
+    {
+      "failures": [],
+      "label": "shell/faucet@1440"
+    },
+    {
+      "failures": [],
+      "label": "shell/admin/sign-in@1440"
+    },
+    {
+      "failures": [],
+      "label": "state:cached-stale/status (disconnected wallet, persisted snapshot with failed live refresh)"
+    },
+    {
+      "failures": [],
+      "label": "state:market-history/market (disconnected wallet, canonical swaps with matched fees)"
+    },
+    {
+      "failures": [],
+      "label": "state:disconnected/faucet (disconnected wallet, stubbed public API)"
+    },
+    {
+      "failures": [],
+      "label": "state:connecting/faucet (connecting wallet, stubbed public API)"
+    },
+    {
+      "failures": [],
+      "label": "state:wallet-reload-disconnect/faucet (ordinary connected wallet, stubbed public API)"
+    },
+    {
+      "failures": [],
+      "label": "state:wrong-network/faucet (wallet on another chain, stubbed public API)"
+    },
+    {
+      "failures": [],
+      "label": "state:ordinary-wallet/faucet (ordinary connected wallet, stubbed public API)"
+    },
+    {
+      "failures": [],
+      "label": "state:loading/faucet (ordinary connected wallet, reads in flight)"
+    },
+    {
+      "failures": [],
+      "label": "state:empty/faucet (ordinary connected wallet, empty inventory)"
+    },
+    {
+      "failures": [],
+      "label": "state:failed/faucet (ordinary connected wallet, failed reads)"
+    },
+    {
+      "failures": [],
+      "label": "state:funded/faucet (ordinary connected wallet, already funded)"
+    },
+    {
+      "failures": [],
+      "label": "state:cooldown/faucet (ordinary connected wallet, recipient cooldown)"
+    },
+    {
+      "failures": [],
+      "label": "admin-without-session:/admin"
+    },
+    {
+      "failures": [],
+      "label": "admin-without-session:/admin/diagnostics"
+    },
+    {
+      "failures": [],
+      "label": "admin-inputs:keeper-and-creator@375"
+    },
+    {
+      "failures": [],
+      "label": "idle-network:craft-detail"
+    },
+    {
+      "failures": [],
+      "label": "read-recovery:connected-faucet"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:hangar-selection@375"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:hangar-selection@768"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:hangar-selection@1024"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:hangar-selection@1440"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:hangar-selection@1280"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:approval-reload"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:trade-stages"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:funding-discovery"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:quote-recovery"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:receipt-recovery"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:partial-rewards"
+    },
+    {
+      "failures": [],
+      "label": "collector-journey:launch-reload"
+    },
+    {
+      "failures": [],
+      "label": "public-collection:explore-and-share"
+    },
+    {
+      "failures": [],
+      "label": "mobile-accessibility:back-text-motion"
+    }
+  ],
+  "failureCount": 0
+}

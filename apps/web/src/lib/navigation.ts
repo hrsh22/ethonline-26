@@ -42,7 +42,6 @@ interface NavigationDefinition {
 const collectorNavigation = {
   primary: [
     { href: "/explore", label: "Explore" },
-    { href: "/auction", label: "Auction" },
     { href: "/exchange", label: "Trade" },
     {
       href: "/fleet",
@@ -51,6 +50,7 @@ const collectorNavigation = {
     },
   ],
   utility: [
+    { href: "/auction", label: "Auction results" },
     { href: "/learn", label: "Learn" },
     { href: "/status", label: "Protocol status" },
     { href: "/faucet", label: "Faucet" },
@@ -97,19 +97,34 @@ const destinations = (
 export const createShellNavigation = (
   context: ShellContext,
   pathname: string,
+  options: {
+    readonly fromExplore?: boolean;
+    readonly auctionActive?: boolean;
+  } = {},
 ) => {
   const definitions =
     context === "collector" ? collectorNavigation : adminNavigation;
   const primaryPathname =
     context === "collector"
-      ? pathname === "/market"
-        ? "/exchange"
-        : pathname === "/relics"
-          ? "/explore"
-          : pathname
+      ? options.fromExplore && pathname.startsWith("/fleet/")
+        ? "/explore"
+        : pathname === "/market"
+          ? "/exchange"
+          : pathname === "/relics"
+            ? "/explore"
+            : pathname
       : pathname;
   return {
-    primary: destinations(primaryPathname, definitions.primary),
+    primary: destinations(
+      primaryPathname,
+      context === "collector" && options.auctionActive
+        ? [
+            definitions.primary[0]!,
+            { href: "/auction", label: "Auction" },
+            ...definitions.primary.slice(1),
+          ]
+        : definitions.primary,
+    ),
     utility: destinations(pathname, definitions.utility),
   } as const;
 };

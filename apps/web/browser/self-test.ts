@@ -317,6 +317,12 @@ export const runHarnessSelfTest = async (
       await installDataFixture(page, "cached-stale");
       await page.goto(`${origin}/status`, { waitUntil: "commit" });
       await settle(page);
+      await page
+        .getByRole("button", {
+          name: "Protocol checks and exact observations",
+          exact: true,
+        })
+        .click();
       const hint = page
         .getByLabel("Destination-locked funds", { exact: true })
         .locator("dd p")

@@ -1,9 +1,13 @@
 import { ccaAbis } from "@orbit/protocol/contracts";
-import { createProtocolReader } from "@orbit/protocol/reader";
+import {
+  createProtocolReader,
+  type CcaEscrowSnapshot,
+} from "@orbit/protocol/reader";
 import { makeViemProtocolTransport } from "@orbit/protocol/viem-transport";
 import {
   encodeFunctionData,
   parseAbi,
+  zeroAddress,
   type Abi,
   type AbiEvent,
   type Address,
@@ -154,6 +158,89 @@ const readAuctionLogs = async (
   return logs;
 };
 
+const readConnectedEscrow = async (
+  reader: ReturnType<typeof readerFor>,
+  account: Address,
+): Promise<CcaEscrowSnapshot | undefined> => {
+  if (sameAddress(account, zeroAddress)) return undefined;
+  const escrow = await reader.readCcaEscrow(account);
+  if (!escrow.supported) return unavailable();
+  return escrow;
+};
+
+const auctionWalletBalances = async (
+  client: ReturnType<typeof createProtocolReadClient>,
+  currency: Address,
+  escrow: CcaEscrowSnapshot | undefined,
+  observedBlock: bigint,
+) => {
+  // Public results never render wallet balances or submit wallet actions.
+  if (escrow === undefined)
+    return {
+      walletCurrencyBalance: 0n,
+      walletGasBalance: 0n,
+      maximumFuelWithdrawal: 0n,
+    };
+  const [walletCurrencyBalance, walletGasBalance, maximumFuelWithdrawal] =
+    await Promise.all([
+      client.readContract({
+        address: currency,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [escrow.beneficiary],
+        blockNumber: observedBlock,
+      }),
+      client.getBalance({
+        address: escrow.beneficiary,
+        blockNumber: observedBlock,
+      }),
+      escrow.deployed
+        ? client.readContract({
+            address: escrow.escrow,
+            abi: ccaAbis.bidEscrow,
+            functionName: "MAX_FUEL_WITHDRAWAL",
+            blockNumber: observedBlock,
+          })
+        : Promise.resolve(64n * 10n ** 18n),
+    ]);
+  return { walletCurrencyBalance, walletGasBalance, maximumFuelWithdrawal };
+};
+
+const auctionWalletFields = (
+  escrow: CcaEscrowSnapshot | undefined,
+  timestamp: bigint,
+  maximumFuelWithdrawal: bigint,
+) => {
+  if (escrow === undefined)
+    return {
+      tokenAllowance: 0n,
+      auctionAllowance: 0n,
+      escrow: {
+        address: zeroAddress,
+        deployed: false,
+        readyToBid: false,
+        currencyBalance: 0n,
+        fuelBalance: 0n,
+        maximumFuelWithdrawal,
+      },
+    };
+  return {
+    tokenAllowance: escrow.wethPermit2Allowance,
+    auctionAllowance:
+      escrow.permit2AuctionAllowance.expiration >= timestamp
+        ? escrow.permit2AuctionAllowance.amount
+        : 0n,
+    escrow: {
+      address: escrow.escrow,
+      deployed: escrow.deployed,
+      readyToBid: escrow.escrowReady,
+      currencyBalance: escrow.currencyBalance,
+      fuelBalance: escrow.fuelBalance,
+      maximumFuelWithdrawal,
+    },
+  };
+};
+
 const readAuction = async (
   account: Address,
   signal: AbortSignal,
@@ -163,11 +250,10 @@ const readAuction = async (
   const reader = readerFor(signal);
   const [auction, escrow, readiness] = await Promise.all([
     reader.readCcaAuction(),
-    reader.readCcaEscrow(account),
+    readConnectedEscrow(reader, account),
     reader.readCcaReadiness(),
   ]);
-  if (!auction.supported || !escrow.supported || !readiness.supported)
-    return unavailable();
+  if (!auction.supported || !readiness.supported) return unavailable();
   if (!auction.configurationMatchesManifest)
     throw new Error(
       "The auction contract does not match its published configuration.",
@@ -175,33 +261,16 @@ const readAuction = async (
 
   const observedBlock = [
     auction.observedBlock,
-    escrow.observedBlock,
+    escrow?.observedBlock ?? auction.observedBlock,
     readiness.observedBlock,
   ].reduce((minimum, block) => (block < minimum ? block : minimum));
-  const [
-    walletCurrencyBalance,
-    walletGasBalance,
-    maximumFuelWithdrawal,
-    block,
-    allSubmitted,
-    claimed,
-  ] = await Promise.all([
-    client.readContract({
-      address: asAddress(manifest.contracts.weth),
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [account],
-      blockNumber: observedBlock,
-    }),
-    client.getBalance({ address: account, blockNumber: observedBlock }),
-    escrow.deployed
-      ? client.readContract({
-          address: escrow.escrow,
-          abi: ccaAbis.bidEscrow,
-          functionName: "MAX_FUEL_WITHDRAWAL",
-          blockNumber: observedBlock,
-        })
-      : Promise.resolve(64n * 10n ** 18n),
+  const [balances, block, allSubmitted, claimed] = await Promise.all([
+    auctionWalletBalances(
+      client,
+      asAddress(manifest.contracts.weth),
+      escrow,
+      observedBlock,
+    ),
     client.getBlock({ blockNumber: observedBlock }),
     readAuctionLogs(
       client,
@@ -211,24 +280,30 @@ const readAuction = async (
       ) as AbiEvent,
       undefined,
       auction.startBlock,
-      observedBlock,
+      observedBlock < auction.endBlock ? observedBlock : auction.endBlock,
     ),
-    readAuctionLogs(
-      client,
-      asAddress(manifest.contracts.continuousClearingAuction),
-      ccaAbis.continuousClearingAuction.find(
-        (item) => item.type === "event" && item.name === "TokensClaimed",
-      ) as AbiEvent,
-      escrow.escrow,
-      auction.startBlock,
-      observedBlock,
-    ),
+    escrow === undefined
+      ? Promise.resolve([])
+      : readAuctionLogs(
+          client,
+          asAddress(manifest.contracts.continuousClearingAuction),
+          ccaAbis.continuousClearingAuction.find(
+            (item) => item.type === "event" && item.name === "TokensClaimed",
+          ) as AbiEvent,
+          escrow.escrow,
+          auction.startBlock,
+          observedBlock,
+        ),
   ]);
   signal.throwIfAborted();
   const submitted = allSubmitted.filter((log) => {
     const owner = (log as { readonly args?: { readonly owner?: Address } }).args
       ?.owner;
-    return owner !== undefined && sameAddress(owner, escrow.escrow);
+    return (
+      escrow !== undefined &&
+      owner !== undefined &&
+      sameAddress(owner, escrow.escrow)
+    );
   });
   const currencyCommitted = allSubmitted.reduce<bigint>((total, log) => {
     const amount = (log as { readonly args?: { readonly amount?: bigint } })
@@ -299,21 +374,13 @@ const readAuction = async (
     suggestedMaxPriceFormatted: formatAuctionPriceQ96(
       auction.clearingPriceQ96 + BigInt(manifest.cca.economics.tickSpacingQ96),
     ),
-    walletCurrencyBalance,
-    walletGasBalance,
-    tokenAllowance: escrow.wethPermit2Allowance,
-    auctionAllowance:
-      escrow.permit2AuctionAllowance.expiration >= block.timestamp
-        ? escrow.permit2AuctionAllowance.amount
-        : 0n,
-    escrow: {
-      address: escrow.escrow,
-      deployed: escrow.deployed,
-      readyToBid: escrow.escrowReady,
-      currencyBalance: escrow.currencyBalance,
-      fuelBalance: escrow.fuelBalance,
-      maximumFuelWithdrawal,
-    },
+    walletCurrencyBalance: balances.walletCurrencyBalance,
+    walletGasBalance: balances.walletGasBalance,
+    ...auctionWalletFields(
+      escrow,
+      block.timestamp,
+      balances.maximumFuelWithdrawal,
+    ),
     marketOpen: readiness.marketOpen,
     bids,
   };

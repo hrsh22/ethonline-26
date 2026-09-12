@@ -41,7 +41,7 @@ describe("root document layout", () => {
     const globalHtml = renderToStaticMarkup(<GlobalNotFound />);
 
     expect(routeHtml).not.toContain('data-shell="collector"');
-    expect(routeHtml).toContain("Return to the protocol overview");
+    expect(routeHtml).toContain("Search the collection");
     expect(globalHtml).toContain('data-shell="collector"');
     expect(globalHtml).toContain('href="#main-content"');
     expect(globalHtml).toContain('href="/fleet"');
@@ -49,6 +49,6 @@ describe("root document layout", () => {
     expect(globalHtml).toMatch(
       /class="[^"]*min-h-11[^"]*"[^>]*href="\/fleet"/u,
     );
-    expect(globalHtml).toContain("Return to the protocol overview");
+    expect(globalHtml).toContain("Search the collection");
   });
 });

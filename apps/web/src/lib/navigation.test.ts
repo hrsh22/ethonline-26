@@ -35,22 +35,22 @@ describe("collector navigation", () => {
 
     expect(navigation.primary.map((entry) => entry.href)).toEqual([
       "/explore",
-      "/auction",
       "/exchange",
       "/fleet",
     ]);
     expect(navigation.primary.map((entry) => entry.label)).toEqual([
       "Explore",
-      "Auction",
       "Trade",
       "My Fleet",
     ]);
     expect(navigation.utility.map((entry) => entry.href)).toEqual([
+      "/auction",
       "/learn",
       "/status",
       "/faucet",
     ]);
     expect(navigation.utility.map((entry) => entry.label)).toEqual([
+      "Auction results",
       "Learn",
       "Protocol status",
       "Faucet",

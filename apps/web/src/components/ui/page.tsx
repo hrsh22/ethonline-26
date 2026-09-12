@@ -19,7 +19,7 @@ export function PageFrame({
   return (
     <main
       className={cn(
-        "mx-auto w-full max-w-[100rem] min-w-0 px-4 pb-16 tablet:px-6",
+        "mx-auto w-full max-w-[85rem] min-w-0 px-4 pb-16 tablet:px-6",
         className,
       )}
       id={id}
@@ -52,7 +52,7 @@ export function PageHeading({
   return (
     <header
       className={cn(
-        "flex flex-col gap-4 border-b border-line py-5 tablet:flex-row tablet:items-end tablet:justify-between",
+        "flex flex-col gap-4 py-7 tablet:flex-row tablet:items-end tablet:justify-between",
         className,
       )}
     >

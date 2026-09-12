@@ -82,8 +82,14 @@ describe("admin wallet disconnect", () => {
     await act(async () => root.render(<WalletControl />));
 
     await act(async () => {
-      container.querySelector<HTMLButtonElement>("button")?.click();
-      await Promise.resolve();
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label^="Wallet "]')
+        ?.click();
+    });
+    await act(async () => {
+      document
+        .querySelector<HTMLButtonElement>('button[aria-label="Disconnect"]')
+        ?.click();
     });
 
     expect(state.endSession).toHaveBeenCalledOnce();
@@ -116,12 +122,17 @@ describe("admin wallet disconnect", () => {
     await act(async () => root.render(<WalletControl />));
     await act(async () => {
       container
+        .querySelector<HTMLButtonElement>('button[aria-label^="Wallet "]')
+        ?.click();
+    });
+    await act(async () => {
+      document
         .querySelector<HTMLButtonElement>('button[aria-label="Disconnect"]')
         ?.click();
     });
     await act(async () => root.render(<WalletControl />));
 
-    const pending = container.querySelector<HTMLButtonElement>(
+    const pending = document.querySelector<HTMLButtonElement>(
       'button[aria-label="Disconnecting wallet"]',
     );
     expect(pending?.disabled).toBe(true);
@@ -134,7 +145,7 @@ describe("admin wallet disconnect", () => {
     expect(container.querySelector('[role="alert"]')?.textContent).toContain(
       "The wallet is still connected. Retry disconnecting.",
     );
-    const retry = container.querySelector<HTMLButtonElement>(
+    const retry = document.querySelector<HTMLButtonElement>(
       'button[aria-label="Retry disconnect"]',
     );
     expect(retry?.disabled).toBe(false);

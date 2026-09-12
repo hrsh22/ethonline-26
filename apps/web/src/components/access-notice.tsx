@@ -109,6 +109,11 @@ const isConnecting = (
   walletRead.accessState === "disconnected" &&
   (!session.ready || session.connecting);
 
+const walletIsHealthy = (read: WalletRead) =>
+  read.status === "loaded" &&
+  !read.stale &&
+  read.snapshot.partialFailures.length === 0;
+
 export function AccessNotice({
   compact = false,
 }: {
@@ -117,6 +122,7 @@ export function AccessNotice({
   const { refreshWallet, walletRead, walletSynchronizing } =
     useProtocolClient();
   const session = useWalletSession();
+  if (walletIsHealthy(walletRead) && !walletSynchronizing) return null;
   const connecting = isConnecting(walletRead, session);
   const notice = connecting
     ? {

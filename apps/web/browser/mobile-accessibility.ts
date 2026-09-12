@@ -26,7 +26,7 @@ export async function assertNoOverflow(page: Page, label: string) {
 
 async function assertSharedActionWraps(page: Page) {
   const measured = await page
-    .getByRole("button", { name: "Preview Grounded", exact: true })
+    .getByRole("button", { name: "Grounded", exact: true })
     .first()
     .evaluate((source) => {
       const container = document.createElement("div");
@@ -71,11 +71,11 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     "auto",
   );
   const preview = page
-    .getByRole("button", { name: "Preview Orbiter", exact: true })
+    .getByRole("button", { name: "Orbiter", exact: true })
     .first();
   await preview.click();
   const groundedPreview = page
-    .getByRole("button", { name: "Preview Grounded", exact: true })
+    .getByRole("button", { name: "Grounded", exact: true })
     .first();
   await groundedPreview.waitFor();
   assert.equal(
@@ -132,7 +132,7 @@ export async function checkMobileAccessibility(page: Page, origin: string) {
     .click();
   await page.waitForURL(`${origin}/explore`);
   await page
-    .getByRole("region", { name: "Explore the collection" })
+    .getByRole("region", { name: "Collection" })
     .scrollIntoViewIfNeeded();
   await assertNoOverflow(page, "Public gallery at 200% root text");
 }

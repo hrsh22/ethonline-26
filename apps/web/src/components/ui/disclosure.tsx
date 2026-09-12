@@ -33,7 +33,7 @@ export function Disclosure({
       className={cn("border-t border-line", className)}
       defaultOpen={defaultOpen}
     >
-      <Collapsible.Trigger className="group flex min-h-11 w-full items-center gap-2 py-2 text-left font-mono text-body-sm font-medium text-ink-soft transition-colors duration-[var(--motion-fast)] hover:text-ink motion-reduce:transition-none">
+      <Collapsible.Trigger className="group flex min-h-11 w-full items-center gap-2 py-2 text-left font-sans text-body-sm font-medium text-ink-soft transition-colors duration-[var(--motion-fast)] hover:text-ink motion-reduce:transition-none">
         <ChevronRight
           aria-hidden="true"
           className="size-4 flex-none text-ink-faint transition-transform duration-[var(--motion-standard)] ease-[var(--ease-standard)] group-data-panel-open:rotate-90 motion-reduce:transition-none"

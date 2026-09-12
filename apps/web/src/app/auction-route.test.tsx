@@ -11,7 +11,7 @@ describe("collector auction route", () => {
   it("explains the clearing-price decision before the wallet instrument", () => {
     const html = renderToStaticMarkup(<AuctionPage />);
     expect(html).toContain(">Auction</h1>");
-    expect(html).toContain("Set the most you will pay");
+    expect(html).toContain("Follow the auction and manage your allocation");
     expect(html).toContain("Collector auction instrument");
   });
 });

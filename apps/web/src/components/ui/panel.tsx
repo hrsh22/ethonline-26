@@ -38,25 +38,25 @@ export function Panel({
       data-panel
     >
       {title === undefined && meta === undefined ? null : (
-        <div className="flex min-h-9 items-center justify-between gap-4 border-b border-line bg-surface-2 px-4 py-1.5">
+        <div className="flex min-h-12 items-center justify-between gap-4 px-5 pt-4 pb-1">
           {title === undefined ? (
             <span />
           ) : (
             <Title
-              className="font-mono text-label font-semibold tracking-[0.1em] text-ink uppercase"
+              className="font-heading text-title-sm font-semibold text-ink"
               id={titleId}
             >
               {title}
             </Title>
           )}
           {meta === undefined ? null : (
-            <div className="flex min-w-0 flex-none items-center gap-3 font-mono text-label tracking-[0.08em] text-ink-faint uppercase">
+            <div className="flex min-w-0 flex-none items-center gap-3 text-caption text-ink-soft">
               {meta}
             </div>
           )}
         </div>
       )}
-      <div className={cn("flex-1 p-4", bodyClassName)}>{children}</div>
+      <div className={cn("flex-1 p-5", bodyClassName)}>{children}</div>
       {footer === undefined ? null : (
         <div className="border-t border-line px-4 py-3">{footer}</div>
       )}

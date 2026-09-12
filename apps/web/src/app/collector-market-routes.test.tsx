@@ -38,7 +38,8 @@ describe("collector trade and market routes", () => {
     expect(html).toContain('href="/explore"');
     expect(html).toContain('href="/exchange">Trade $FUEL</a>');
     expect(html).toContain("Find the craft worth keeping.");
-    expect(html).toContain("Editorial artwork");
+    expect(html).toContain("From first Discovery to forever.");
+    expect(html).not.toContain("Editorial artwork");
     expect(html).not.toContain("Public collection signal");
   });
 
@@ -48,7 +49,9 @@ describe("collector trade and market routes", () => {
     // The route title names the task and matches its shell destination; the
     // assets it trades belong in the lede, not in an h1 that wraps twice.
     expect(html).toContain(">Trade</h1>");
-    expect(html).toContain("Buy and sell $FUEL for ETH or WETH");
+    expect(html).toContain(
+      "Buy FUEL to discover craft, or sell from your balance.",
+    );
     expect(html).toContain("Focused trade form");
     expect(html).not.toContain("Complete indexed market history");
   });

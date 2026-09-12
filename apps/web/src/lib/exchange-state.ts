@@ -392,6 +392,10 @@ const deriveSellReview = (
     status: "ready",
     submitEnabled: true,
     review: {
+      consequence: review,
+      destructive:
+        !validation.walletDiscoveryExempt &&
+        validation.walletImpact.lostWholeUnitCount > 0,
       sentence: `You pay ${displayAmount(quote.amountIn)} ${applicationCopy.exchange.token} and receive ${displayAmount(quote.amountOut)} ${settlementMode === "native" ? "ETH" : "WETH"}. The ${feePercent} fee is ${displayAmount(quote.tradingFee)} WETH. ${review}`,
       ...sellWarning(
         validation.walletDiscoveryExempt
@@ -419,7 +423,7 @@ const buyBoundarySentence = (
   }
   const count = recipient.mutations;
   if (count > 0) {
-    return `Buying this amount schedules ${count} random ${discoveryLabel(count)}.`;
+    return `Expected: ${count} random ${discoveryLabel(count)}.`;
   }
   return `After this trade, ${formatTokenAmount(validation.walletImpact.projectedNextDiscoveryDraw.remainingWei, { rounding: "ceil" }).display} ${applicationCopy.exchange.token} remains before the next random ${identity.terms.discoveryDraw}.`;
 };
@@ -430,6 +434,21 @@ const buyWarning = (discoveryCount: number) =>
         warning: `Large collection change: this trade schedules ${discoveryCount} random ${discoveryLabel(discoveryCount)}. Use a smaller amount if you only want one ${identity.terms.transientCollectible}.`,
       }
     : {};
+
+const buyMinimumCaveat = (
+  quote: ExchangeQuote,
+  validation: ValidatedMarketDiscoveryEvidence,
+) => {
+  if (validation.walletDiscoveryExempt) return undefined;
+  const { balance, mutations } = validation.evidence.recipient;
+  const minimumCount = Number(
+    (balance + exchangeMinimumAmountOut(quote.amountOut)) / 10n ** 18n -
+      balance / 10n ** 18n,
+  );
+  return minimumCount < mutations
+    ? `The minimum received supports ${minimumCount} ${discoveryLabel(minimumCount)}. A price change before confirmation could reduce this outcome.`
+    : undefined;
+};
 
 const deriveBuyReview = (
   quote: ExchangeQuote,
@@ -443,6 +462,9 @@ const deriveBuyReview = (
     status: "ready",
     submitEnabled: true,
     review: {
+      consequence: buyBoundarySentence(validation),
+      boundaryCaveat: buyMinimumCaveat(quote, validation),
+      destructive: false,
       sentence: `You pay ${displayAmount(quote.amountIn)} ${settlementMode === "native" ? "ETH" : "WETH"} and receive ${displayAmount(quote.amountOut)} ${applicationCopy.exchange.token}. The ${feePercent} fee is ${displayAmount(quote.tradingFee)} WETH. ${buyBoundarySentence(validation)}`,
       ...buyWarning(discoveryCount),
     },

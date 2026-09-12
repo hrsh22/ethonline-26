@@ -15,30 +15,38 @@ const stories: Record<number, string> = {
 export function RelicPreview({ identityId }: { readonly identityId: number }) {
   const [lit, setLit] = useState(false);
   return (
-    <div className="flex flex-col items-center gap-3 p-4">
+    <div className="flex min-w-0 flex-col items-center gap-3 p-4">
       <CraftArt
-        className="h-auto w-40 max-w-full"
+        className="h-auto w-64 max-w-full"
         identityId={identityId}
         kind="relic"
         lit={lit}
-        label={`Identity ${identityId}, illustrative ${lit ? "Orbiter" : "Grounded"} preview`}
+        label={`Identity ${identityId}, ${lit ? "Orbiter" : "Grounded"}`}
       />
-      <Button variant="outline" aria-pressed={lit} onClick={() => setLit(!lit)}>
-        {lit ? "Preview Grounded" : "Preview Orbiter"}
-      </Button>
-      <p className="text-caption text-ink-soft">
-        Preview only. No transaction.
-      </p>
+      <div
+        className="flex max-w-full flex-wrap justify-center gap-1 rounded-lg border border-line p-1"
+        aria-label="Appearance"
+      >
+        <Button
+          size="sm"
+          variant={lit ? "ghost" : "secondary"}
+          aria-pressed={!lit}
+          onClick={() => setLit(false)}
+        >
+          Grounded
+        </Button>
+        <Button
+          size="sm"
+          variant={lit ? "secondary" : "ghost"}
+          aria-pressed={lit}
+          onClick={() => setLit(true)}
+        >
+          Orbiter
+        </Button>
+      </div>
       {identity.key === "orbit-4444" ? (
         <p className="text-body-sm text-ink-soft">{stories[identityId]}</p>
       ) : null}
-      <details className="text-caption text-ink-soft">
-        <summary className="min-h-11 cursor-pointer py-3">
-          About this artwork
-        </summary>
-        Web illustration and fictional story. Decorative details carry no reward
-        benefits. Wallet artwork uses the sealed metadata.
-      </details>
     </div>
   );
 }

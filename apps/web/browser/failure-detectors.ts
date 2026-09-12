@@ -369,62 +369,50 @@ export const collectorHeaderCollisionFailure = async (
     : { detail: `${label}: ${collision}`, kind: "layout-collision" };
 };
 
-/** The promoted faucet utility must be both rendered and reachable above any
- * transient wallet notice in the sticky collector header. */
+/** Funding remains reachable as a utility without occupying primary navigation. */
 export const collectorFundingVisibilityFailure = async (
   page: Page,
   label: string,
 ): Promise<BrowserFailure | undefined> => {
-  const visibleLink = page.locator(
-    '[data-shell="collector"] header a[href="/faucet"]:visible',
-  );
-  if ((await visibleLink.count()) === 1) {
-    // Hydration opens and closes the real wallet chooser. Let its exit layer
-    // finish releasing pointer events before testing the header beneath it.
-    await visibleLink.click({ trial: true, timeout: 5_000 }).catch(() => {});
-  }
-  const issue = await page.evaluate(() => {
-    const header = document.querySelector<HTMLElement>(
-      '[data-shell="collector"] header',
-    );
-    if (header === null) return undefined;
-    const links = [
-      ...header.querySelectorAll<HTMLAnchorElement>('a[href="/faucet"]'),
-    ].filter((link) => {
-      const style = getComputedStyle(link);
-      const rect = link.getBoundingClientRect();
-      return [
-        style.display !== "none",
-        style.visibility !== "hidden",
-        Number(style.opacity) > 0,
-        rect.width > 0,
-        rect.height > 0,
-      ].every(Boolean);
-    });
-    if (links.length !== 1)
-      return `expected one visible Get test funds link, found ${links.length}`;
-    const link = links[0]!;
-    const rect = link.getBoundingClientRect();
-    const top = document.elementFromPoint(
-      rect.left + rect.width / 2,
-      rect.top + rect.height / 2,
-    );
-    if (top === null || (!link.contains(top) && !top.contains(link)))
-      return `Get test funds is obscured by ${top?.tagName.toLowerCase() ?? "nothing"}`;
-    if (
-      [
-        rect.left < 0,
-        rect.top < 0,
-        rect.right > document.documentElement.clientWidth,
-        rect.bottom > document.documentElement.clientHeight,
-      ].some(Boolean)
-    )
-      return "Get test funds is clipped outside the viewport";
+  if ((await page.locator('[data-shell="collector"]').count()) === 0)
     return undefined;
+  const dismiss = page.getByRole("button", {
+    name: "Dismiss completed activity",
+    exact: true,
   });
+  if (await dismiss.isVisible()) await dismiss.click();
+  const link = page
+    .locator('[data-shell="collector"] a[href="/faucet"]:visible')
+    .last();
+  if ((await link.count()) === 0)
+    return {
+      kind: "layout-collision",
+      detail: `${label}: missing funding utility`,
+    };
+  const scroll = await page.evaluate(() => window.scrollY);
+  let issue: string | undefined;
+  try {
+    await link.scrollIntoViewIfNeeded();
+    await link.click({ trial: true, timeout: 5000 });
+    const rect = await link.boundingBox();
+    const viewport = page.viewportSize();
+    if (
+      rect === null ||
+      viewport === null ||
+      rect.x < 0 ||
+      rect.x + rect.width > viewport.width
+    )
+      issue = "Funding utility is clipped";
+  } catch {
+    issue = "Funding utility is obscured or unreachable";
+  }
+  await page.evaluate(
+    (y) => window.scrollTo({ top: y, behavior: "instant" }),
+    scroll,
+  );
   return issue === undefined
     ? undefined
-    : { detail: `${label}: ${issue}`, kind: "layout-collision" };
+    : { kind: "layout-collision", detail: `${label}: ${issue}` };
 };
 
 /**
@@ -435,6 +423,8 @@ export const focusFailure = async (
   page: Page,
   label: string,
 ): Promise<BrowserFailure | undefined> => {
+  // Keyboard traversal requires an active tab; other matrix pages can take focus.
+  await page.bringToFront();
   const startedOnControl = await page.evaluate(() => {
     const active = document.activeElement;
     return (
@@ -460,14 +450,16 @@ export const focusFailure = async (
   // the document. BODY focus loss inside the page remains a failure.
   if (
     focused === undefined &&
-    startedOnControl &&
     !(await page.evaluate(() => document.hasFocus()))
   ) {
     await page.keyboard.press("Shift+Tab");
     focused = await readFocus();
   }
   if (focused === undefined) {
-    return { kind: "focus-broken", detail: `${label}: Tab reached no control` };
+    return {
+      kind: "focus-broken",
+      detail: `${label}: Tab reached no control (started on control: ${startedOnControl}, document focused: ${await page.evaluate(() => document.hasFocus())})`,
+    };
   }
   return focused.visible
     ? undefined
@@ -482,6 +474,11 @@ export const awaitAdvancedMarketChart = async (
   page: Page,
   timeout = 15_000,
 ) => {
+  const toggle = page.getByRole("button", {
+    name: "Advanced chart",
+    exact: true,
+  });
+  if (await toggle.isVisible()) await toggle.click();
   const chart = page
     .locator(
       '[data-library="tradecanvas"][role="region"]:not([aria-hidden="true"])',

@@ -27,9 +27,7 @@ describe("Launch completion evidence", () => {
     const pending = renderToStaticMarkup(
       <LaunchCompletion protocol={protocol} />,
     );
-    expect(pending).toContain(
-      "collection synchronization is still in progress",
-    );
+    expect(pending).toContain("Updating your Fleet");
     expect(pending).not.toContain("Launch complete");
     const verified = {
       ...protocol,
@@ -49,7 +47,7 @@ describe("Launch completion evidence", () => {
     );
     expect(completed).toContain("View Orbiter #1639");
     expect(completed).toContain("Launch burned 1 FUEL");
-    expect(completed).toContain("Reward Track: METAｃ");
+    expect(completed).toContain("Reward track: METAｃ");
     expect(completed).toContain("/fleet/1639");
   });
 });
@@ -94,9 +92,9 @@ it.each([false, true])(
     expect(container.querySelector('[role="status"]')?.textContent).toContain(
       "Orbiter #1639",
     );
-    expect(container.querySelector("a")?.getAttribute("href")).toBe(
-      "/fleet/1639",
-    );
+    expect(
+      container.querySelector('a[href="/fleet/1639"]')?.getAttribute("href"),
+    ).toBe("/fleet/1639");
     expect(animate).toHaveBeenCalledTimes(reduced ? 0 : 1);
     await act(async () => root.unmount());
     root = createRoot(container);

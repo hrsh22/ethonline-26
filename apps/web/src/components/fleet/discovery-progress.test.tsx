@@ -64,7 +64,7 @@ it.each([1, 60])(
         }}
       />,
     );
-    expect(html).toContain(`${minutes} min elapsed`);
+    expect(html).toContain(`Started ${minutes} min ago`);
     expect(html).toContain("Waiting for independently verified randomness");
     expect(html.includes("15-minute delay threshold")).toBe(minutes >= 15);
     expect(html).not.toContain("% complete");

@@ -1,3 +1,4 @@
+import { CollectionSearchRecovery } from "@/components/collection-search-recovery";
 import { RecoverySurface } from "@/components/recovery-surface";
 import { ButtonLink } from "@/components/ui/button";
 
@@ -11,7 +12,7 @@ export default function NotFound() {
     <RecoverySurface
       actions={
         <>
-          <ButtonLink href="/">{notFoundContent.link}</ButtonLink>
+          <CollectionSearchRecovery />
           <ButtonLink href="/learn" variant="outline">
             {notFoundContent.learn}
           </ButtonLink>

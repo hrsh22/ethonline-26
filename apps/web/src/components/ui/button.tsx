@@ -5,17 +5,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-/**
- * Every action in the application is one of these.
- *
- * The filled variant is the only place signal orange appears as a fill, so a
- * page has exactly one obvious next action. Everything else is a grey outline
- * or a quiet ghost. Labels are set in the mono caps the rest of the system
- * uses for controls, which is why they read as instrument keys rather than as
- * web buttons.
- */
+/** Primary actions use the accent fill; secondary controls stay quiet and legible. */
 const buttonVariants = cva(
-  "group/button inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-clip-padding px-4 font-mono text-body-sm font-semibold tracking-[0.06em] uppercase transition-[background-color,border-color,color,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none data-disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 motion-reduce:transition-none motion-reduce:active:scale-100",
+  "group/button inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] border border-transparent bg-clip-padding px-4 font-sans text-body-sm font-semibold tracking-normal transition-[background-color,border-color,color,transform,filter] duration-[var(--motion-fast)] ease-[var(--ease-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98] disabled:pointer-events-none data-disabled:pointer-events-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 motion-reduce:transition-none motion-reduce:active:scale-100",
   {
     variants: {
       variant: {

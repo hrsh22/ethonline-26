@@ -145,6 +145,8 @@ describe("Exchange panel", () => {
   };
 
   beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.removeItem("orbit:advanced-chart");
     (
       globalThis as typeof globalThis & {
         IS_REACT_ACT_ENVIRONMENT?: boolean;
@@ -203,7 +205,7 @@ describe("Exchange panel", () => {
     );
   });
 
-  it("offers truthful test funding beside a blank order", async () => {
+  it("offers a Discovery target and balance without repeating funding for a funded wallet", async () => {
     await act(async () =>
       root.render(
         <QueryClientProvider client={queryClient}>
@@ -212,13 +214,11 @@ describe("Exchange panel", () => {
       ),
     );
 
-    expect(container.textContent).toContain(
-      "Trade with test ETH or WETH. ETH also covers network fees.",
-    );
+    expect(container.textContent).toContain("Available: 5 WETH");
+    expect(container.textContent).toContain("Enough for 1 Discovery");
     expect(
-      container.querySelector("a[href='/faucet?returnTo=/exchange']")
-        ?.textContent,
-    ).toBe("Get test funds");
+      container.querySelector("a[href='/faucet?returnTo=/exchange']"),
+    ).toBeNull();
   });
 
   it("offers test ETH before a WETH approval when network-fee balance is empty", async () => {
@@ -389,7 +389,7 @@ describe("Exchange panel", () => {
       ),
     );
     expect(container.textContent).toContain(
-      "0.92807 $FUEL to the next discovery.",
+      "0.92807 $FUEL to the next Discovery.",
     );
     expect(
       container.querySelector('[title="0.928063001893924137"]')?.textContent,
@@ -423,11 +423,7 @@ describe("Exchange panel", () => {
         button.textContent === "Sell $FUEL",
     );
     expect(submit!.getAttribute("aria-disabled") === "true").toBe(true);
-    const reasonId = submit?.getAttribute("aria-describedby");
-    expect(reasonId).toBe("exchange-submit-disabled-reason");
-    expect(container.querySelector(`#${reasonId}`)?.textContent).toContain(
-      "Enter an amount and wait for a current quote",
-    );
+    expect(submit?.getAttribute("aria-describedby")).toBeNull();
     expect(container.textContent).toContain(
       "Enter an amount to get an automatic live quote.",
     );
@@ -436,7 +432,7 @@ describe("Exchange panel", () => {
     );
   });
 
-  it("places the live market before the order form in the responsive reading order", async () => {
+  it("places amount entry before market context in the responsive reading order", async () => {
     await act(async () =>
       root.render(
         <QueryClientProvider client={queryClient}>
@@ -445,11 +441,14 @@ describe("Exchange panel", () => {
       ),
     );
 
-    const panels = [...container.querySelectorAll<HTMLElement>("[data-panel]")];
-    expect(panels[0]?.textContent).toContain("Loading indexed market history");
-    expect(panels[0]?.parentElement?.className).toContain("laptop:col-span-7");
-    expect(panels[1]?.querySelector("#exchange-amount")).not.toBeNull();
-    expect(panels[1]?.className).toContain("laptop:col-span-5");
+    const order = container.querySelector<HTMLElement>("[data-panel]")!;
+    const market = container.querySelector('[aria-label="Market overview"]')!;
+    expect(order.querySelector("#exchange-amount")).not.toBeNull();
+    expect(order.className).toContain("laptop:col-span-5");
+    expect(
+      order.compareDocumentPosition(market) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(container.querySelector("[data-library='tradecanvas']")).toBeNull();
   });
 
   it("labels and disables the action while a transaction is pending", async () => {
@@ -923,16 +922,14 @@ describe("Exchange panel", () => {
       10_000_000_000_000_000n,
       createProtocol().address,
     );
-    expect(container.textContent).toContain(
-      "You pay 0.01 WETH and receive 1.2 $FUEL. The 3.00% fee is 0.0003 WETH. Buying this amount schedules 1 random Discovery.",
-    );
+    expect(container.textContent).toContain("Expected: 1 random Discovery.");
     const decisionReview = container.querySelector("[data-trade-review]");
     const exchangeActions = container.querySelector("[data-exchange-actions]");
     const tradeTerms = container.querySelector("[data-trade-terms]");
     expect(decisionReview).not.toBeNull();
     expect(decisionReview?.textContent).toContain("Minimum received");
-    expect(decisionReview?.textContent).toContain("Quote freshness");
-    expect(decisionReview?.textContent).toContain("0s old · block 46,081,327");
+    expect(decisionReview?.textContent).toContain("0s old");
+    expect(decisionReview?.textContent).not.toContain("block 46,081,327");
     expect(exchangeActions).not.toBeNull();
     expect(tradeTerms).not.toBeNull();
     expect(
@@ -1162,6 +1159,18 @@ describe("Exchange panel", () => {
       await new Promise((resolve) => window.setTimeout(resolve, 0));
     });
 
+    expect(
+      container.querySelector<HTMLInputElement>("#exchange-amount")?.value,
+    ).toBe("");
+    await act(async () => {
+      enterAmount(
+        container.querySelector<HTMLInputElement>("#exchange-amount")!,
+        "1",
+      );
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
+    });
     expect(testState.quoteExactInput).toHaveBeenCalledWith(
       false,
       1_000_000_000_000_000_000n,

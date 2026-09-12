@@ -18,7 +18,7 @@ export async function generateMetadata({
       parsedIdentityId === undefined
         ? applicationCopy.fleet.title
         : applicationCopy.craft.title(parsedIdentityId),
-    description: `${identity.brand} identity #${parsedIdentityId ?? "unknown"}. Explore its assigned traits and current onchain state. Web artwork is illustrative. Valueless test assets.`,
+    description: `${identity.brand} identity #${parsedIdentityId ?? "unknown"}. Explore its assigned traits and current onchain state.`,
   };
 }
 

@@ -4,7 +4,6 @@ import { runPublicRead } from "@orbit/protocol/read-lifetime";
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
 
 import { CollectorReturnLink } from "@/components/start/collector-return-link";
 import { TestFundsLink } from "@/components/shell/test-funds-link";
@@ -22,7 +21,14 @@ import {
   ExchangeInstrument,
   ExchangeMarketReference,
 } from "@/components/trade/exchange-instrument";
-import { TradeMarketChartContent } from "@/components/trade/trade-market-chart";
+import {
+  TradeCompletion,
+  TradeDiscoveryTarget,
+  TradeConfirmationSteps,
+} from "@/components/trade/exchange-progress";
+import { TradeMarketContext } from "@/components/trade/trade-market-context";
+import { useExchangeDraft } from "@/lib/use-exchange-draft";
+import { formatTokenAmount } from "@/lib/format";
 import {
   exchangeAccessQuoteMessage,
   ExchangeDecisionReview,
@@ -44,7 +50,6 @@ import {
   type ExchangeSettlementMode,
   type ExchangeWalletEvidence,
 } from "@/lib/exchange-state";
-import { deploymentEnvironment } from "@/lib/deployment";
 import { applicationCopy } from "@/lib/identity";
 import { isTransactionInFlight } from "@/lib/transaction-state";
 import { webProtocolQueryRetryCount } from "@/lib/web-rpc-policy";
@@ -124,18 +129,19 @@ const quoteForDisplay = <QuoteValue,>(
     ? quote
     : undefined;
 
-/**
- * Undefined hides the max control. An empty wallet has no maximum to offer, and
- * filling the field with `0` answered a deliberate action with "enter a
- * positive decimal" -- a format complaint about a number the control itself
- * had just written.
- */
+/** Zero is a known spendable balance; unavailable reads remain undefined. */
 const spendableBalanceWei = (
   wallet: ExchangeWalletEvidence,
   direction: ExchangeDirection,
   settlementMode: ExchangeSettlementMode,
 ): bigint | undefined => {
   if (wallet.status !== "loaded") return undefined;
+  if (
+    direction === "buy" &&
+    settlementMode === "native" &&
+    wallet.nativeBalanceWei === undefined
+  )
+    return undefined;
   const balance =
     direction === "sell"
       ? wallet.liquidTokenBalanceWei
@@ -145,7 +151,7 @@ const spendableBalanceWei = (
           ? 0n
           : wallet.nativeBalanceWei - NATIVE_TRADE_GAS_RESERVE_WEI
         : wallet.wethBalanceWei;
-  return balance > 0n ? balance : undefined;
+  return balance;
 };
 
 /**
@@ -276,8 +282,7 @@ function DiscoveryShortfall({
   return (
     <p className="text-body-sm text-ink-soft">
       <Amount rounding="ceil" value={next.remainingWei} /> $FUEL to the next
-      discovery. Estimated output can change; use the protected minimum received
-      below when checking the threshold.
+      Discovery. The trade review shows how your collection will change.
     </p>
   );
 }
@@ -448,8 +453,7 @@ function ExchangeActions({
     ? undefined
     : pending
       ? "Wait for the current transaction to finish before submitting another exchange."
-      : (accessMessage ??
-        "Enter an amount and wait for a current quote before submitting the exchange.");
+      : accessMessage;
   return (
     <div>
       <div className="grid gap-2" data-exchange-actions>
@@ -519,7 +523,7 @@ function InsufficientBalanceFeedback({
       <p>{applicationCopy.exchange.insufficientBalance(asset)}</p>
       <p>
         {applicationCopy.exchange.availableMaximum(
-          formatUnits(intent.availableBalanceWei, 18),
+          formatTokenAmount(intent.availableBalanceWei).display,
           asset,
         )}
       </p>
@@ -654,13 +658,67 @@ function ExchangeSecondaryDetails({
   );
 }
 
+type SubmittedTrade = {
+  readonly quote: ExchangeQuote;
+  readonly review: ReturnType<typeof deriveExchangeReviewState>;
+  readonly address: string;
+};
+const pendingReview = (
+  pending: boolean,
+  submitted: SubmittedTrade | undefined,
+  address: string | undefined,
+) => (pending && submitted?.address === address ? submitted : undefined);
+const isApproval = (protocol: ProtocolClient) =>
+  protocol.transactionMetadata?.isApproval === true;
+const healthObservedBlock = (protocol: ProtocolClient) =>
+  protocol.health?.deployment?.observedBlock;
+const marketReferencePrice = (protocol: ProtocolClient) =>
+  protocol.health?.market.price?.wethPerLiquidTokenWei;
+const executeTrade = (
+  protocol: ProtocolClient,
+  quote: NonNullable<ReturnType<typeof useMarketQuote>["quote"]>,
+  direction: ExchangeDirection,
+  mode: ExchangeSettlementMode,
+) =>
+  protocol.execute(
+    {
+      type: "swap-exact-input",
+      quote,
+      liquidTokenForWeth: direction === "sell",
+      exactAmountIn: quote.amountIn,
+      minimumAmountOut: exchangeMinimumAmountOut(quote.amountOut),
+      recipient: protocol.address!,
+      deadline: BigInt(
+        Math.floor(Date.now() / 1000) +
+          EXCHANGE_SLIPPAGE_POLICY.deadlineSeconds,
+      ),
+      useNative: mode === "native",
+    },
+    direction === "buy"
+      ? applicationCopy.exchange.directionToToken
+      : applicationCopy.exchange.directionToWeth,
+  );
+
 export function ExchangePanel() {
   const protocol = useProtocolClient();
-  const [direction, setDirection] = useState<ExchangeDirection>("buy");
-  const [settlementMode, setSettlementMode] =
-    useState<ExchangeSettlementMode>("wrapped");
+  const {
+    direction,
+    setDirection,
+    settlementMode,
+    setSettlementMode,
+    amount,
+    setAmount,
+  } = useExchangeDraft(protocol.address);
+  const [submitted, setSubmitted] = useState<{
+    quote: ExchangeQuote;
+    review: ReturnType<typeof deriveExchangeReviewState>;
+    address: string;
+  }>();
+  const [completed, setCompleted] = useState<{
+    direction: ExchangeDirection;
+    address: string;
+  }>();
   const settlementModeChosen = useRef(false);
-  const [amount, setAmount] = useState("");
   useEffect(() => {
     if (
       settlementModeChosen.current ||
@@ -673,7 +731,12 @@ export function ExchangePanel() {
       return;
     }
     setSettlementMode("native");
-  }, [amount, protocol.nativeBalanceRead, protocol.walletRead]);
+  }, [
+    amount,
+    protocol.nativeBalanceRead,
+    protocol.walletRead,
+    setSettlementMode,
+  ]);
   const wallet = exchangeWalletEvidence(protocol);
   const intent = deriveExchangeIntent({
     accessState: protocol.accessState,
@@ -697,40 +760,39 @@ export function ExchangePanel() {
   const reviewState = deriveExchangeReviewState({
     intent,
     nowMilliseconds,
-    observedBlock: protocol.health?.deployment?.observedBlock,
+    observedBlock: healthObservedBlock(protocol),
     quoteRead: quoteState.quoteRead,
     transactionPending,
   });
   const currentQuote =
     reviewState.status === "ready" ? quoteState.quote : undefined;
-  const displayedQuote = quoteForDisplay(reviewState.status, quoteState.quote);
+  const frozen = pendingReview(transactionPending, submitted, protocol.address);
+  const displayedQuote =
+    frozen?.quote ?? quoteForDisplay(reviewState.status, quoteState.quote);
+  const displayedReview = frozen?.review ?? reviewState;
 
   const submitExchange = async () => {
     if (currentQuote === undefined || protocol.address === undefined) return;
-    const result = await protocol.execute(
-      {
-        type: "swap-exact-input",
-        quote: currentQuote,
-        liquidTokenForWeth: direction === "sell",
-        exactAmountIn: currentQuote.amountIn,
-        minimumAmountOut: exchangeMinimumAmountOut(currentQuote.amountOut),
-        recipient: protocol.address,
-        deadline: BigInt(
-          Math.floor(Date.now() / 1_000) +
-            EXCHANGE_SLIPPAGE_POLICY.deadlineSeconds,
-        ),
-        useNative: settlementMode === "native",
-      },
-      direction === "buy"
-        ? applicationCopy.exchange.directionToToken
-        : applicationCopy.exchange.directionToWeth,
+    setSubmitted({
+      quote: currentQuote,
+      review: reviewState,
+      address: protocol.address,
+    });
+    setCompleted(undefined);
+    const result = await executeTrade(
+      protocol,
+      currentQuote,
+      direction,
+      settlementMode,
     );
-    if (result.status === "confirmed") setAmount("");
+    if (result.status === "confirmed") {
+      setAmount("");
+      setCompleted({ direction, address: protocol.address });
+    }
   };
 
   const assets = exchangeAssets(direction, settlementMode);
-  const referencePriceWei =
-    protocol.health?.market.price?.wethPerLiquidTokenWei;
+  const referencePriceWei = marketReferencePrice(protocol);
 
   /* DOM order is the reading order a trader needs: inputs, the current quote
    * summary, the submit button, then the full terms as evidence. */
@@ -739,75 +801,76 @@ export function ExchangePanel() {
       <div className="min-w-0 laptop:col-span-12">
         <CollectorReturnLink />
       </div>
-      <div className="min-w-0 laptop:col-span-7 laptop:sticky laptop:top-24">
-        <TradeMarketChartContent
-          history={protocol.marketHistory}
-          onRefresh={protocol.refreshMarketHistory}
-          priceWei={referencePriceWei}
-        />
-      </div>
       <Panel
         bodyClassName="grid gap-4"
-        className="laptop:col-span-5"
+        className="laptop:col-span-5 laptop:col-start-8 laptop:row-start-2"
         title={applicationCopy.exchange.orderTitle}
       >
         {accessNoticeVisible(protocol, intent.status) ? (
           <AccessNotice compact />
         ) : null}
-        <ExchangeDirectionControl
-          direction={direction}
-          onDirection={setDirection}
+        <TradeCompletion
+          completed={completed}
+          protocol={protocol}
+          onDismiss={() => setCompleted(undefined)}
         />
-        <SettlementModeControl
+        <fieldset disabled={transactionPending} className="grid min-w-0 gap-3">
+          <ExchangeDirectionControl
+            direction={direction}
+            onDirection={setDirection}
+          />
+          <SettlementModeControl
+            direction={direction}
+            mode={settlementMode}
+            onMode={(mode) => {
+              settlementModeChosen.current = true;
+              setSettlementMode(mode);
+            }}
+          />
+          <div className="grid gap-2">
+            <ExchangeInstrument
+              amount={amount}
+              intent={intent}
+              maximumAmountWei={spendableBalanceWei(
+                wallet,
+                direction,
+                settlementMode,
+              )}
+              onAmount={setAmount}
+              outputState={outputStateFor(quoteState.quoteRead.status)}
+              payAsset={assets.pay}
+              quote={displayedQuote}
+              receiveAsset={assets.receive}
+            />
+            <ExchangeIntentFeedback
+              intent={intent}
+              onBuyRecovery={() => setDirection("buy")}
+            />
+          </div>
+        </fieldset>
+        <TradeDiscoveryTarget
           direction={direction}
           mode={settlementMode}
-          onMode={(mode) => {
-            settlementModeChosen.current = true;
-            setSettlementMode(mode);
-          }}
+          wallet={wallet}
+          protocol={protocol}
+          pending={transactionPending}
+          onAmount={setAmount}
         />
-        <div className="grid gap-2">
-          <ExchangeInstrument
-            amount={amount}
-            intent={intent}
-            maximumAmountWei={spendableBalanceWei(
-              wallet,
-              direction,
-              settlementMode,
-            )}
-            onAmount={setAmount}
-            outputState={outputStateFor(quoteState.quoteRead.status)}
-            payAsset={assets.pay}
-            quote={displayedQuote}
-            receiveAsset={assets.receive}
-          />
-          <ExchangeIntentFeedback
-            intent={intent}
-            onBuyRecovery={() => setDirection("buy")}
-          />
-          <p className="text-body-sm text-ink-soft">
-            Trade with test ETH or WETH. ETH also covers network fees.{" "}
-            <TestFundsLink href="/faucet?returnTo=/exchange" />
-          </p>
-        </div>
-        <p className="text-body-sm text-ink-soft">
-          {direction === "buy" && settlementMode === "native"
-            ? "One wallet transaction buys $FUEL with ETH; no token approval is needed."
-            : `Your wallet may first ask to approve ${assets.pay}, then confirm the ${direction === "buy" ? "purchase" : "sale"}. Approval alone does not complete the trade.`}
-        </p>
-        <DiscoveryShortfall protocol={protocol} direction={direction} />
-        <p className="text-body-sm text-ink-soft">
-          {applicationCopy.exchange.discoveryRule}
-        </p>
-        <p className="text-body-sm text-ink-soft">
-          Network: {deploymentEnvironment.chainLabel}. Valueless test assets.
-        </p>
+        {amount === "" ? (
+          <DiscoveryShortfall protocol={protocol} direction={direction} />
+        ) : null}
+        <TradeConfirmationSteps
+          nativeBuy={settlementMode === "native" && direction === "buy"}
+          pending={transactionPending}
+          approval={isApproval(protocol)}
+          hasQuote={displayedQuote !== undefined}
+        />
         <ExchangeDecisionReview
           displayedQuote={displayedQuote}
           nowMilliseconds={nowMilliseconds}
           quoteReceivedAtMilliseconds={quoteReceivedAt(quoteState.quoteRead)}
           referencePriceWei={referencePriceWei}
-          reviewState={reviewState}
+          reviewState={displayedReview}
           settlementMode={settlementMode}
         />
         <div className="grid gap-3">
@@ -833,6 +896,13 @@ export function ExchangePanel() {
           protocol={protocol}
         />
       </Panel>
+      <div className="min-w-0 laptop:col-span-7 laptop:col-start-1 laptop:row-start-2 laptop:sticky laptop:top-24">
+        <TradeMarketContext
+          history={protocol.marketHistory}
+          onRefresh={protocol.refreshMarketHistory}
+          priceWei={referencePriceWei}
+        />
+      </div>
     </div>
   );
 }

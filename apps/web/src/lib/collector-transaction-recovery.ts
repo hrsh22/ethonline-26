@@ -38,6 +38,68 @@ export interface RecoveredReceipt {
 const approvalEvent = parseAbiItem(
   "event Approval(address indexed owner,address indexed spender,uint256 value)",
 );
+
+export interface CollectorActionRecoveryReader extends CollectorRecoveryReader {
+  readonly getBlockNumber: () => Promise<bigint>;
+  readonly getCandidateLogs: (args: {
+    addresses: readonly Address[];
+    fromBlock: bigint;
+    toBlock: bigint;
+  }) => Promise<readonly { transactionHash: Hash | null; removed: boolean }[]>;
+}
+
+/** Event hashes are candidates, never proof. Every recovered action must match
+ * the original sender, destination, calldata, value, time and canonical receipt. */
+export async function findCollectorTransactionHash(input: {
+  metadata: CollectorTransactionMetadata;
+  address: Address;
+  chainId: number;
+  canonicalTargets: readonly string[];
+  reader: CollectorActionRecoveryReader;
+}): Promise<Hash | undefined> {
+  const call = input.metadata.preparedCall;
+  if (call === undefined) return;
+  validateRecoveryScope(
+    call,
+    input.address,
+    input.chainId,
+    input.canonicalTargets,
+  );
+  const [chain, head] = await Promise.all([
+    input.reader.getChainId(),
+    input.reader.getBlockNumber(),
+  ]);
+  if (chain !== input.chainId)
+    throw new Error("The transaction reader is on a different network.");
+  const start = BigInt(call.afterBlock) + 1n;
+  // Bound automatic recovery to the first hour. Older/no-log/reverted calls can
+  // still be verified by their exact hash through the manual recovery control.
+  const end = head < start + 1_799n ? head : start + 1_799n;
+  if (end < start) return;
+  const logs = await input.reader.getCandidateLogs({
+    addresses: input.canonicalTargets as readonly Address[],
+    fromBlock: start,
+    toBlock: end,
+  });
+  const candidates = [
+    ...new Set(
+      logs
+        .filter((log) => !log.removed && log.transactionHash !== null)
+        .map((log) => log.transactionHash!),
+    ),
+  ]
+    .reverse()
+    .slice(0, 64);
+  for (const hash of candidates) {
+    try {
+      const transaction = await input.reader.getTransaction({ hash });
+      if (!matchesCall(transaction, hash, call)) continue;
+      return await recoverCollectorTransactionHash({ ...input, hash });
+    } catch {
+      // Unrelated transactions and temporary/reorged evidence cannot unlock a send.
+    }
+  }
+}
 export interface CollectorApprovalRecoveryReader extends CollectorRecoveryReader {
   readonly getBlockNumber: () => Promise<bigint>;
   readonly getLogs: (args: {

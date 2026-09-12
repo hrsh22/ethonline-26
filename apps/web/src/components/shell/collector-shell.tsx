@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useSyncExternalStore } from "react";
+import { useProtocolClient } from "@/providers/protocol-client-provider";
+import { protocolDeploymentManifest } from "@/lib/deployment";
 
 import { CollectorActivity } from "@/components/shell/collector-activity";
 import { CollectorNotifications } from "@/components/shell/collector-notifications";
 import { MobileActivityIndicator } from "@/components/shell/mobile-activity";
 import { ShellSkipLink } from "@/components/shell/rail";
-import { TestFundsLink } from "@/components/shell/test-funds-link";
 import { WalletControl } from "@/components/wallet-control";
 import { applicationCopy, identity } from "@/lib/identity";
 import {
@@ -57,7 +59,7 @@ function MobileNavigation({
   return (
     <nav
       aria-label="Mobile collector navigation"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-line bg-surface-1 pb-[env(safe-area-inset-bottom)] min-[901px]:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid auto-cols-fr grid-flow-col border-t border-line bg-surface-1 pb-[env(safe-area-inset-bottom)] min-[901px]:hidden"
       data-mobile-navigation
     >
       {destinations.map((destination) => {
@@ -125,6 +127,40 @@ function CollectorFooter({
   );
 }
 
+const subscribeToHydration = () => () => undefined;
+
+function ContextNavigation({ mobile = false }: { readonly mobile?: boolean }) {
+  // Cached protocol data can arrive before this Suspense boundary hydrates.
+  // Keep its first render identical to the server, then apply live navigation.
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
+  const pathname = usePathname();
+  const search = useSearchParams();
+  const protocol = useProtocolClient();
+  const end =
+    protocolDeploymentManifest !== undefined &&
+    "cca" in protocolDeploymentManifest
+      ? protocolDeploymentManifest.cca.lifecycle.endBlock
+      : undefined;
+  const auctionActive =
+    hydrated &&
+    end !== undefined &&
+    protocol.publicStatus !== undefined &&
+    protocol.publicStatus.observedBlock < BigInt(end);
+  const navigation = createShellNavigation("collector", pathname, {
+    fromExplore: search.get("from") === "explore",
+    auctionActive,
+  });
+  return mobile ? (
+    <MobileNavigation destinations={navigation.primary} />
+  ) : (
+    <PrimaryNavigation destinations={navigation.primary} />
+  );
+}
+
 /** Compact collector chrome. Transaction state remains mounted above route content. */
 export function CollectorShell({
   children,
@@ -150,37 +186,23 @@ export function CollectorShell({
                 href="/"
               >
                 <span aria-hidden="true" className="collector-orbit-mark" />
-                <span className="max-[400px]:hidden" data-brand-mark>
+                <span className="text-body-sm" data-brand-mark>
                   {identity.brand}
                 </span>
               </Link>
             </div>
-            <PrimaryNavigation destinations={navigation.primary} />
+            <Suspense
+              fallback={<PrimaryNavigation destinations={navigation.primary} />}
+            >
+              <ContextNavigation />
+            </Suspense>
             <div
               className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-2 min-[901px]:ml-0 min-[1280px]:whitespace-nowrap"
               data-collector-wallet-actions
             >
-              <TestFundsLink
-                active={pathname === "/faucet"}
-                className="hidden min-[1280px]:inline-flex"
-                variant="chrome"
-              />
               <CollectorNotifications />
               <WalletControl />
             </div>
-          </div>
-          <div
-            className="flex min-h-11 flex-wrap items-center justify-between gap-3 border-t border-line py-1 min-[1280px]:hidden"
-            data-collector-funding-row
-          >
-            <span className="font-mono text-label text-ink-faint max-[400px]:hidden">
-              Base Sepolia · no value
-            </span>
-            <TestFundsLink
-              active={pathname === "/faucet"}
-              className="shrink-0"
-              variant="chrome"
-            />
           </div>
         </div>
       </header>
@@ -189,7 +211,11 @@ export function CollectorShell({
         <div className="flex-1">{children}</div>
         <CollectorFooter utility={navigation.utility} />
       </div>
-      <MobileNavigation destinations={navigation.primary} />
+      <Suspense
+        fallback={<MobileNavigation destinations={navigation.primary} />}
+      >
+        <ContextNavigation mobile />
+      </Suspense>
     </div>
   );
 }

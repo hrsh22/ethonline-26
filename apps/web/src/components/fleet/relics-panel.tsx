@@ -7,6 +7,7 @@ import { StateFeedback } from "@/components/state-feedback";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { RelicPreview } from "@/components/ui/craft-preview";
+import { Disclosure } from "@/components/ui/disclosure";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Panel } from "@/components/ui/panel";
 import { Unavailable } from "@/components/ui/value";
@@ -39,7 +40,7 @@ interface RelicIdentity {
  */
 const relicIdentities: readonly RelicIdentity[] = [
   ...BASKET_RELIC_IDENTITY_IDS.map((identityId, index) => ({
-    allocation: applicationCopy.relics.stationAllocation,
+    allocation: "≈4.1667% of each track",
     identityId,
     kind: identity.terms.basketRelic,
     role: `${identity.terms.basketRelic} #${identityId}`,
@@ -142,7 +143,7 @@ function RelicCard({
 
   return (
     <article
-      className={`flex w-full flex-col rounded-[var(--radius-surface)] border bg-surface-1 ${
+      className={`flex min-w-0 w-full flex-col rounded-[var(--radius-surface)] border bg-surface-1 ${
         state === "held" ? "border-[var(--accent-border)]" : "border-line"
       }`}
       data-ownership={state}
@@ -154,7 +155,7 @@ function RelicCard({
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-mono text-title-sm font-semibold">
+          <h2 className="font-display text-title font-semibold">
             {relic.title}
           </h2>
           <span className="font-mono text-body-sm text-ink-faint tabular-nums">
@@ -162,7 +163,6 @@ function RelicCard({
           </span>
         </div>
         <DataList>
-          <DataRow label={applicationCopy.relics.kind} value={relic.kind} />
           <DataRow
             label={applicationCopy.relics.allocation}
             value={relic.allocation}
@@ -173,7 +173,9 @@ function RelicCard({
             value={<Badge tone={owned.tone}>{owned.badge}</Badge>}
           />
         </DataList>
-        <p className="mt-auto text-caption text-ink-soft">{caption}</p>
+        {state === "unknown" ? (
+          <p className="text-caption text-ink-soft">{caption}</p>
+        ) : null}
         <Link
           className="flex min-h-11 items-center font-mono text-body-sm font-semibold tracking-[0.06em] text-signal uppercase underline decoration-1 underline-offset-4 hover:text-ink"
           href={`/fleet/${relic.identityId}`}
@@ -270,17 +272,24 @@ export function RelicsPanel() {
 
   return (
     <div className="mt-4 grid gap-3">
-      <ul className="grid gap-3 compact:grid-cols-2 laptop:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-3 tablet:grid-cols-2">
         {relicIdentities.map((relic) => (
-          <li className="flex" key={relic.identityId}>
+          <li className="flex min-w-0" key={relic.identityId}>
             <RelicCard relic={relic} walletRead={walletRead} />
           </li>
         ))}
       </ul>
-      <div className="grid gap-3 laptop:grid-cols-2">
-        <AllocationComparison />
-        <TrackBoard health={health} />
-      </div>
+      <Disclosure title="Reward allocation and track status">
+        <p className="mb-4 text-body-sm text-ink-soft">
+          The three Stations share 12.5% of each track equally. These
+          allocations describe how rewards are divided; they are not a promised
+          payout.
+        </p>
+        <div className="grid gap-3 laptop:grid-cols-2">
+          <AllocationComparison />
+          <TrackBoard health={health} />
+        </div>
+      </Disclosure>
       <RelicNextAction walletRead={walletRead} />
     </div>
   );

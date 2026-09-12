@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { formatUnits } from "viem";
 
 import { Button } from "@/components/ui/button";
@@ -59,9 +60,27 @@ export function ExchangeInstrument({
 }) {
   return (
     <div className="grid gap-3">
+      {maximumAmountWei === undefined ? null : (
+        <p
+          className="text-right text-body-sm text-ink-soft"
+          title={formatUnits(maximumAmountWei, 18)}
+        >
+          Available: {formatTokenAmount(maximumAmountWei).display} {payAsset}
+        </p>
+      )}
+      {maximumAmountWei === 0n &&
+      payAsset !== applicationCopy.exchange.token ? (
+        <Link
+          href="/faucet?returnTo=%2Fexchange"
+          className="inline-flex min-h-11 items-center text-body-sm text-signal underline"
+        >
+          Get test funds
+        </Link>
+      ) : null}
       <AmountField
         action={
-          maximumAmountWei === undefined ? undefined : (
+          maximumAmountWei === undefined ||
+          maximumAmountWei === 0n ? undefined : (
             <div className="flex flex-wrap gap-1">
               {[25n, 50n].map((percent) => (
                 <Button

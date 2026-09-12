@@ -13,8 +13,7 @@ export default function ExchangePage() {
   return (
     <PageFrame>
       <PageHeading
-        eyebrow={applicationCopy.exchange.eyebrow}
-        lede={applicationCopy.exchange.lede}
+        lede="Buy FUEL to discover craft, or sell from your balance."
         title={applicationCopy.exchange.title}
       />
       <ExchangePanel />

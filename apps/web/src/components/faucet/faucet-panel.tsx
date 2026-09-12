@@ -2,10 +2,12 @@
 
 import type { TestnetFundingResponse } from "@orbit/config/testnet-funding";
 
+import { RelativeTime } from "@/components/ui/relative-time";
+
 import { CollectorReturnLink } from "@/components/start/collector-return-link";
 import type { StateFeedbackTone } from "@/components/state-feedback";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Metric, MetricGroup } from "@/components/ui/metric";
@@ -308,12 +310,7 @@ function EligibleAgainMetric({
     eligibleAt === undefined ? (
       <EligibleAgainWithoutDeadline response={response} view={view} />
     ) : (
-      <time
-        className="text-title-sm"
-        dateTime={new Date(eligibleAt).toISOString()}
-      >
-        {new Date(eligibleAt).toLocaleString()}
-      </time>
+      <RelativeTime timestamp={eligibleAt} countdown />
     );
   return (
     <Metric
@@ -702,6 +699,48 @@ function SecurityDisclosure() {
   );
 }
 
+function TopupAmount({
+  amounts,
+  label,
+}: {
+  readonly amounts: FaucetAmounts;
+  readonly label: string;
+}) {
+  const amount = amounts.remaining ?? amounts.target ?? amounts.balance;
+  return (
+    <div>
+      <p className="text-body-sm text-ink-soft">{label}</p>
+      <div className="mt-2 text-title">
+        {amount === undefined ? (
+          <span className="text-body text-ink-soft">Checking amount…</span>
+        ) : (
+          <FaucetAmountValue amount={amount} />
+        )}
+      </div>
+    </div>
+  );
+}
+function FundingOnward({
+  response,
+  view,
+}: {
+  readonly response: TestnetFundingResponse | undefined;
+  readonly view: TestnetFundingView;
+}) {
+  if (view.state !== "funded" && view.state !== "cooldown") return null;
+  const eligibleAt = nextEligibleAt(response);
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <ButtonLink href="/exchange">Continue to Trade</ButtonLink>
+      {eligibleAt === undefined ? null : (
+        <p className="text-body-sm text-ink-soft">
+          Next top-up: <RelativeTime timestamp={eligibleAt} countdown />
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function FaucetPanel() {
   const protocol = useProtocolClient();
   const funding = useTestnetFunding(protocol, "faucet");
@@ -723,20 +762,32 @@ export function FaucetPanel() {
   return (
     <div className="mt-5 grid gap-3">
       <CollectorReturnLink />
-      <EligibilityBoard
-        gas={gas}
-        response={funding.response}
-        view={funding.view}
-        weth={weth}
-      />
-      <FaucetLimits response={funding.response} />
+      <div className="flex flex-wrap gap-6 rounded-lg bg-surface-1 p-5">
+        <TopupAmount amounts={gas} label="ETH for network fees" />
+        <TopupAmount amounts={weth} label="WETH for trading" />
+      </div>
       <RequestPanel
         fund={funding.fund}
         response={funding.response}
         retry={funding.retry}
         view={funding.view}
       />
-      <AssetEducation fuel={fuel} gas={gas} weth={weth} />
+      <FundingOnward response={funding.response} view={funding.view} />
+      <Disclosure searchable title="Balances and eligibility">
+        {" "}
+        <EligibilityBoard
+          gas={gas}
+          response={funding.response}
+          view={funding.view}
+          weth={weth}
+        />
+      </Disclosure>
+      <Disclosure searchable title="Funding limits">
+        <FaucetLimits response={funding.response} />
+      </Disclosure>
+      <Disclosure searchable title="About test assets">
+        <AssetEducation fuel={fuel} gas={gas} weth={weth} />
+      </Disclosure>
       <SecurityDisclosure />
     </div>
   );

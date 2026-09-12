@@ -1,15 +1,18 @@
 "use client";
 
+import { zeroAddress } from "viem";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Address } from "viem";
 
+import { Disclosure } from "@/components/ui/disclosure";
 import { AccessNotice } from "@/components/access-notice";
 import { StateFeedback, DisabledReason } from "@/components/state-feedback";
 import { TestFundsLink } from "@/components/shell/test-funds-link";
 import { TransactionStatus } from "@/components/transaction-status";
 import { AmountField } from "@/components/ui/amount-field";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Metric, MetricGroup } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
@@ -94,8 +97,10 @@ const fundingCoverage = (committed: bigint, minimum: bigint): string => {
 
 function AuctionTape({
   snapshot,
+  explanation,
 }: {
   readonly snapshot: CollectorAuctionSnapshot;
+  readonly explanation?: string | undefined;
 }) {
   const phase = auctionPhase(snapshot);
   const progress = auctionProgress(snapshot);
@@ -119,7 +124,7 @@ function AuctionTape({
         >
           {copy.label}
         </Badge>
-        <p>{copy.explanation}</p>
+        <p>{explanation ?? copy.explanation}</p>
       </div>
       <div className="auction-tape__blocks font-mono tabular-nums">
         <span>Block {snapshot.observedBlock.toString()}</span>
@@ -378,151 +383,174 @@ function AuctionInstrument({
           </p>
         </Panel>
       ) : null}
-      <MetricGroup columns={4} label="Auction funding progress">
-        <Metric
-          hint={fundingCoverage(
-            snapshot.currencyCommitted,
-            snapshot.minimumRaise,
-          )}
-          label="Committed"
-          tone="live"
-          value={`${formatAuctionAmount(snapshot.currencyCommitted, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-        />
-        <Metric
-          hint="The final cleared amount must reach this threshold."
-          label="Minimum to succeed"
-          value={`${formatAuctionAmount(snapshot.minimumRaise, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-        />
-        <Metric
-          hint="Submitted commitments can clear for less than their maximum amount."
-          label={
-            commitmentCushion >= 0n ? "Commitment cushion" : "Still needed"
-          }
-          value={`${formatAuctionAmount(commitmentGap, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-        />
-        <Metric
-          hint="This clearing-derived value determines graduation."
-          label="Cleared / raised"
-          value={`${formatAuctionAmount(snapshot.currencyRaised, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-        />
-      </MetricGroup>
-      <MetricGroup columns={3} label="Current auction measurements">
-        <Metric
-          label="Clearing price"
-          tone="live"
-          value={`${snapshot.clearingPriceFormatted} ${snapshot.currency.symbol}`}
-        />
-        <Metric
-          label="Floor price"
-          value={`${snapshot.floorPriceFormatted} ${snapshot.currency.symbol}`}
-        />
-        <Metric
-          label="Token allocation"
-          value={`${formatAuctionAmount(snapshot.tokensSold, snapshot.token.decimals)} / ${formatAuctionAmount(snapshot.totalTokens, snapshot.token.decimals)}`}
-        />
-      </MetricGroup>
-
-      <div className="auction-workspace">
-        <Panel
-          title="Bid ticket"
-          tone={auctionPhase(snapshot) === "live" ? "live" : "default"}
-        >
-          <div className="grid gap-4">
-            <AmountField
-              id="auction-bid-amount"
-              label="Commit"
-              onValueChange={setAmount}
-              unit={snapshot.currency.symbol}
-              value={amount}
-            />
-            <AmountField
-              description="Your bid may clear below this ceiling."
-              id="auction-max-price"
-              label="Maximum price per token"
-              onValueChange={setMaxPrice}
-              unit={snapshot.currency.symbol}
-              value={maxPrice}
-            />
-            <p className="text-body-sm text-ink-soft">
-              Bidding needs test WETH plus Base Sepolia ETH for network fees.{" "}
-              <TestFundsLink href="/faucet?returnTo=/auction" />
+      {snapshot.marketOpen ? (
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-surface-1 p-5">
+          <div>
+            <h2 className="text-heading">Auction complete</h2>
+            <p className="mt-2 text-body text-ink-soft">
+              {formatAuctionAmount(
+                snapshot.tokensSold,
+                snapshot.token.decimals,
+              )}{" "}
+              FUEL allocated ·{" "}
+              {formatAuctionAmount(
+                snapshot.currencyRaised,
+                snapshot.currency.decimals,
+              )}{" "}
+              {snapshot.currency.symbol} raised
             </p>
-            <DataList>
-              <DataRow
-                label="Wallet balance"
-                value={`${formatAuctionAmount(snapshot.walletCurrencyBalance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-              />
-              <DataRow
-                label="Permit2 token approval"
-                value={`${formatAuctionAmount(snapshot.tokenAllowance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-              />
-              <DataRow
-                label="Auction allowance"
-                value={`${formatAuctionAmount(snapshot.auctionAllowance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
-              />
-              <DataRow
-                label="Network fee balance"
-                value={`${formatAuctionAmount(snapshot.walletGasBalance, 18)} ETH`}
-              />
-            </DataList>
-            <div aria-label="Bid steps" className="grid gap-2">
-              <p className="font-mono text-label text-ink-faint">Bid steps</p>
-              <ol className="grid gap-1 text-body-sm text-ink-soft">
-                {[
-                  "Prepare delivery account",
-                  `Approve ${amount || "—"} ${snapshot.currency.symbol} for Permit2`,
-                  `Allow auction to spend ${amount || "—"} ${snapshot.currency.symbol}`,
-                  `Place bid at up to ${maxPrice || "—"} ${snapshot.currency.symbol}`,
-                ].map((label, index) => (
-                  <li
-                    className={index === bidStep ? "text-ink" : undefined}
-                    key={label}
-                  >
-                    {index < bidStep ? "✓" : index === bidStep ? "→" : "·"}{" "}
-                    {label}
-                  </li>
-                ))}
-              </ol>
-            </div>
-            {bidAction === undefined ? (
-              <Button disabled>Place bid</Button>
-            ) : (
-              <Button disabled={busy} onClick={() => void run(bidAction)}>
-                {bidActionLabel(bidAction, snapshot)}
-              </Button>
-            )}
-            {bidAction?.type === "approve-token" ||
-            bidAction?.type === "approve-auction" ? (
-              <p className="text-body-sm text-ink-soft">
-                Each allowance is capped at this bid amount. Placing the bid
-                remains a separate wallet action.
-              </p>
-            ) : null}
-            {!next.state.enabled && next.state.reason !== undefined ? (
-              <div>
-                <DisabledReason id="auction-bid-disabled">
-                  {next.state.reason}
-                </DisabledReason>
-                {next.state.condition === "insufficient-weth" ? (
-                  <TestFundsLink
-                    className="mt-1"
-                    href="/faucet?returnTo=/auction"
-                  >
-                    Get test WETH
-                  </TestFundsLink>
-                ) : null}
-                {next.state.condition === "insufficient-eth" ? (
-                  <TestFundsLink
-                    className="mt-1"
-                    href="/faucet?returnTo=/auction"
-                  >
-                    Get test ETH
-                  </TestFundsLink>
-                ) : null}
-              </div>
-            ) : null}
           </div>
-        </Panel>
+          <ButtonLink href="/exchange">Trade FUEL</ButtonLink>
+        </div>
+      ) : null}
+      <Disclosure searchable title="Auction results and details">
+        <MetricGroup columns={4} label="Auction funding progress">
+          <Metric
+            hint={fundingCoverage(
+              snapshot.currencyCommitted,
+              snapshot.minimumRaise,
+            )}
+            label="Committed"
+            tone="live"
+            value={`${formatAuctionAmount(snapshot.currencyCommitted, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+          />
+          <Metric
+            hint="The final cleared amount must reach this threshold."
+            label="Minimum to succeed"
+            value={`${formatAuctionAmount(snapshot.minimumRaise, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+          />
+          <Metric
+            hint="Submitted commitments can clear for less than their maximum amount."
+            label={
+              commitmentCushion >= 0n ? "Commitment cushion" : "Still needed"
+            }
+            value={`${formatAuctionAmount(commitmentGap, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+          />
+          <Metric
+            hint="This clearing-derived value determines graduation."
+            label="Cleared / raised"
+            value={`${formatAuctionAmount(snapshot.currencyRaised, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+          />
+        </MetricGroup>
+        <MetricGroup columns={3} label="Current auction measurements">
+          <Metric
+            label="Clearing price"
+            tone="live"
+            value={`${snapshot.clearingPriceFormatted} ${snapshot.currency.symbol}`}
+          />
+          <Metric
+            label="Floor price"
+            value={`${snapshot.floorPriceFormatted} ${snapshot.currency.symbol}`}
+          />
+          <Metric
+            label="Token allocation"
+            value={`${formatAuctionAmount(snapshot.tokensSold, snapshot.token.decimals)} / ${formatAuctionAmount(snapshot.totalTokens, snapshot.token.decimals)}`}
+          />
+        </MetricGroup>
+      </Disclosure>
+      <div className="auction-workspace">
+        {auctionPhase(snapshot) === "live" ? (
+          <Panel
+            title="Bid ticket"
+            tone={auctionPhase(snapshot) === "live" ? "live" : "default"}
+          >
+            <div className="grid gap-4">
+              <AmountField
+                id="auction-bid-amount"
+                label="Commit"
+                onValueChange={setAmount}
+                unit={snapshot.currency.symbol}
+                value={amount}
+              />
+              <AmountField
+                description="Your bid may clear below this ceiling."
+                id="auction-max-price"
+                label="Maximum price per token"
+                onValueChange={setMaxPrice}
+                unit={snapshot.currency.symbol}
+                value={maxPrice}
+              />
+              <p className="text-body-sm text-ink-soft">
+                Bidding needs test WETH plus Base Sepolia ETH for network fees.{" "}
+                <TestFundsLink href="/faucet?returnTo=/auction" />
+              </p>
+              <DataList>
+                <DataRow
+                  label="Wallet balance"
+                  value={`${formatAuctionAmount(snapshot.walletCurrencyBalance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+                />
+                <DataRow
+                  label="Permit2 token approval"
+                  value={`${formatAuctionAmount(snapshot.tokenAllowance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+                />
+                <DataRow
+                  label="Auction allowance"
+                  value={`${formatAuctionAmount(snapshot.auctionAllowance, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+                />
+                <DataRow
+                  label="Network fee balance"
+                  value={`${formatAuctionAmount(snapshot.walletGasBalance, 18)} ETH`}
+                />
+              </DataList>
+              <div aria-label="Bid steps" className="grid gap-2">
+                <p className="font-mono text-label text-ink-faint">Bid steps</p>
+                <ol className="grid gap-1 text-body-sm text-ink-soft">
+                  {[
+                    "Prepare delivery account",
+                    `Approve ${amount || "—"} ${snapshot.currency.symbol} for Permit2`,
+                    `Allow auction to spend ${amount || "—"} ${snapshot.currency.symbol}`,
+                    `Place bid at up to ${maxPrice || "—"} ${snapshot.currency.symbol}`,
+                  ].map((label, index) => (
+                    <li
+                      className={index === bidStep ? "text-ink" : undefined}
+                      key={label}
+                    >
+                      {index < bidStep ? "✓" : index === bidStep ? "→" : "·"}{" "}
+                      {label}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              {bidAction === undefined ? (
+                <Button disabled>Place bid</Button>
+              ) : (
+                <Button disabled={busy} onClick={() => void run(bidAction)}>
+                  {bidActionLabel(bidAction, snapshot)}
+                </Button>
+              )}
+              {bidAction?.type === "approve-token" ||
+              bidAction?.type === "approve-auction" ? (
+                <p className="text-body-sm text-ink-soft">
+                  Each allowance is capped at this bid amount. Placing the bid
+                  remains a separate wallet action.
+                </p>
+              ) : null}
+              {!next.state.enabled && next.state.reason !== undefined ? (
+                <div>
+                  <DisabledReason id="auction-bid-disabled">
+                    {next.state.reason}
+                  </DisabledReason>
+                  {next.state.condition === "insufficient-weth" ? (
+                    <TestFundsLink
+                      className="mt-1"
+                      href="/faucet?returnTo=/auction"
+                    >
+                      Get test WETH
+                    </TestFundsLink>
+                  ) : null}
+                  {next.state.condition === "insufficient-eth" ? (
+                    <TestFundsLink
+                      className="mt-1"
+                      href="/faucet?returnTo=/auction"
+                    >
+                      Get test ETH
+                    </TestFundsLink>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </Panel>
+        ) : null}
 
         <Panel
           title="Your delivery"
@@ -583,6 +611,52 @@ function AuctionInstrument({
   );
 }
 
+function PublicAuctionResults({
+  snapshot,
+}: {
+  readonly snapshot: CollectorAuctionSnapshot;
+}) {
+  return (
+    <div className="mt-5 grid gap-5">
+      <AuctionTape
+        snapshot={snapshot}
+        explanation={
+          auctionPhase(snapshot) === "complete"
+            ? "The auction has ended. Connect your wallet to check your allocation or refund."
+            : undefined
+        }
+      />
+      <MetricGroup columns={3} label="Public auction results">
+        <Metric
+          label="Raised"
+          value={`${formatAuctionAmount(snapshot.currencyRaised, snapshot.currency.decimals)} ${snapshot.currency.symbol}`}
+        />
+        <Metric
+          label="FUEL allocated"
+          value={formatAuctionAmount(
+            snapshot.tokensSold,
+            snapshot.token.decimals,
+          )}
+        />
+        <Metric
+          label="Clearing price"
+          value={`${snapshot.clearingPriceFormatted} ${snapshot.currency.symbol}`}
+        />
+      </MetricGroup>
+      {snapshot.marketOpen ? (
+        <div>
+          <ButtonLink href="/exchange">Trade FUEL</ButtonLink>
+        </div>
+      ) : null}
+      <AccessNotice compact />
+    </div>
+  );
+}
+const auctionReadAccount = (protocol: ReturnType<typeof useProtocolClient>) =>
+  protocol.accessState === "ready" && protocol.address !== undefined
+    ? protocol.address
+    : zeroAddress;
+
 export function AuctionPanel({
   adapter = auctionAdapter,
 }: {
@@ -593,24 +667,27 @@ export function AuctionPanel({
     | { readonly status: "idle" }
     | { readonly status: "loading" }
     | { readonly status: "failed"; readonly error: Error }
-    | { readonly status: "loaded"; readonly snapshot: CollectorAuctionSnapshot }
+    | {
+        readonly status: "loaded";
+        readonly account: string;
+        readonly snapshot: CollectorAuctionSnapshot;
+      }
   >({ status: "idle" });
 
   const account = protocol.address;
+  const readAccount = auctionReadAccount(protocol);
   useEffect(() => {
-    if (
-      !adapter.configured ||
-      protocol.accessState !== "ready" ||
-      account === undefined
-    )
-      return;
+    if (!adapter.configured) return;
     const controller = new AbortController();
     void Promise.resolve()
       .then(() => {
         setRead({ status: "loading" });
-        return adapter.read(account, controller.signal);
+        return adapter.read(readAccount, controller.signal);
       })
-      .then((snapshot) => setRead({ status: "loaded", snapshot }))
+      .then((snapshot) => {
+        if (!controller.signal.aborted)
+          setRead({ status: "loaded", account: readAccount, snapshot });
+      })
       .catch((cause) => {
         if (!controller.signal.aborted)
           setRead({
@@ -619,25 +696,23 @@ export function AuctionPanel({
           });
       });
     return () => controller.abort();
-  }, [account, adapter, protocol.accessState]);
+  }, [readAccount, adapter]);
 
   if (!adapter.configured)
     return (
       <div className="mt-5">
         <StateFeedback
-          description="The collector interface is ready and will connect when the CCA address and reader are published for this deployment."
+          description="Auction details will appear here when a sale is scheduled."
           title="Auction deployment pending"
           tone="notice"
         />
       </div>
     );
-  if (protocol.accessState !== "ready" || account === undefined)
-    return (
-      <div className="mt-5">
-        <AccessNotice />
-      </div>
-    );
-  if (read.status === "idle" || read.status === "loading")
+  if (
+    read.status === "idle" ||
+    read.status === "loading" ||
+    (read.status === "loaded" && read.account !== readAccount)
+  )
     return (
       <div className="mt-5">
         <StateFeedback
@@ -657,6 +732,8 @@ export function AuctionPanel({
         />
       </div>
     );
+  if (protocol.accessState !== "ready" || account === undefined)
+    return <PublicAuctionResults snapshot={read.snapshot} />;
   return (
     <AuctionInstrument
       account={account}

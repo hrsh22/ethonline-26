@@ -93,7 +93,7 @@ function CollectorHelpTopics() {
     {
       id: "wallet-artwork",
       title: "My collection and my wallet's NFT tab disagree",
-      body: "Check the collectible's current owner and state through its onchain link. Wallets and explorers can cache an older name or state after Launch. Compare it with the current state in the app; a stale label does not undo Launch or change ownership. The current deployment uses sealed placeholder metadata; the website's illustrations are previews. Use the collection address and identity number from the detail page if your wallet supports manual NFT import.",
+      body: "Check the collectible's current owner and state through its onchain link. Wallets and explorers can cache an older name or state after Launch. Compare it with the current state in the app; a stale label does not undo Launch or change ownership. Wallet artwork is stored in the collection’s fixed onchain metadata and can differ from the website’s artwork. Use the collection address and identity number from the detail page if your wallet supports manual NFT import.",
     },
     {
       id: "rewards",
@@ -109,17 +109,13 @@ function CollectorHelpTopics() {
     >
       <div className="grid gap-4 tablet:grid-cols-2">
         {topics.map((topic) => (
-          <article key={topic.id} aria-labelledby={`help-${topic.id}`}>
-            <h3
-              id={`help-${topic.id}`}
-              className="scroll-mt-24 text-title-sm font-semibold"
-            >
-              {topic.title}
-            </h3>
-            <p className="mt-2 max-w-[64ch] text-body text-ink-soft">
-              {topic.body}
-            </p>
-          </article>
+          <div key={topic.id} id={`help-${topic.id}`} className="scroll-mt-24">
+            <Disclosure title={topic.title} searchable>
+              <p className="mt-2 max-w-[64ch] text-body text-ink-soft">
+                {topic.body}
+              </p>
+            </Disclosure>
+          </div>
         ))}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
@@ -138,12 +134,13 @@ function CollectorHelpTopics() {
           Verify contracts
         </a>
       </div>
-      <p className="mt-3 text-body-sm text-ink-soft">
-        The project repository is the current support channel. Include the
-        public support details copied from the affected screen. There is no
-        guaranteed response time or published private security-reporting
-        channel. Do not post secrets or exploitable details in a public issue.
-      </p>
+      <Disclosure title="Contact and privacy">
+        <p className="text-body-sm text-ink-soft">
+          Report issues through the project repository using the public support
+          details from the affected screen. Never include wallet secrets.
+          Private security reporting is not currently published.
+        </p>
+      </Disclosure>
     </Section>
   );
 }
@@ -422,7 +419,7 @@ function HistoryPanel() {
 
 const limitations = [
   "Base Sepolia and all displayed assets are for testing only; there is no mainnet deployment.",
-  "Web illustrations are previews. The current sealed wallet metadata remains placeholder material.",
+  "Wallet artwork is fixed in this deployment and may differ from the artwork in the app.",
   "Delivery status reports the latest service heartbeat and processing setting. It is not an uptime guarantee.",
   "Indexed history can lag the chain; every status surface preserves its observation time and reports partial coverage.",
   "Singapore is only a provisional operator-jurisdiction assumption and has not been validated by counsel or presented as an incorporated operating entity.",
@@ -482,8 +479,31 @@ export default function LearnPage() {
         title="Learn and verify"
       />
 
-      <CollectorHelpTopics />
+      <nav
+        aria-label="Guide sections"
+        className="mb-8 flex flex-wrap gap-x-6 gap-y-2 text-body"
+      >
+        <a
+          className="min-h-11 py-2 underline underline-offset-4"
+          href="#collecting-loop"
+        >
+          Getting started
+        </a>
+        <a className="min-h-11 py-2 underline underline-offset-4" href="#rules">
+          Rules
+        </a>
+        <a className="min-h-11 py-2 underline underline-offset-4" href="#help">
+          Help
+        </a>
+        <a
+          className="min-h-11 py-2 underline underline-offset-4"
+          href="#verify"
+        >
+          Technical reference
+        </a>
+      </nav>
       <CollectingLoop />
+      <div id="rules" className="scroll-mt-24" />
 
       <Section
         description="One fixed split funds rewards, permanent liquidity and the creator."
@@ -497,6 +517,7 @@ export default function LearnPage() {
       </Section>
 
       <SafetyPanels />
+      <CollectorHelpTopics />
 
       <Section
         description="Addresses come from the sealed deployment manifest used by this build."
@@ -504,8 +525,12 @@ export default function LearnPage() {
         title="Verify deployment contracts"
       >
         <div className="grid gap-3 laptop:grid-cols-2">
-          <ContractsPanel />
-          <GlossaryPanel />
+          <Disclosure title="Contract addresses" searchable>
+            <ContractsPanel />
+          </Disclosure>
+          <Disclosure title="Glossary" searchable>
+            <GlossaryPanel />
+          </Disclosure>
         </div>
       </Section>
 
@@ -515,8 +540,12 @@ export default function LearnPage() {
         title="Protocol history"
       >
         <div className="grid gap-3 laptop:grid-cols-2">
-          <HistoryPanel />
-          <AboutPanel />
+          <Disclosure title="Deployment history" searchable>
+            <HistoryPanel />
+          </Disclosure>
+          <Disclosure title="About Orbit" searchable>
+            <AboutPanel />
+          </Disclosure>
         </div>
       </Section>
     </PageFrame>

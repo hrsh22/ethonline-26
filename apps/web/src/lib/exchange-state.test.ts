@@ -586,7 +586,7 @@ describe("exchange review state", () => {
       submitEnabled: true,
       review: {
         sentence:
-          "You pay 0.01 WETH and receive 1.2 $FUEL. The 3.00% fee is 0.0003 WETH. Buying this amount schedules 1 random Discovery.",
+          "You pay 0.01 WETH and receive 1.2 $FUEL. The 3.00% fee is 0.0003 WETH. Expected: 1 random Discovery.",
       },
     });
   });
@@ -1319,3 +1319,50 @@ describe("exchange trade terms", () => {
     expect(EXCHANGE_SLIPPAGE_POLICY.deadlineSeconds).toBe(600);
   });
 });
+
+it.each([1_000_000_000_000_000_000n, 1_200_000_000_000_000_000n])(
+  "distinguishes quoted Discoveries from the protected minimum at output %s",
+  (amountOut) => {
+    const wallet = { ...loadedWallet, liquidTokenBalanceWei: 0n };
+    const intent = deriveExchangeIntent({
+      accessState: "ready",
+      amount: "0.01",
+      direction: "buy",
+      readerAvailable: true,
+      wallet,
+    });
+    const result = deriveExchangeReviewState({
+      intent,
+      nowMilliseconds: reviewNowMilliseconds,
+      observedBlock: 102n,
+      transactionPending: false,
+      quoteRead: loadedQuote(
+        {
+          liquidTokenForWeth: false,
+          amountIn: 10n ** 16n,
+          amountInFormatted: "0.01",
+          amountOut,
+          amountOutFormatted: String(Number(amountOut) / 1e18),
+          tradingFee: 3n * 10n ** 14n,
+          tradingFeeFormatted: "0.0003",
+          observedBlock: 100n,
+          expiresAtBlock: 105n,
+          tradingFeeBps: 300,
+          discovery: discoveryForWallet("buy", wallet, amountOut),
+        },
+        quoteReceivedAtMilliseconds,
+        wallet,
+      ),
+    });
+    expect(result).toMatchObject({
+      status: "ready",
+      review: {
+        consequence: "Expected: 1 random Discovery.",
+        boundaryCaveat:
+          amountOut === 10n ** 18n
+            ? expect.stringContaining("minimum received supports 0")
+            : undefined,
+      },
+    });
+  },
+);

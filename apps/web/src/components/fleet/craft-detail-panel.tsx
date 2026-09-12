@@ -103,11 +103,6 @@ const craftDetailState = (
   } as const;
 };
 
-const ownerActionDisclosure = (permanent: boolean): string =>
-  permanent
-    ? applicationCopy.craft.permanentOwnerOnly
-    : applicationCopy.craft.transientOwnerOnly;
-
 const transferRecipientReason = (
   candidate: string,
   validAddress: boolean,
@@ -270,13 +265,17 @@ const specialKindLabel = (kind: ManifestFacts["kind"]): string | undefined => {
 function ManifestPortrait({
   facts,
   identityId,
+  undiscovered,
 }: {
   readonly facts: ManifestFacts;
   readonly identityId: number;
+  readonly undiscovered: boolean;
 }) {
   return (
     <Panel
-      meta={<Badge>{applicationCopy.craft.manifestUnobserved}</Badge>}
+      meta={
+        <Badge>{undiscovered ? "Undiscovered" : "State unavailable"}</Badge>
+      }
       title={applicationCopy.craft.identityPanel}
     >
       <figure className="flex flex-col items-center gap-3 rounded-[var(--radius-control)] border border-line bg-canvas p-4">
@@ -299,7 +298,7 @@ function ManifestPortrait({
 function ManifestFactsPanel({ facts }: { readonly facts: ManifestFacts }) {
   const special = specialKindLabel(facts.kind);
   return (
-    <Panel title={applicationCopy.craft.manifestPanel}>
+    <Panel title="Traits">
       <DataList>
         <DataRow
           label={applicationCopy.craft.track}
@@ -319,9 +318,11 @@ function ManifestFactsPanel({ facts }: { readonly facts: ManifestFacts }) {
           />
         )}
       </DataList>
-      <p className="mt-3 text-caption text-ink-soft">
-        {applicationCopy.craft.manifestNote}
-      </p>
+      <Disclosure title="Identity provenance">
+        <p className="text-body-sm text-ink-soft">
+          {applicationCopy.craft.manifestNote}
+        </p>
+      </Disclosure>
     </Panel>
   );
 }
@@ -355,10 +356,12 @@ function MissingCraft({
       <div className="mt-4 grid gap-3 laptop:grid-cols-12 laptop:items-start">
         <div className="grid gap-3 laptop:col-span-5">
           {facts === undefined ? null : (
-            <ManifestPortrait facts={facts} identityId={identityId} />
+            <ManifestPortrait
+              facts={facts}
+              identityId={identityId}
+              undiscovered={undiscovered}
+            />
           )}
-          <CollectibleExplorerLinks identityId={identityId} />
-          <CollectorHelp topic="wallet-artwork" />
         </div>
         <div className="grid gap-3 laptop:col-span-7">
           <StateFeedback
@@ -384,6 +387,24 @@ function MissingCraft({
           ) : (
             <ManifestFactsPanel facts={facts} />
           )}
+          {undiscovered ? (
+            <div className="space-y-3">
+              <p className="text-body text-ink-soft">
+                A Discovery chooses an identity at random. Buying FUEL does not
+                reserve this particular craft.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <ButtonLink href="/exchange">Discover a craft</ButtonLink>
+                <ButtonLink href="/explore" variant="outline">
+                  Explore more
+                </ButtonLink>
+              </div>
+            </div>
+          ) : null}
+          <Disclosure searchable title="Onchain details">
+            <CollectibleExplorerLinks identityId={identityId} />
+          </Disclosure>
+          {directRead.isError ? <CollectorHelp topic="wallet-artwork" /> : null}
         </div>
       </div>
     </PageFrame>
@@ -394,6 +415,36 @@ function MissingCraft({
  * The irreversible Launch: a review control, then an alert dialog whose
  * confirming action stays disabled until the reader has ticked the box.
  */
+function LaunchTransformation({ identityId }: { readonly identityId: number }) {
+  return (
+    <div className="mt-3 grid grid-cols-[1fr_auto_1fr] items-center text-center">
+      <figure>
+        <CraftArt
+          className="mx-auto size-24"
+          decorative
+          identityId={identityId}
+          kind={identityId > 4440 ? "relic" : "transient"}
+          lit={false}
+          track={trackIndexFor(manifestFactsFor(identityId)?.rewardTrack ?? "")}
+        />
+        <figcaption className="text-caption">Grounded #{identityId}</figcaption>
+      </figure>
+      <span aria-hidden="true">→</span>
+      <figure>
+        <CraftArt
+          className="mx-auto size-24"
+          decorative
+          identityId={identityId}
+          kind={identityId > 4440 ? "relic" : "permanent"}
+          lit
+          track={trackIndexFor(manifestFactsFor(identityId)?.rewardTrack ?? "")}
+        />
+        <figcaption className="text-caption">Orbiter #{identityId}</figcaption>
+      </figure>
+    </div>
+  );
+}
+
 function LaunchDialog({
   confirmed,
   disabledReason,
@@ -414,15 +465,13 @@ function LaunchDialog({
     <AlertDialog.Portal>
       <AlertDialog.Backdrop className={dialogBackdropClassName} />
       <AlertDialog.Popup className={dialogPopupClassName}>
-        <p className="font-mono text-label font-semibold tracking-[0.14em] text-[var(--status-warning-text)] uppercase">
-          {applicationCopy.launch.dialogLabel}
-        </p>
         <AlertDialog.Title className={dialogTitleClassName}>
           {applicationCopy.launch.title}
         </AlertDialog.Title>
         <AlertDialog.Description className={dialogDescriptionClassName}>
-          {applicationCopy.launch.introduction}
+          Keep this identity as a permanent Orbiter.
         </AlertDialog.Description>
+        <LaunchTransformation identityId={identityId} />
         <DataList className="mt-4">
           <DataRow
             label="Collectible"
@@ -439,9 +488,6 @@ function LaunchDialog({
           />
         </DataList>
         <Well className="mt-4 border-[var(--status-warning-text)]">
-          <p className="text-body-sm font-semibold text-ink" role="note">
-            {applicationCopy.launch.warning}
-          </p>
           {fuelBalance === undefined ? null : (
             <p className="mt-1 font-mono text-body-sm text-ink-soft">
               {applicationCopy.launch.fuelBalance(fuelBalance)}
@@ -505,7 +551,7 @@ function LaunchControl({
   return (
     <div className="grid gap-2">
       <p className="text-body-sm text-ink-soft">
-        {applicationCopy.launch.introduction}
+        Keep this identity as a permanent Orbiter.
       </p>
       <AlertDialog.Root onOpenChange={(open) => !open && setConfirmed(false)}>
         <div>
@@ -994,8 +1040,6 @@ export function CraftDetailPanel({
             identityId={identityId}
             permanent={isPermanent}
           />
-          <CollectibleExplorerLinks identityId={identityId} />
-          <CollectorHelp topic="wallet-artwork" />
         </div>
 
         <div className="grid gap-3 laptop:col-span-7">
@@ -1006,6 +1050,47 @@ export function CraftDetailPanel({
             permanent={isPermanent}
           />
 
+          {currentOwner ? (
+            <section id="launch" className="scroll-mt-24">
+              <Panel title={applicationCopy.craft.actionsPanel}>
+                <div className="grid gap-4">
+                  <LaunchSlot
+                    controlsDisabledReason={controlsDisabledReason}
+                    identityId={identityId}
+                    protocol={protocol}
+                    transientHeld={transient !== undefined && currentOwner}
+                    wallet={wallet}
+                  />
+                  <ClaimControl
+                    craft={currentOwner ? permanent : undefined}
+                    disabledReason={controlsDisabledReason}
+                    identityId={identityId}
+                    protocol={protocol}
+                    rewards={rewards}
+                  />
+                  <Disclosure title="Transfer collectible">
+                    <TransferControl
+                      permanent={isPermanent}
+                      disabledReason={controlsDisabledReason}
+                      identityId={identityId}
+                      owner={directOwner(directRead.data) ?? protocol.address}
+                      protocol={protocol}
+                      visible={currentOwner}
+                    />
+                  </Disclosure>
+                </div>
+              </Panel>
+            </section>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <ButtonLink href="/explore" variant="outline">
+                Explore more
+              </ButtonLink>
+              <ButtonLink href="/exchange" variant="outline">
+                Discover your own craft
+              </ButtonLink>
+            </div>
+          )}
           <section aria-labelledby="attached-rewards-heading">
             <Panel
               title={applicationCopy.craft.attachedRewards}
@@ -1018,35 +1103,10 @@ export function CraftDetailPanel({
             </Panel>
           </section>
 
-          <Panel title={applicationCopy.craft.actionsPanel}>
-            <div className="grid gap-4">
-              <p className="text-body-sm text-ink-soft">
-                {ownerActionDisclosure(isPermanent)}
-              </p>
-              <LaunchSlot
-                controlsDisabledReason={controlsDisabledReason}
-                identityId={identityId}
-                protocol={protocol}
-                transientHeld={transient !== undefined && currentOwner}
-                wallet={wallet}
-              />
-              <ClaimControl
-                craft={currentOwner ? permanent : undefined}
-                disabledReason={controlsDisabledReason}
-                identityId={identityId}
-                protocol={protocol}
-                rewards={rewards}
-              />
-              <TransferControl
-                permanent={isPermanent}
-                disabledReason={controlsDisabledReason}
-                identityId={identityId}
-                owner={directOwner(directRead.data) ?? protocol.address}
-                protocol={protocol}
-                visible={currentOwner}
-              />
-            </div>
-          </Panel>
+          <Disclosure searchable title="Onchain details and provenance">
+            <CollectibleExplorerLinks identityId={identityId} />
+          </Disclosure>
+          <CollectorHelp topic="wallet-artwork" />
         </div>
       </div>
     </PageFrame>

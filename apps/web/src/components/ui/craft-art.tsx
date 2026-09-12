@@ -1,6 +1,7 @@
 /** Deterministic web artwork. Canonical sealed metadata may use different art. */
 
-import { useId } from "react";
+import { SpacecraftArt } from "@/components/ui/spacecraft-art";
+import { identity } from "@/lib/identity";
 
 export type CraftKind = "transient" | "permanent" | "relic";
 
@@ -159,86 +160,6 @@ const kindLabel: Record<CraftKind, string> = {
   relic: "relic",
 };
 
-function OrdinaryCraft({
-  identityId,
-  lit,
-  track,
-}: {
-  readonly identityId: number;
-  readonly lit: boolean;
-  readonly track: number;
-}) {
-  const craft = craftGeometry(identityId, track);
-  // Several crafts share a page, so the hull clip needs a unique id.
-  const clipId = useId();
-  const line = lit ? "var(--text-primary)" : "var(--text-secondary)";
-  const signal = "var(--accent-text)";
-  return (
-    <>
-      {lit ? (
-        <path d={craft.plume} fill={signal} opacity="0.55" stroke="none" />
-      ) : null}
-      {craft.fins.map((d, index) => (
-        <path d={d} fill="var(--surface-1)" key={index} stroke={line} />
-      ))}
-      <path d={craft.hull} fill="var(--surface-2)" stroke={line} />
-      <g
-        clipPath={`url(#${clipId})`}
-        stroke={line}
-        strokeWidth="0.7"
-        opacity="0.45"
-      >
-        <path d={`M48 18V${craft.tail}M72 18V${craft.tail}`} />
-        <path d={`M30 ${craft.tail - 25}H90`} />
-        <path
-          d={`M54 ${craft.tail - 23}V${craft.tail - 19}H66V${craft.tail - 23}Z`}
-        />
-      </g>
-      {craft.stripes.map((y) => (
-        <line
-          key={y}
-          stroke={line}
-          strokeWidth="1"
-          x1={AXIS - 30}
-          x2={AXIS + 30}
-          y1={y}
-          y2={y}
-          clipPath={`url(#${clipId})`}
-        />
-      ))}
-      {craft.ports.map((port) => (
-        <circle
-          cx={AXIS}
-          cy={port.y}
-          fill={lit ? signal : "none"}
-          key={port.y}
-          r={port.r}
-          stroke={line}
-        />
-      ))}
-      {craft.engines.map((engine) => (
-        <rect
-          fill={lit ? signal : "none"}
-          height="5"
-          key={engine.x}
-          stroke={line}
-          width={engine.w}
-          x={engine.x - engine.w / 2}
-          y={craft.tail - 1}
-        />
-      ))}
-      {craft.antenna === undefined ? null : (
-        <path d={craft.antenna} stroke={line} />
-      )}
-      <defs>
-        <clipPath id={clipId}>
-          <path d={craft.hull} />
-        </clipPath>
-      </defs>
-    </>
-  );
-}
-
 /** The three Stations: a hub with two, four or six solar arrays on a truss. */
 function Station({
   variant,
@@ -247,8 +168,8 @@ function Station({
   readonly variant: 1 | 2 | 3;
   readonly lit: boolean;
 }) {
-  const line = "var(--text-primary)";
-  const signal = lit ? "var(--accent-text)" : "var(--text-secondary)";
+  const line = "#e9edf3";
+  const signal = lit ? "#ff9c63" : "#a7b7c9";
   const arrays = variant * 2;
   return (
     <>
@@ -260,11 +181,7 @@ function Station({
         return (
           <g key={index}>
             <rect
-              fill={
-                lit
-                  ? "var(--accent-subtle, var(--surface-2))"
-                  : "var(--surface-1)"
-              }
+              fill={lit ? "var(--accent-subtle, var(--surface-2))" : "#162232"}
               height={22}
               key={index}
               stroke={line}
@@ -281,7 +198,7 @@ function Station({
         );
       })}
       <rect
-        fill="var(--surface-1)"
+        fill="#162232"
         height={28}
         rx={2}
         stroke={line}
@@ -298,13 +215,13 @@ function Station({
 
 /** The Observatory: a telescope tube, an aperture ring, and a dish. */
 function Observatory({ lit }: { readonly lit: boolean }) {
-  const line = "var(--text-primary)";
-  const signal = lit ? "var(--accent-text)" : "var(--text-secondary)";
+  const line = "#e9edf3";
+  const signal = lit ? "#ff9c63" : "#a7b7c9";
   return (
     <>
       <path
         d={`M${point(AXIS - 12, 22)}L${point(AXIS + 12, 22)}L${point(AXIS + 12, 86)}L${point(AXIS - 12, 86)}Z`}
-        fill="var(--surface-1)"
+        fill="#162232"
         stroke={line}
       />
       <ellipse cx={AXIS} cy={22} fill={signal} rx={12} ry={4} stroke={line} />
@@ -348,11 +265,23 @@ export function CraftArt({
   /** Reward track index 1–4, drawn as hull bands. */
   readonly track?: number;
 }) {
+  if (kind !== "relic") {
+    return (
+      <SpacecraftArt
+        className={className}
+        decorative={decorative}
+        identityId={identityId}
+        label={label ?? `Identity ${identityId}, ${kindLabel[kind]}`}
+        permanent={kind === "permanent"}
+        rewardTrack={identity.rewardTrackLabels[track] ?? ""}
+      />
+    );
+  }
   const semantics = semanticsFor(
     decorative,
     label ?? `Identity ${identityId}, ${kindLabel[kind]}`,
   );
-  const variant = kind === "relic" ? relicVariant(identityId) : undefined;
+  const variant = relicVariant(identityId);
   return (
     <svg
       {...semantics}
@@ -364,13 +293,7 @@ export function CraftArt({
       viewBox={`0 0 ${SIZE} ${SIZE}`}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {variant === undefined ? (
-        <OrdinaryCraft
-          identityId={identityId}
-          lit={kind === "permanent"}
-          track={track}
-        />
-      ) : variant === "observatory" ? (
+      {variant === "observatory" ? (
         <Observatory lit={lit} />
       ) : (
         <Station lit={lit} variant={variant} />

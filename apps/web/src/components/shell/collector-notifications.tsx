@@ -117,6 +117,10 @@ function NotificationsMenu({ protocol }: { readonly protocol: Protocol }) {
         protocol={protocol}
         open={open}
         onOpen={() => handleOpenChange(true)}
+        onDismiss={() => {
+          triggerRef.current?.focus();
+          protocol.clearTransaction?.();
+        }}
       />
     </>
   );
@@ -126,10 +130,12 @@ function CompletionToast({
   protocol,
   open,
   onOpen,
+  onDismiss,
 }: {
   readonly protocol: Protocol;
   readonly open: boolean;
   readonly onOpen: () => void;
+  readonly onDismiss: () => void;
 }) {
   const portal = useSyncExternalStore(
     subscribeToDocument,
@@ -160,7 +166,7 @@ function CompletionToast({
             <Button
               variant="ghost"
               size="sm"
-              onClick={protocol.clearTransaction}
+              onClick={onDismiss}
               aria-label="Dismiss completed activity"
             >
               Dismiss

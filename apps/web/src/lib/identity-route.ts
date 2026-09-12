@@ -5,3 +5,10 @@ export const parseCanonicalIdentityId = (value: string) => {
   const identityId = Number(value);
   return identityId <= COLLECTION_SIZE ? identityId : undefined;
 };
+
+/** Accept familiar display forms at the search boundary; URLs remain canonical. */
+export const parseIdentitySearch = (value: string) => {
+  const normalized = value.trim().replace(/^#\s*/u, "");
+  if (!/^\d+$/u.test(normalized)) return undefined;
+  return parseCanonicalIdentityId(String(Number(normalized)));
+};

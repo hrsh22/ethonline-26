@@ -10,6 +10,7 @@ import { AccessNotice } from "@/components/access-notice";
 import { StateFeedback } from "@/components/state-feedback";
 import { ButtonLink } from "@/components/ui/button";
 import { PageHeading } from "@/components/ui/page";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Amount } from "@/components/ui/value";
 import { applicationCopy } from "@/lib/identity";
 import { useProtocolClient } from "@/providers/protocol-client-provider";
@@ -35,9 +36,13 @@ function FleetRewards() {
   if (walletRead.status !== "loaded") return <AccessNotice />;
   return (
     <>
-      <RewardProgressPanel />
       <RewardsPanel />
-      <StockBalancesPanel />
+      <Disclosure title="How your rewards are progressing">
+        <RewardProgressPanel />
+      </Disclosure>
+      <Disclosure title="Reward tokens in your wallet">
+        <StockBalancesPanel />
+      </Disclosure>
     </>
   );
 }

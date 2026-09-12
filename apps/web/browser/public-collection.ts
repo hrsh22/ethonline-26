@@ -8,8 +8,8 @@ export async function checkPublicCollection(page: Page, origin: string) {
     .getByRole("link", { name: "Explore the collection", exact: true })
     .click();
   await page.waitForURL(`${origin}/explore`);
-  const gallery = page.getByRole("region", { name: "Explore the collection" });
-  assert.equal(await gallery.getByRole("link").count(), 8);
+  const gallery = page.getByRole("region", { name: "Collection" });
+  assert.equal(await gallery.getByRole("link").count(), 12);
   await page.getByRole("textbox", { name: "Find an identity" }).fill("0042");
   // Input focus must not hide the fixed navigation: reappearing on submit
   // pointerdown can intercept pointerup and discard the user's click.
@@ -17,15 +17,7 @@ export async function checkPublicCollection(page: Page, origin: string) {
     await page.locator("[data-mobile-navigation]").isVisible(),
     true,
   );
-  await page.getByRole("button", { name: "Open identity" }).click();
-  await page
-    .getByText(
-      "Enter a whole identity number from 1 to 4444, without leading zeros.",
-    )
-    .waitFor();
-  assert.equal(new URL(page.url()).pathname, "/explore");
-  await page.getByRole("textbox", { name: "Find an identity" }).fill("42");
-  await page.getByRole("button", { name: "Open identity" }).click();
+  await page.getByRole("button", { name: "Find", exact: true }).click();
   await page.waitForURL(`${origin}/fleet/42?from=explore`);
   await page
     .getByRole("link", { name: "Back to Explore", exact: true })

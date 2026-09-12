@@ -581,6 +581,7 @@ const visit = async (
     if (input.label.startsWith("state:wallet-reload-disconnect/")) {
       await page.reload();
       await page.locator('[data-wallet-state="connected"]').first().waitFor();
+      await page.getByRole("button", { name: /^Wallet 0x/ }).click();
       await page
         .getByRole("button", { name: "Disconnect", exact: true })
         .first()
@@ -647,6 +648,12 @@ const visit = async (
         .getByText("Showing last-known public snapshot", { exact: true })
         .waitFor({ state: "visible" });
       await page
+        .getByRole("button", {
+          name: "Protocol checks and exact observations",
+          exact: true,
+        })
+        .click();
+      await page
         .getByText("Stale snapshot", { exact: true })
         .waitFor({ state: "visible" });
       await page
@@ -655,7 +662,7 @@ const visit = async (
       await page
         .getByLabel("Destination-locked funds", { exact: true })
         .getByRole("definition")
-        .filter({ hasText: /^2\.0000WETH/u })
+        .filter({ hasText: /^2(?:\.0+)? WETH/u })
         .waitFor({ state: "visible" });
       await page
         .getByRole("definition")
@@ -663,6 +670,7 @@ const visit = async (
         .waitFor({ state: "visible" });
       await page
         .locator('time[datetime="2023-11-14T22:13:20.000Z"]')
+        .first()
         .waitFor({ state: "visible" });
     }
     if (input.backgroundTraffic !== undefined) {

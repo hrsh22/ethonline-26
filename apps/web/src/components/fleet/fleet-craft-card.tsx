@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { ButtonLink } from "@/components/ui/button";
+import { CraftArt } from "@/components/ui/craft-art";
 import { FleetCraftArt } from "@/components/fleet/fleet-craft-art";
 import { applicationCopy, identity } from "@/lib/identity";
 
@@ -46,13 +48,23 @@ export function FleetCraftCard({
       data-featured-craft
     >
       <div className="fleet-art-stage">
-        <FleetCraftArt
-          className="fleet-featured-art"
-          decorative
-          identityId={craft.identityId}
-          permanent={craft.permanent}
-          rewardTrack={craft.rewardTrack}
-        />
+        {craft.identityId > 4440 ? (
+          <CraftArt
+            className="fleet-featured-art"
+            decorative
+            identityId={craft.identityId}
+            kind="relic"
+            lit={craft.permanent}
+          />
+        ) : (
+          <FleetCraftArt
+            className="fleet-featured-art"
+            decorative
+            identityId={craft.identityId}
+            permanent={craft.permanent}
+            rewardTrack={craft.rewardTrack}
+          />
+        )}
       </div>
       <div className="fleet-featured-info">
         <span className="fleet-state-badge">{fleetStateLabel(craft)}</span>
@@ -66,13 +78,27 @@ export function FleetCraftCard({
             {applicationCopy.rewards.readFailed}
           </p>
         ) : null}
-        <Link
-          className="fleet-view-craft"
-          href={`/fleet/${craft.identityId}?returnTo=${encodeURIComponent(returnTo)}`}
-          aria-label={`Inspect ${craft.stateLabel} #${craft.identityId}`}
-        >
-          View craft
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          {!craft.permanent ? (
+            <ButtonLink
+              href={`/fleet/${craft.identityId}?returnTo=${encodeURIComponent(returnTo)}#launch`}
+              size="sm"
+            >
+              Review Launch
+            </ButtonLink>
+          ) : craft.claimEligible && craft.hasAttachedRewards ? (
+            <ButtonLink href="/fleet?view=rewards" size="sm">
+              Review rewards
+            </ButtonLink>
+          ) : null}
+          <Link
+            className="fleet-view-craft"
+            href={`/fleet/${craft.identityId}?returnTo=${encodeURIComponent(returnTo)}`}
+            aria-label={`Inspect ${craft.stateLabel} #${craft.identityId}`}
+          >
+            View craft
+          </Link>
+        </div>
       </div>
     </article>
   );

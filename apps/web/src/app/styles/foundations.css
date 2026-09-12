@@ -26,11 +26,11 @@
   --text-label: 0.75rem;
   --text-label--line-height: 1.3;
   --text-label--letter-spacing: 0.1em;
-  --text-caption: 0.75rem;
+  --text-caption: 0.8125rem;
   --text-caption--line-height: 1.45;
-  --text-body-sm: 0.8125rem;
+  --text-body-sm: 0.9375rem;
   --text-body-sm--line-height: 1.5;
-  --text-body: 0.875rem;
+  --text-body: 1rem;
   --text-body--line-height: 1.55;
   --text-lede: 1rem;
   --text-lede--line-height: 1.5;
@@ -96,37 +96,29 @@
   --color-danger-surface: var(--status-danger-surface);
 }
 
-/* Graphite: the collector's single dark instrumentation theme.
- *
- * The canvas is near-black graphite, panels are one step lighter and drawn
- * with a hairline, and exactly one hue — signal orange — marks live values,
- * the current destination and the primary action. Everything else is a grey.
- * There is one token map and no `prefers-color-scheme` split; the document
- * declares `color-scheme: dark` so native controls and scrollbars match.
- *
- * The operator console reads this same map: admin and collector are one
- * visual system, differing only in density and in what they put in the rail. */
+/* Orbit uses navy surfaces, warm white text and orange for primary actions.
+ * Shared tokens keep controls consistent across the collector and console. */
 :root {
   color-scheme: dark;
 
-  --font-sans: var(--font-jetbrains);
+  --font-sans: var(--font-barlow);
   --font-mono: var(--font-jetbrains);
-  --font-display: var(--font-jetbrains);
+  --font-display: var(--font-barlow);
 
   /* Canvas and layered surfaces. Surface 1 is a panel; 2 is a panel header
    * or the sidebar; 3 is a well or an input. */
-  --canvas: #0e0f12;
-  --surface-1: #15171b;
-  --surface-2: #1b1e23;
-  --surface-3: #23272d;
+  --canvas: #0b111b;
+  --surface-1: #111b28;
+  --surface-2: #162232;
+  --surface-3: #1d2c3e;
 
-  /* Text hierarchy: warm off-white, then two greys. */
-  --text-primary: #ecebe6;
-  --text-secondary: #a9a8a1;
-  --text-tertiary: #94938c;
+  /* Text hierarchy: warm white, then muted blue-gray. */
+  --text-primary: #e9edf3;
+  --text-secondary: #a7b7c9;
+  --text-tertiary: #9caabd;
 
   /* Rules, focus, and interaction */
-  --border-subtle: #262a30;
+  --border-subtle: #2c3b4e;
   --border-strong: #707680;
   /* A signal-tinted hairline for regions holding a live or owned state. */
   --accent-border: #7a4423;
@@ -134,7 +126,7 @@
   --inverse-focus-ring: #ff7a2f;
   /* Signal orange. The fill is the primary action; the text tone is for live
    * values, links and the active destination. Dark text sits on the fill. */
-  --accent-fill: #ff6a1f;
+  --accent-fill: #ff7a30;
   --accent-fill-text: #14110d;
   --accent-text: #ff7a2f;
   --accent-surface: #2a1a10;
@@ -181,7 +173,7 @@
   --text-sm: 0.8125rem;
   --text-base: 0.875rem;
   --text-title: 1.375rem;
-  --text-body: 0.875rem;
+  --text-body: 1rem;
   --type-heading-section: clamp(1.5rem, 1.25rem + 1vw, 1.875rem);
   --type-heading-task: clamp(1.875rem, 1.4rem + 1.8vw, 2.625rem);
   --type-display-collector: clamp(2.75rem, 1.5rem + 5vw, 5.5rem);

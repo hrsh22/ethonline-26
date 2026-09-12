@@ -45,7 +45,13 @@ function VerifiedLaunch({
           Your identity is preserved as a permanent Orbiter. Launch burned 1
           FUEL.
         </p>
-        <p>Reward Track: {rewardTrack}. Eligible rewards can now accrue.</p>
+        <p>Reward track: {rewardTrack}.</p>
+        <Link
+          className="inline-flex min-h-11 items-center underline"
+          href="/fleet?view=rewards"
+        >
+          View rewards →
+        </Link>
         <Link
           className="inline-flex min-h-11 items-center text-signal underline"
           href={`/fleet/${identityId}`}
@@ -85,8 +91,7 @@ export function LaunchCompletion({
   if (craft === undefined || protocol.walletSynchronizing)
     return (
       <p className="mt-3 text-body">
-        Launch transaction confirmed for #{identityId}. We are checking its
-        Orbiter ownership; collection synchronization is still in progress.
+        Launch confirmed for #{identityId}. Updating your Fleet…
       </p>
     );
   return (

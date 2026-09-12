@@ -9,6 +9,8 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Metric, MetricGroup } from "@/components/ui/metric";
 import { Panel } from "@/components/ui/panel";
+import { RelativeTime } from "@/components/ui/relative-time";
+import { Disclosure } from "@/components/ui/disclosure";
 import { Count } from "@/components/ui/value";
 import {
   deploymentEnvironment,
@@ -106,6 +108,31 @@ function HealthBoard({ model }: { readonly model: PublicStatusModel }) {
         {applicationCopy.publicStatus.snapshotDisclosure}
       </p>
     </div>
+  );
+}
+
+function HumanStatus({ model }: { readonly model: PublicStatusModel }) {
+  const expired = useObservationExpiry(
+    model.observedAt * 1000 + WEB_QUERY_STALE_TIME_MILLISECONDS,
+  );
+  return (
+    <section className="my-6 space-y-2">
+      <h2 className="text-title font-semibold">
+        {model.freshness === "fresh" && !expired
+          ? {
+              healthy: "Onchain checks passed",
+              degraded: "Onchain checks need attention",
+              critical: "Onchain checks found a critical issue",
+            }[model.health]
+          : "Last known onchain status"}
+      </h2>
+      <p className="text-body text-ink-soft">
+        {applicationCopy.publicStatus.healthExplanation[model.health]}
+      </p>
+      <p className="text-body-sm text-ink-soft">
+        Checked <RelativeTime timestamp={model.observedAt * 1000} />
+      </p>
+    </section>
   );
 }
 
@@ -238,11 +265,14 @@ export function StatusPanel() {
         <DeploymentEvidenceBoard />
       ) : (
         <>
-          <HealthBoard model={publicStatus} />
-          <ProtocolOverview
-            checks={publicChecks(health)}
-            model={publicStatus}
-          />
+          <HumanStatus model={publicStatus} />
+          <Disclosure title="Protocol checks and exact observations" searchable>
+            <HealthBoard model={publicStatus} />
+            <ProtocolOverview
+              checks={publicChecks(health)}
+              model={publicStatus}
+            />
+          </Disclosure>
         </>
       )}
     </>

@@ -14,7 +14,7 @@ export default function AuctionPage() {
     <PageFrame>
       <PageHeading
         eyebrow="Launch allocation"
-        lede="Set the most you will pay. The final clearing price applies to the tokens your bid receives."
+        lede="Follow the auction and manage your allocation."
         title="Auction"
       />
       <AuctionPanel />

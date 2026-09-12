@@ -137,11 +137,11 @@ describe("rewards transaction controls", () => {
       const html = renderToStaticMarkup(<RewardsPanel />);
       expect(html).toContain(
         hasOrbiter
-          ? "Your Orbiter is eligible, but no rewards are currently available to claim"
+          ? "Your Orbiter is ready for future rewards"
           : "This wallet holds no Orbiters",
       );
       expect(html).toContain('href="/learn#help-rewards"');
-      expect(html).toContain("Valueless test tokens");
+      expect(html).toContain("Company names identify test tokens");
       for (const name of ["Apple", "Alphabet", "Meta", "NVIDIA"])
         expect(html).toContain(name);
     },

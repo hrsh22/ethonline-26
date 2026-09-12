@@ -36,8 +36,8 @@ const privyChain = {
 };
 const privyConfig: PrivyClientConfig = {
   appearance: {
-    theme: "#0e0f12",
-    accentColor: "#ff6a1f",
+    theme: "#0b111b",
+    accentColor: "#ff7a30",
     landingHeader: `Connect to ${identity.brand}`,
     loginMessage:
       "Use your wallet or create one with email. Base Sepolia test assets only.",

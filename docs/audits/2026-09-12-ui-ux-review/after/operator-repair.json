@@ -1,0 +1,45 @@
+{
+  "host": "orbit-milesvm",
+  "process": "orbit-operator",
+  "backup": "/home/orbit-api/.local/state/orbit/patches/2026-09-12-confirmations/backup",
+  "state": {
+    "desired": {
+      "mode": "live",
+      "oneShot": "none"
+    },
+    "heartbeat": {
+      "at": 1789216799298,
+      "observedMode": "live",
+      "supervisor": "c1c0a905-051f-40a9-9477-bf49b78ccfa7"
+    },
+    "latestRun": {
+      "authority": "execute",
+      "finishedAt": 1789216799298,
+      "outcome": "completed",
+      "startedAt": 1789216787105
+    },
+    "nextRunAt": 1789217099298,
+    "service": "online"
+  },
+  "observedBlock": "46724254",
+  "discoveryMaintenance": {
+    "status": "idle",
+    "reason": "No Discovery Batch needs maintenance.",
+    "actions": [
+      {
+        "kind": "finalize",
+        "vrfRequestId": "109945816628340908997364858104587012321023173591834682401306803967017543605112",
+        "maxCount": 8,
+        "reason": "Verified randomness is ready; finalize the next bounded chunk.",
+        "status": "confirmed",
+        "transactionHash": "0xf0afc5678dd7f1e7e89342b72e07bdc676026781a0296e66b1a4adc1e20efe37"
+      }
+    ]
+  },
+  "patchedSha256": {
+    "operator-confirmation.ts": "08c465c728a9dafc014059c2bd4f43aab507dc99877af47be4eadbd207f9d9d9",
+    "base-sepolia-operator.ts": "dcfc3cdc09c0e214ffca8bb17bde9c84b803929e932ca430a6bdf110eba02218",
+    "discovery-maintenance.ts": "1d57c2bd7444c3944f0017b08119f4a24fd2c269e43a984759fb289f30a3059e",
+    "cca-maintenance.ts": "2450a9ed9560718b26fb6e712e7a0ff592149d40d259d47a3576bca279214829"
+  }
+}

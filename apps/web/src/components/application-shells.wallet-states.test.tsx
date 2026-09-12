@@ -23,6 +23,7 @@ vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => ({ transaction: { status: "idle" } }),
 }));
 vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => shellState.pathname,
 }));
 
@@ -137,14 +138,14 @@ describe("collector shell wallet states", () => {
     };
     const html = renderShell();
     expect(walletState(html)).toBe("connected");
-    expect(html).toContain("Disconnect");
+    expect(html).toContain("Wallet 0x0000…4444");
     const navigationIndex = html.indexOf('id="collector-navigation"');
     const walletIndex = html.indexOf("data-wallet-state=");
     expect(navigationIndex).toBeGreaterThan(-1);
     expect(navigationIndex).toBeLessThan(walletIndex);
   });
 
-  it("keeps all four mobile destinations and sticky funding available in every wallet state", () => {
+  it("keeps collector tasks and footer funding reachable in every wallet state", () => {
     for (const status of [
       "disconnected",
       "connecting",
@@ -162,7 +163,8 @@ describe("collector shell wallet states", () => {
       expect(html).toContain('href="/auction"');
       expect(html).toContain('href="/exchange"');
       expect(html).toContain('href="/fleet"');
-      expect(html.match(/>Get test funds</gu)).toHaveLength(2);
+      expect(html).toContain('href="/faucet"');
+      expect(html).not.toContain("data-collector-funding-row");
     }
   });
 });

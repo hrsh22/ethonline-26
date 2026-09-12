@@ -128,7 +128,7 @@ describe("wallet control", () => {
     const html = renderToStaticMarkup(<WalletControl />);
 
     expect(html).toContain("0x0000…4444");
-    expect(html).toContain("Disconnect");
+    expect(html).toContain('aria-label="Wallet 0x0000…4444"');
     expect(html).toContain('data-wallet-state="connected"');
     expect(html).not.toContain("Connect wallet");
   });

@@ -134,7 +134,8 @@ describe("collectible transaction controls", () => {
 
       const html = renderToStaticMarkup(<CraftDetailPanel identityId={42} />);
 
-      expect(html).toContain(expected);
+      expect(html).toContain("Transfer collectible");
+      expect(html).not.toContain(expected);
       expect(html).not.toContain(unavailableAction);
     },
   );
@@ -253,7 +254,7 @@ describe("collectible transaction controls", () => {
 
     expect(html).toContain("Orbiter #42");
     expect(html).toContain("Claim eligible rewards");
-    expect(html).toContain("Transfer ORBIT 4444 Collectible");
+    expect(html).toContain("Transfer collectible");
     expect(source).toContain('type: "direct-collectible-transfer"');
   });
 

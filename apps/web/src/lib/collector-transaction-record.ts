@@ -42,7 +42,9 @@ export type CompletedCollectorTransaction = CollectorTransactionRecord & {
 const completedKeyFor = (scope: string) =>
   `orbit:collector-completed:v1:${scope}`;
 
-const keyFor = (scope: string) => `orbit:collector-transaction:v1:${scope}`;
+export const collectorTransactionStorageKey = (scope: string) =>
+  `orbit:collector-transaction:v1:${scope}`;
+const keyFor = collectorTransactionStorageKey;
 const validIds = (ids: unknown): ids is readonly number[] =>
   Array.isArray(ids) &&
   ids.length <= 64 &&
@@ -173,7 +175,7 @@ const restoreState = (value: unknown): TransactionState | undefined => {
       status: "submission-unknown",
       label: value.label,
       message:
-        "The app closed while waiting for your wallet. Check your wallet activity before trying again; no transaction hash was received.",
+        "Waiting for a wallet response. The request may still be open in another tab or in your wallet. Check its status before trying again.",
     };
   return restoreReceipt(value, value.label);
 };

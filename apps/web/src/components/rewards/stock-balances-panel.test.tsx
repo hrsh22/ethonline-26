@@ -102,8 +102,8 @@ describe("stock tokens held by the connected wallet", () => {
     await render();
     expect(readStockBalances).toHaveBeenCalledWith(owner);
     expect(container.textContent).toContain("Stock tokens in your wallet");
-    expect(container.textContent).toContain("1.25AAPLc");
-    expect(container.textContent).toContain("0GOOGLc");
+    expect(container.textContent).toContain("1.25 AAPLc");
+    expect(container.textContent).toContain("0 GOOGLc");
     expect(container.textContent).toContain(
       "separate from the unclaimed rewards",
     );
@@ -149,13 +149,13 @@ describe("stock tokens held by the connected wallet", () => {
     expect(container.textContent).toContain(
       "Some stock balances could not be read",
     );
-    expect(container.textContent).toContain("1.25AAPLc");
+    expect(container.textContent).toContain("1.25 AAPLc");
     expect(
       container.querySelector(
         '[aria-label="GOOGLc wallet balance unavailable"]',
       ),
     ).not.toBeNull();
-    expect(container.textContent).not.toContain("0GOOGLc");
+    expect(container.textContent).not.toContain("0 GOOGLc");
     expect(container.textContent).not.toContain("does not hold any");
   });
 
@@ -182,8 +182,8 @@ describe("stock tokens held by the connected wallet", () => {
       state.protocol = { ...(state.protocol as object), accessState };
       await render();
       expect(readStockBalances).not.toHaveBeenCalled();
-      expect(container.textContent).not.toContain("1.25AAPLc");
-      expect(container.textContent).not.toContain("0AAPLc");
+      expect(container.textContent).not.toContain("1.25 AAPLc");
+      expect(container.textContent).not.toContain("0 AAPLc");
       expect(container.textContent?.includes("Connect wallet")).toBe(
         accessState === "disconnected",
       );
@@ -197,8 +197,8 @@ describe("stock tokens held by the connected wallet", () => {
     await render();
     expect(readStockBalances).toHaveBeenLastCalledWith(otherOwner);
     expect(container.textContent).toContain("Checking your stock balances");
-    expect(container.textContent).not.toContain("1.25AAPLc");
-    expect(container.textContent).not.toContain("0AAPLc");
+    expect(container.textContent).not.toContain("1.25 AAPLc");
+    expect(container.textContent).not.toContain("0 AAPLc");
   });
 
   it("marks retained balances as last checked when a refresh fails", async () => {
@@ -206,7 +206,7 @@ describe("stock tokens held by the connected wallet", () => {
     readStockBalances.mockRejectedValue(new Error("RPC unavailable"));
     await refresh();
     expect(container.textContent).toContain("Showing last checked balances");
-    expect(container.textContent).toContain("1.25AAPLc");
+    expect(container.textContent).toContain("1.25 AAPLc");
     readStockBalances.mockResolvedValue(snapshot({ observedBlock: 101n }));
     await refresh();
     expect(container.textContent).not.toContain(
@@ -219,10 +219,10 @@ describe("stock tokens held by the connected wallet", () => {
     readStockBalances.mockRejectedValue(new Error("RPC unavailable"));
     await render();
     expect(container.textContent).toContain("Stock balances unavailable");
-    expect(container.textContent).not.toContain("0AAPLc");
+    expect(container.textContent).not.toContain("0 AAPLc");
     readStockBalances.mockResolvedValue(snapshot());
     await refresh();
-    expect(container.textContent).toContain("1.25AAPLc");
+    expect(container.textContent).toContain("1.25 AAPLc");
   });
 
   it("refreshes after a confirmed claim and waits for its receipt block", async () => {
@@ -248,14 +248,14 @@ describe("stock tokens held by the connected wallet", () => {
         </QueryClientProvider>,
       );
     });
-    expect(container.textContent).not.toContain("1.25AAPLc");
+    expect(container.textContent).not.toContain("1.25 AAPLc");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
-    expect(container.textContent).toContain("2.5AAPLc");
+    expect(container.textContent).toContain("2.5 AAPLc");
     expect(container.textContent).toContain("Checked at block 101");
   });
 

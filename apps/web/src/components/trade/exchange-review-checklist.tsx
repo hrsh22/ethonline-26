@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { DataList, DataRow } from "@/components/ui/data-list";
 import { Disclosure } from "@/components/ui/disclosure";
 import { Well } from "@/components/ui/panel";
-import { Amount, Count } from "@/components/ui/value";
 import {
   deploymentEnvironment,
   protocolDeploymentManifest,
@@ -213,12 +212,10 @@ const quoteAgeSeconds = (
  */
 function ExchangeReviewReady({
   ageSeconds,
-  quote,
   review,
   terms,
 }: {
   readonly ageSeconds: number | undefined;
-  readonly quote: ExchangeQuote;
   readonly review: ReadyReview;
   readonly terms: ExchangeTradeTerms;
 }) {
@@ -234,17 +231,22 @@ function ExchangeReviewReady({
       >
         {applicationCopy.exchange.reviewTitle}
       </h3>
-      <p className="mt-1.5 text-body-sm text-ink">{review.sentence}</p>
-      <DataList className="mt-1.5">
-        <DataRow
-          label={applicationCopy.exchange.reviewPay}
-          value={<Amount unit={terms.payAsset} value={quote.amountIn} />}
-        />
-        <DataRow
-          label={applicationCopy.exchange.reviewReceive}
-          tone="live"
-          value={<Amount unit={terms.receiveAsset} value={quote.amountOut} />}
-        />
+      <p
+        className={
+          review.destructive
+            ? "mt-3 rounded-lg border border-warning bg-warning-surface p-3 text-body font-medium text-warning"
+            : "mt-2 text-body-sm text-ink"
+        }
+        role={review.destructive ? "alert" : undefined}
+      >
+        {review.consequence}
+      </p>
+      {"boundaryCaveat" in review && review.boundaryCaveat ? (
+        <p className="mt-2 text-body-sm text-warning" role="note">
+          {review.boundaryCaveat}
+        </p>
+      ) : null}
+      <DataList className="mt-3">
         <DataRow
           label={applicationCopy.exchange.minimumReceived}
           value={terms.minimumReceived}
@@ -259,16 +261,8 @@ function ExchangeReviewReady({
             value={terms.priceImpact}
           />
         )}
-        <DataRow
-          label={applicationCopy.exchange.quoteFreshness}
-          value={
-            <>
-              {`${age} · block `}
-              <Count value={quote.observedBlock} />
-            </>
-          }
-        />
       </DataList>
+      <p className="mt-2 text-caption text-ink-soft">{age}</p>
       {"warning" in review ? (
         <p
           className="mt-2 border-l-2 border-[var(--status-warning-text)] pl-3 text-body-sm text-warning"
@@ -378,7 +372,6 @@ export function ExchangeDecisionReview({
             nowMilliseconds,
             quoteReceivedAtMilliseconds,
           )}
-          quote={displayedQuote}
           review={reviewState.review}
           terms={deriveExchangeTradeTerms(
             displayedQuote,
@@ -392,7 +385,8 @@ export function ExchangeDecisionReview({
   /* A state with nothing of its own to say (an amount the
    * field is already rejecting) keeps the well's promise visible instead of
    * leaving an empty box above the button. */
-  const feedback = reviewFeedbackFor(reviewState) ?? staticReviewFeedback.empty;
+  const feedback = reviewFeedbackFor(reviewState);
+  if (feedback === undefined) return null;
   return (
     <Well className="grid min-h-[6rem] content-center">
       <p

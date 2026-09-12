@@ -70,7 +70,7 @@ it("reviews one Station as four labeled assets before submitting its identity", 
   const dialog = document.querySelector('[role="alertdialog"]');
   expect(dialog?.textContent).toContain("1 identity in this claim");
   for (const track of ["AAPLc", "GOOGLc", "METAc", "NVDAc"])
-    expect(dialog?.textContent).toContain(`1${track}`);
+    expect(dialog?.textContent).toContain(`1 ${track}`);
   await click("Identities included in this claim");
   expect(dialog?.textContent).toContain("#4441");
   expect(current.execute).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ it("reviews exactly the first 64 identities and explains the remainder", async (
   await click("Claim eligible rewards");
   const dialog = document.querySelector('[role="alertdialog"]');
   expect(dialog?.textContent).toContain("64 identities in this claim");
-  expect(dialog?.textContent).toContain("64AAPLc");
+  expect(dialog?.textContent).toContain("64 AAPLc");
   expect(dialog?.textContent).toContain("1 more eligible identity remains");
   expect(dialog?.textContent).not.toContain("#65");
   await click("Confirm claim");
@@ -143,7 +143,7 @@ it("excludes unread identities and recovers their claim without another wallet a
   await click("Claim eligible rewards");
   dialog = document.querySelector('[role="alertdialog"]');
   expect(dialog?.textContent).toContain("2 identities in this claim");
-  expect(dialog?.textContent).toContain("2AAPLc");
+  expect(dialog?.textContent).toContain("2 AAPLc");
 });
 
 it("locks an open claim when the active wallet no longer has the reviewed identities", async () => {

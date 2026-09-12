@@ -379,16 +379,15 @@ function ClaimShortcut({
         </h2>
         {claimable.size === 0 && !updating ? (
           <p className="mt-1 text-body-sm text-ink-soft">
-            See what needs to happen before your next rewards arrive.
+            No rewards to claim yet. Your Orbiters can earn from future trading
+            activity.
           </p>
         ) : (
           <ClaimableAmounts claimable={claimable} updating={updating} />
         )}
       </div>
       <ButtonLink href={`/fleet?${rewardParams}`} size="sm" variant="outline">
-        {claimable.size === 0 && !updating
-          ? "View reward progress"
-          : "Review claims"}
+        {claimable.size === 0 && !updating ? "View rewards" : "Review claims"}
       </ButtonLink>
     </section>
   );

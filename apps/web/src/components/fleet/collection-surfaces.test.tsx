@@ -58,11 +58,16 @@ const filterButtons = (root: HTMLElement) => [
     '[aria-label="Filter collection"] button',
   ),
 ];
-const craftSelectorButtons = (root: HTMLElement) => [
-  ...root.querySelectorAll<HTMLButtonElement>(
-    '[aria-label="Choose a craft"] button[data-craft-id]',
-  ),
-];
+const craftSelectorButtons = (root: HTMLElement) => {
+  const selectors = [
+    ...root.querySelectorAll<HTMLElement>(
+      '[aria-label="Choose a craft"] button[data-craft-id]',
+    ),
+  ];
+  return selectors.length > 0
+    ? selectors
+    : [...root.querySelectorAll<HTMLElement>("[data-featured-craft]")];
+};
 
 const craft = (identityId: number) => ({
   identityId,
@@ -183,9 +188,9 @@ describe("collection surfaces", () => {
       expect(new URLSearchParams(window.location.search).get("selected")).toBe(
         "2",
       );
-      expect(featured?.querySelector("a")?.getAttribute("href")).toContain(
-        "selected%3D2",
-      );
+      expect(
+        featured?.querySelector("a.fleet-view-craft")?.getAttribute("href"),
+      ).toContain("selected%3D2");
 
       await act(async () => {
         window.history.replaceState(null, "", "/fleet?selected=1");
@@ -246,9 +251,9 @@ describe("collection surfaces", () => {
       const shortcut = container.querySelector(
         '[aria-labelledby="fleet-rewards-shortcut"]',
       );
-      expect(shortcut?.textContent).toContain("1AAPLc");
-      expect(shortcut?.textContent).toContain("2NVDAc");
-      expect(shortcut?.textContent).not.toContain("3AAPLc");
+      expect(shortcut?.textContent).toContain("1 AAPLc");
+      expect(shortcut?.textContent).toContain("2 NVDAc");
+      expect(shortcut?.textContent).not.toContain("3 AAPLc");
       expect(shortcut?.querySelector("a")?.getAttribute("href")).toBe(
         "/fleet?view=rewards",
       );
@@ -296,7 +301,7 @@ describe("collection surfaces", () => {
       const shortcut = container.querySelector(
         '[aria-labelledby="fleet-rewards-shortcut"]',
       );
-      expect(shortcut?.textContent).toContain("View reward progress");
+      expect(shortcut?.textContent).toContain("View rewards");
       expect(shortcut?.textContent).not.toContain("Rewards available");
     });
 
@@ -364,9 +369,9 @@ describe("collection surfaces", () => {
           );
         }
         expect(permanent?.textContent).not.toContain("Last confirmed");
-        expect(permanent?.querySelector("a")?.getAttribute("href")).toContain(
-          "/fleet/2?",
-        );
+        expect(
+          permanent?.querySelector("a.fleet-view-craft")?.getAttribute("href"),
+        ).toContain("/fleet/2?");
       },
     );
 
@@ -614,11 +619,14 @@ describe("collection surfaces", () => {
       expect(
         container.querySelector("[data-state='stale']")?.textContent,
       ).toContain("Collectible delivery is delayed");
-      expect(container.textContent).toContain("Your random draw is verified");
+      expect(container.textContent).toContain("Randomness received");
       expect(container.textContent).not.toContain(
         "randomness service hasn't responded",
       );
-      expect(container.querySelector("button")).toBeNull();
+      expect(container.querySelector("button")?.textContent).toContain(
+        "Discovery details",
+      );
+      expect(container.textContent).not.toContain("Request Discovery");
     });
 
     it("explains a delayed external randomness request without claiming assets were lost", async () => {
@@ -652,7 +660,7 @@ describe("collection surfaces", () => {
       await render(<FleetPanel />);
 
       expect(container.textContent).toContain(
-        "Randomness is taking longer than expected",
+        "Your Discovery is taking longer than usual",
       );
       expect(container.textContent).toContain("15-minute delay threshold");
       expect(container.textContent).toContain(
@@ -745,7 +753,7 @@ describe("collection surfaces", () => {
       // state only manifest facts: number, kind, allocation, ownership.
       expect(text).not.toContain("instrument");
       expect(text).not.toContain("lens");
-      expect(text).toContain("12.5% of every Reward Track, divided equally");
+      expect(text).toContain("≈4.1667% of each track");
       expect(
         new Set(
           [...container.querySelectorAll("[data-relic-role]")].map((node) =>
@@ -889,7 +897,7 @@ describe("collection surfaces", () => {
       const attachment = container.querySelector(
         '[aria-labelledby="attached-rewards-heading"]',
       );
-      expect(attachment?.textContent).toContain("No rewards accrued");
+      expect(attachment?.textContent).toContain("No unclaimed rewards");
       expect(attachment?.textContent).not.toContain("Not observed");
     });
 
@@ -937,7 +945,7 @@ describe("collection surfaces", () => {
         '[aria-labelledby="attached-rewards-heading"]',
       );
       expect(attachment?.textContent).toContain("temporarily unavailable");
-      expect(attachment?.textContent).not.toContain("No rewards accrued");
+      expect(attachment?.textContent).not.toContain("No unclaimed rewards");
     });
 
     it("shows readable amounts with exact raw units on demand", async () => {

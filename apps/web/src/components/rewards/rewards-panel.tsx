@@ -110,7 +110,7 @@ const rewardWalletView = (walletRead: WalletRead) => {
                     : walletRead.snapshot.collectibles.permanent.some(
                           (craft) => craft.claimEligible,
                         )
-                      ? "Your Orbiter is eligible, but no rewards are currently available to claim. Rewards depend on market activity and completed conversions; there is no guaranteed amount or payout time."
+                      ? "Your Orbiter is ready for future rewards. New claims appear after a reward cycle completes."
                       : "No rewards are currently claimable. Reward activation and the current owner determine whether an identity can claim.",
                 title: "No claimable rewards",
                 tone: "empty",
@@ -444,7 +444,8 @@ function PolicyDisclosure() {
         {applicationCopy.rewards.currentOwner}
       </p>
       <p className="mt-2 max-w-[62ch] text-body-sm text-ink-soft">
-        {applicationCopy.rewards.units}
+        {applicationCopy.rewards.units} Company names identify test tokens, not
+        company shares.
       </p>
     </Disclosure>
   );
@@ -462,10 +463,6 @@ function ClaimableSummary({
     ("rewardsComplete" in walletView && !walletView.rewardsComplete);
   return (
     <>
-      <p className="text-body-sm text-ink-soft">
-        Valueless test tokens on Base Sepolia. Company names identify the test
-        Reward Tracks; these are not shares or promised income.
-      </p>
       {walletView.observed ? (
         <DataList>
           {TRACK_INDICES.map((index) => {
@@ -501,6 +498,26 @@ function ClaimableSummary({
 
 const walletIsStale = (walletRead: WalletRead) =>
   walletRead.status === "loaded" && walletRead.stale === true;
+
+function ClaimCompletion({
+  protocol,
+}: {
+  readonly protocol: ReturnType<typeof useProtocolClient>;
+}) {
+  if (
+    protocol.transaction.status !== "confirmed" ||
+    protocol.transactionMetadata?.actionType !== "claim"
+  )
+    return null;
+  return (
+    <StateFeedback
+      tone="success"
+      title="Claim confirmed"
+      description="Your claim transaction is confirmed. Your token balances below refresh automatically."
+      compact
+    />
+  );
+}
 
 export function RewardsPanel() {
   const protocol = useProtocolClient();
@@ -547,6 +564,7 @@ export function RewardsPanel() {
         title={applicationCopy.rewards.claimTitle}
         tone={claimBatch.length > 0 ? "live" : "default"}
       >
+        <ClaimCompletion protocol={protocol} />
         <ClaimableSummary walletView={walletView} rewarded={rewarded} />
         {showFeedback ? (
           <StateFeedback
@@ -560,11 +578,7 @@ export function RewardsPanel() {
             compact
           />
         ) : null}
-        {rewarded.map((craft) => (
-          <RewardRow craft={craft} key={craft.identityId} />
-        ))}
-        {/* The claim decision closes the ledger, separated from the evidence
-            rows above it so the one action on this route reads on its own. */}
+
         <div className="grid gap-3 border-t border-line pt-4">
           <div>
             <ClaimReview
@@ -580,6 +594,16 @@ export function RewardsPanel() {
             />
           </div>
         </div>
+        {rewarded.length > 0 ? (
+          <Disclosure
+            searchable
+            title={`Rewards by collectible (${rewarded.length})`}
+          >
+            {rewarded.map((craft) => (
+              <RewardRow craft={craft} key={craft.identityId} />
+            ))}
+          </Disclosure>
+        ) : null}
       </Panel>
 
       <CollectorHelp topic="rewards" />

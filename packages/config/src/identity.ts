@@ -1044,7 +1044,7 @@ export const createIdentityApplicationCopy = (
       onchainRecord: "Onchain record",
       viewOnchainIdentity: "View collectible on BaseScan ↗",
       viewOnchainCollection: "View onchain collection ↗",
-      noRewardsAccrued: "No rewards accrued yet",
+      noRewardsAccrued: "No unclaimed rewards",
       rewardsUnavailable:
         "Rewards for this identity are temporarily unavailable. This does not mean no rewards are attached.",
       directReadFailed:

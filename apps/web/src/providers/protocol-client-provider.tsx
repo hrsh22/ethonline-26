@@ -37,6 +37,7 @@ import { deploymentManifestFingerprint } from "@orbit/config/deployment-manifest
 
 import {
   clearCompletedCollectorTransactions,
+  collectorTransactionStorageKey,
   readCollectorTransaction,
   isObsoleteRecoveryCallback,
   readCompletedCollectorTransactions,
@@ -49,6 +50,7 @@ import {
 
 import {
   recoverCollectorTransactionHash,
+  findCollectorTransactionHash,
   recoverCollectorApproval,
   readCollectorApprovalReview,
   type RecoveredReceipt,
@@ -1627,6 +1629,26 @@ const actionPreparationMessage = (cause: unknown): string =>
 const walletReadRequiresRecovery = (read: ProtocolWalletRead): boolean =>
   read.status === "failed" || (read.status === "loaded" && read.stale === true);
 
+const transactionOperationId = (
+  metadata: { readonly operationId: string } | undefined,
+) => metadata?.operationId;
+const transactionIsApproval = (
+  metadata: { readonly isApproval?: boolean } | undefined,
+) => metadata?.isApproval;
+const sourceOwnsRequest = (state: TransactionState) =>
+  state.status === "pending" ||
+  state.status === "simulated" ||
+  state.status === "submitted";
+const shouldContinueHashSearch = (
+  cancelled: boolean,
+  state: TransactionState,
+) => !cancelled && state.status === "submission-unknown";
+const recoveryStillCurrent = (
+  cancelled: boolean,
+  expected: number,
+  current: number,
+) => !cancelled && expected === current;
+
 export function ProtocolClientProvider({
   children,
 }: {
@@ -2204,6 +2226,79 @@ export function ProtocolClientProvider({
     await marketHistoryQuery.refetch();
   }, [marketHistoryQuery]);
 
+  const recoveryOperationId = transactionOperationId(transactionMetadata);
+  const recoveringApproval = transactionIsApproval(transactionMetadata);
+  // A wallet request can remain unresolved even after it has mined. Keep its
+  // execution alive for a late hash, but expose read-only recovery after a minute.
+  useEffect(() => {
+    if (
+      collectorRecordScope === undefined ||
+      transaction.status !== "simulated"
+    )
+      return;
+    const operationId = recoveryOperationId;
+    const timer = setTimeout(() => {
+      const current = transactionRef.current;
+      if (
+        current.status !== "simulated" ||
+        recordScopeRef.current !== collectorRecordScope ||
+        transactionMetadataRef.current?.operationId !== operationId
+      )
+        return;
+      updateTransaction({
+        status: "submission-unknown",
+        label: current.label,
+        message:
+          "Your wallet is taking longer to respond. Check its activity or verify a completed transaction below. No new transaction will be sent.",
+      });
+      void refresh().catch(() => {});
+    }, 60_000);
+    return () => clearTimeout(timer);
+  }, [
+    collectorRecordScope,
+    transaction.status,
+    recoveryOperationId,
+    refresh,
+    updateTransaction,
+  ]);
+
+  useEffect(() => {
+    if (collectorRecordScope === undefined) return;
+    const sync = (event: StorageEvent) => {
+      if (event.key !== collectorTransactionStorageKey(collectorRecordScope))
+        return;
+      const saved = readCollectorTransaction(collectorRecordScope);
+      if (saved === undefined) return;
+      const current = transactionRef.current;
+      // The source tab owns its live SDK request. Other tabs follow its receipt.
+      if (sourceOwnsRequest(current)) return;
+      const sameOperation =
+        saved.operationId === transactionMetadataRef.current?.operationId;
+      if (
+        sameOperation &&
+        saved.state.status === current.status &&
+        !("hash" in saved.state)
+      )
+        return;
+      transactionPrivacyGenerationRef.current += 1;
+      activeExecution.current = isTransactionInFlight(saved.state)
+        ? Symbol("synced collector transaction")
+        : undefined;
+      transactionMetadataRef.current = saved;
+      submittedTransactionPhase.current = saved.phase;
+      transactionPersistRef.current = true;
+      transactionRef.current = saved.state;
+      setTransaction(saved.state);
+      setTransactionMetadata(displayedTransactionMetadata(saved, saved.phase));
+      setCompletedTransactions(
+        readCompletedCollectorTransactions(collectorRecordScope),
+      );
+      if (saved.state.status === "confirmed") void refresh().catch(() => {});
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, [collectorRecordScope, refresh]);
+
   const executeTransaction = useCallback(
     async (
       action: ProtocolAction,
@@ -2635,6 +2730,72 @@ export function ProtocolClientProvider({
     [retryUnknownOutcome, updateTransaction],
   );
 
+  useEffect(() => {
+    if (
+      collectorRecordScope === undefined ||
+      transaction.status !== "submission-unknown" ||
+      recoveringApproval === true
+    )
+      return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    let delay = 5_000;
+    const check = async () => {
+      if (cancelled) return;
+      const metadata = transactionMetadataRef.current;
+      const address = transactionScopeRef.current.address;
+      const generation = transactionPrivacyGenerationRef.current;
+      if (
+        metadata?.preparedCall === undefined ||
+        address === undefined ||
+        recordScopeRef.current !== collectorRecordScope
+      )
+        return;
+      try {
+        const hash = await findCollectorTransactionHash({
+          metadata,
+          address,
+          chainId: protocolChain.id,
+          canonicalTargets: canonicalRecoveryTargets,
+          reader: {
+            ...protocolTransactionClient,
+            getCandidateLogs: ({ addresses, fromBlock, toBlock }) =>
+              protocolTransactionClient.getLogs({
+                address: [...addresses],
+                fromBlock,
+                toBlock,
+              }),
+          },
+        });
+        if (
+          recoveryStillCurrent(
+            cancelled,
+            generation,
+            transactionPrivacyGenerationRef.current,
+          ) &&
+          hash !== undefined
+        )
+          await recoverTransactionHash(hash);
+      } catch {
+        // An unavailable reader leaves the wallet request locked and recoverable.
+      }
+      if (shouldContinueHashSearch(cancelled, transactionRef.current)) {
+        timer = setTimeout(() => void check(), delay);
+        delay = Math.min(30_000, delay * 2);
+      }
+    };
+    timer = setTimeout(() => void check(), 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    collectorRecordScope,
+    transaction.status,
+    recoveringApproval,
+    recoverTransactionHash,
+  ]);
+
   const reconcileInterruptedApproval = useCallback(
     async (resumeReview = false): Promise<void> => {
       const current = transactionRef.current;
@@ -2708,7 +2869,7 @@ export function ProtocolClientProvider({
     if (
       collectorRecordScope === undefined ||
       transaction.status !== "submission-unknown" ||
-      transactionMetadata?.isApproval !== true
+      recoveringApproval !== true
     )
       return;
     let cancelled = false;
@@ -2721,10 +2882,7 @@ export function ProtocolClientProvider({
       } catch {
         /* Public RPC can recover on the next poll. */
       }
-      if (
-        !cancelled &&
-        transactionRef.current.status === "submission-unknown"
-      ) {
+      if (shouldContinueHashSearch(cancelled, transactionRef.current)) {
         timer = setTimeout(() => void check(), delay);
         delay = Math.min(delay * 2, 30_000);
       }
@@ -2738,7 +2896,7 @@ export function ProtocolClientProvider({
     collectorRecordScope,
     reconcileInterruptedApproval,
     transaction.status,
-    transactionMetadata?.isApproval,
+    recoveringApproval,
   ]);
 
   const retry = useCallback(

@@ -8,6 +8,7 @@ import {
 } from "./collector-transaction-record";
 import {
   recoverCollectorTransactionHash,
+  findCollectorTransactionHash,
   recoverCollectorApproval,
   readCollectorApprovalPrerequisite,
   type CollectorRecoveryReader,
@@ -61,6 +62,34 @@ const input = (rpc = reader()) => ({
   reader: rpc,
 });
 beforeEach(() => localStorage.clear());
+
+it("finds a lost action hash from events only after verifying the complete saved call", async () => {
+  const rpc = {
+    ...reader(),
+    getBlockNumber: vi.fn(async () => 102n),
+    getCandidateLogs: vi.fn(async () => [
+      { transactionHash: hash, removed: false },
+    ]),
+  };
+  expect(
+    await findCollectorTransactionHash({ ...input(rpc), reader: rpc }),
+  ).toBe(hash);
+  expect(rpc.getTransactionReceipt).toHaveBeenCalled();
+  vi.mocked(rpc.getTransaction).mockResolvedValue({
+    ...transaction,
+    from: target,
+  });
+  expect(
+    await findCollectorTransactionHash({ ...input(rpc), reader: rpc }),
+  ).toBeUndefined();
+  vi.mocked(rpc.getTransaction).mockResolvedValue(transaction);
+  rpc.getCandidateLogs.mockResolvedValue([
+    { transactionHash: hash, removed: true },
+  ]);
+  expect(
+    await findCollectorTransactionHash({ ...input(rpc), reader: rpc }),
+  ).toBeUndefined();
+});
 
 const approvalRecoveryInput = (withPrerequisite = true) => {
   const approvalData = encodeFunctionData({

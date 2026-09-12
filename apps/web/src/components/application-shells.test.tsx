@@ -11,6 +11,7 @@ vi.mock("@/providers/protocol-client-provider", () => ({
   useProtocolClient: () => ({ transaction: { status: "idle" } }),
 }));
 vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(),
   usePathname: () => routeState.pathname,
 }));
 
@@ -57,9 +58,9 @@ describe("application route shells", () => {
     expect(html).toContain("Protocol status");
     expect(html).toContain("No-value test assets.");
     expect(html).toContain("BASE SEPOLIA");
-    expect(html.match(/>Get test funds</gu)).toHaveLength(2);
+    expect(html).not.toContain(">Get test funds<");
     expect(html).toContain('href="/faucet"');
-    expect(html).toContain("data-collector-funding-row");
+    expect(html).not.toContain("data-collector-funding-row");
     expect(html).toContain("data-collector-wallet-actions");
     expect(html).not.toContain('href="/start"');
     expect(html).not.toContain("Live at block");
@@ -67,7 +68,7 @@ describe("application route shells", () => {
     expect(html).not.toContain(">Admin<");
   });
 
-  it("marks the sticky funding destination current on the faucet", () => {
+  it("marks the footer funding destination current on the faucet", () => {
     routeState.pathname = "/faucet";
 
     const html = renderToStaticMarkup(
@@ -78,7 +79,7 @@ describe("application route shells", () => {
 
     expect(
       html.match(/aria-current="page"[^>]*href="\/faucet"/gu),
-    ).toHaveLength(3);
+    ).toHaveLength(1);
   });
 
   it("renders a separate operator context with a collector escape route", () => {

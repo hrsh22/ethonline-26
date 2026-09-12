@@ -49,10 +49,11 @@ function Value({
       {unit === undefined ? null : (
         <span
           className={cn(
-            "ml-1.5 text-[0.8em] font-medium tracking-wide whitespace-nowrap text-ink-faint",
+            "ml-1 text-[0.8em] font-medium tracking-wide whitespace-nowrap text-ink-faint",
             unitClassName,
           )}
         >
+          {" "}
           {unit}
         </span>
       )}

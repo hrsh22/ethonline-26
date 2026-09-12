@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
+import { Disclosure } from "@/components/ui/disclosure";
 import { CollectorHelp } from "@/components/collector-help";
 import {
   useDeliveryStatus,
@@ -36,7 +37,13 @@ const serviceMessage: Record<DeliveryCondition, string> = {
 };
 
 const secondsSince = (startedAt: bigint | undefined, now: number) =>
-  startedAt === undefined ? 0 : Math.max(0, now - Number(startedAt));
+  startedAt === undefined || startedAt === 0n
+    ? undefined
+    : Math.max(0, now - Number(startedAt));
+
+const elapsedMinutes = (elapsed: number | undefined) =>
+  elapsed === undefined ? undefined : Math.floor(elapsed / 60);
+const passedDelay = (elapsed: number | undefined) => (elapsed ?? 0) >= 900;
 
 function progressEvidence(pending: PendingDiscovery, now: number) {
   const batch = pending.batch;
@@ -44,11 +51,12 @@ function progressEvidence(pending: PendingDiscovery, now: number) {
   const randomReceived =
     batch !== undefined && batch.state !== "awaiting-randomness";
   return {
-    elapsed: Math.floor(elapsed / 60),
+    elapsed: elapsedMinutes(elapsed),
     randomReceived,
-    delayed: !randomReceived && (batch?.delayed === true || elapsed >= 900),
+    delayed:
+      !randomReceived && (batch?.delayed === true || passedDelay(elapsed)),
     deliveryDelayed:
-      randomReceived && secondsSince(batch?.fulfilledAt, now) >= 900,
+      randomReceived && passedDelay(secondsSince(batch?.fulfilledAt, now)),
   };
 }
 
@@ -58,9 +66,8 @@ function progressTitle(
 ) {
   if (pending.batch?.fullyCancelled) return "Discovery cancelled";
   if (evidence.deliveryDelayed) return "Collectible delivery is delayed";
-  if (evidence.randomReceived)
-    return "Randomness verified · preparing your collection";
-  if (evidence.delayed) return "Randomness is taking longer than expected";
+  if (evidence.randomReceived) return "Your craft is being delivered";
+  if (evidence.delayed) return "Your Discovery is taking longer than usual";
   return "Your discovery is underway";
 }
 
@@ -102,15 +109,19 @@ function ProgressReference({
 }) {
   return (
     <>
-      {pending.batch !== undefined ? (
-        <p className="text-body-sm">{elapsed} min elapsed</p>
+      {pending.batch !== undefined && elapsed !== undefined ? (
+        <p className="text-body-sm">
+          {elapsed < 1
+            ? "Started less than a minute ago"
+            : `Started ${elapsed} min ago`}
+        </p>
       ) : (
         <p className="text-body-sm">Request details are still being checked.</p>
       )}
       <p className="text-body-sm text-ink-soft">
         {observedAt === undefined
           ? "Observation time unavailable"
-          : `Last checked ${new Date(observedAt * 1000).toISOString()}`}
+          : `Last checked ${new Date(observedAt * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`}
         .{" "}
         <Link className="underline" href="/status">
           Service status
@@ -141,31 +152,36 @@ export function DiscoveryProgress({
       className="grid min-w-0 grid-cols-1 gap-3 rounded border border-line bg-panel p-4 [overflow-wrap:anywhere]"
     >
       <h2 className="font-semibold">{progressTitle(pending, evidence)}</h2>
-      <ProgressStages pending={pending} received={evidence.randomReceived} />
-      {evidence.randomReceived ? (
-        <p className="text-body-sm text-ink-soft">
-          Your random draw is verified. Processed results can include cancelled
-          backing. Delivered identities appear in Fleet only after ownership is
-          verified.
-        </p>
-      ) : null}
+      <p className="text-body text-ink-soft">
+        {pending.count} {pending.count === 1 ? "craft is" : "craft are"} on the
+        way. Keep the backing FUEL in this wallet until your Discovery arrives.
+      </p>
       {evidence.delayed ? (
         <p className="text-body-sm text-warning">
           This has passed the 15-minute delay threshold. The request remains
           recorded; there is no reliable delivery estimate.
         </p>
       ) : null}
-      <p className="text-body-sm">{serviceMessage[delivery.state]}</p>
-      <p className="text-body-sm text-ink-soft">
-        Moving away the whole FUEL unit cancels its unresolved Discovery. Do not
-        buy again to retry this request.
-      </p>
+      {delivery.state === "running" ? (
+        <p className="text-body-sm">
+          No action needed. Your Fleet will update when delivery completes.
+        </p>
+      ) : (
+        <p className="text-body-sm">{serviceMessage[delivery.state]}</p>
+      )}
       <ProgressReference
         pending={pending}
         elapsed={evidence.elapsed}
         observedAt={observedAt}
       />
-      <CollectorHelp topic="discovery" />
+      <Disclosure searchable title="Discovery details">
+        <ProgressStages pending={pending} received={evidence.randomReceived} />
+        <p className="mt-3 text-body-sm text-ink-soft">
+          Moving away a whole backing FUEL unit cancels its unresolved
+          Discovery. Buying again does not retry an existing request.
+        </p>
+        <CollectorHelp topic="discovery" />
+      </Disclosure>
     </section>
   );
 }

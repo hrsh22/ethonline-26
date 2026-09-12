@@ -190,6 +190,6 @@ it("keeps home fee pots distinct from aggregated waiting funds", () => {
   const values = [...dom.window.document.querySelectorAll("dd")].map(
     (node) => node.textContent,
   );
-  expect(values).toEqual(["2WETH", "5WETH", "3WETH", "6WETH"]);
+  expect(values).toEqual(["2 WETH", "5 WETH", "3 WETH", "6 WETH"]);
   dom.window.close();
 });
