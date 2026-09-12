@@ -15,7 +15,7 @@ import { useObservationExpiry } from "./use-observation-expiry";
 export type DeliveryCondition =
   "running" | "stopped" | "checking" | "offline" | "delayed" | "unknown";
 
-/** The shell owns the one refresh timer; other consumers share its cached evidence. */
+/** Consumers share cached evidence; visible surfaces explicitly own refresh. */
 export const useDeliveryStatus = ({
   poll = false,
 }: { readonly poll?: boolean } = {}) => {

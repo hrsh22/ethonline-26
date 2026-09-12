@@ -91,3 +91,12 @@ build, and all 142 production-browser cases passed. The production
 journeys now check that the opaque ID is absent, completed Discovery stays
 absent after public-route navigation/reload, and a launched Orbiter can open the
 reward-progress view with an accessible funding meter.
+
+Live Chrome verification used the existing WalletConnect demo Orbiter #1289
+(METAc), without submitting new transactions. The view displayed 0.00026009 /
+0.04 WETH and 0.65% funding, no queued conversions, and no claimable rewards.
+Desktop and 375px layouts had no horizontal overflow. Live observation exposed
+an unmounted legacy polling owner: processing evidence expired while the pool
+continued refreshing. The rewards view now refreshes that shared query too,
+including on manual refresh. This follow-up passed 992 web tests, lint,
+typechecking, a production build, and 10 targeted production-browser cases.

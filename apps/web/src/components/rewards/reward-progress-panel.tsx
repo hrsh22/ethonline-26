@@ -43,6 +43,7 @@ function useProgressRefresh() {
         "protocol-health",
         "protocol-wallet",
         "public-protocol-status",
+        "delivery-status",
       ]) {
         void queryClient.refetchQueries(
           { queryKey: [key], type: "active" },
@@ -394,7 +395,9 @@ export function RewardProgressPanel() {
           size="sm"
           variant="outline"
           disabled={protocol.healthRefreshing}
-          onClick={() => void protocol.refresh()}
+          onClick={() =>
+            void Promise.allSettled([protocol.refresh(), service.refresh()])
+          }
         >
           {protocol.healthRefreshing
             ? "Refreshing…"
