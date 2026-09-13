@@ -1,5 +1,5 @@
-query RewardFunding($poolId: ID!) {
-  _meta {
+query RewardFunding($poolId: ID!, $block: Block_height) {
+  _meta(block: $block) {
     block {
       number
       hash
@@ -8,7 +8,7 @@ query RewardFunding($poolId: ID!) {
     hasIndexingErrors
     deployment
   }
-  rewardFundingSummary(id: $poolId) {
+  rewardFundingSummary(id: $poolId, block: $block) {
     id
     totalFeesWeth
     totalRewardsWeth
@@ -47,7 +47,12 @@ query RewardFunding($poolId: ID!) {
       }
     }
   }
-  hookFeeAccruals(first: 10, orderBy: timestamp, orderDirection: desc) {
+  hookFeeAccruals(
+    block: $block
+    first: 1000
+    orderBy: timestamp
+    orderDirection: asc
+  ) {
     id
     hash
     logIndex
@@ -60,7 +65,12 @@ query RewardFunding($poolId: ID!) {
     liquidityWeth
     creatorWeth
   }
-  rewardConversions(first: 10, orderBy: timestamp, orderDirection: desc) {
+  rewardConversions(
+    block: $block
+    first: 1000
+    orderBy: timestamp
+    orderDirection: asc
+  ) {
     id
     hash
     logIndex

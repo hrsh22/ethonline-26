@@ -5,7 +5,6 @@ import {
   TokensClaimed,
 } from "../generated/ContinuousClearingAuction/ContinuousClearingAuction";
 import {
-  Migrated,
   MigrationFailed,
   FundsRecovered,
 } from "../generated/CcaStrategy/CcaStrategy";
@@ -16,12 +15,12 @@ import {
   AuctionBidSubmission,
   AuctionBidExit,
   AuctionTokenClaim,
-  CcaMigration,
   CcaMigrationFailure,
   CcaFundsRecovery,
   CcaActivation,
   CcaEscrow,
 } from "../generated/schema";
+import { CCA_INITIALIZER } from "./constants";
 
 function eventId(event: ethereum.Event): string {
   return event.transaction.hash.toHexString() + "-" + event.logIndex.toString();
@@ -65,20 +64,8 @@ export function handleTokensClaimed(event: TokensClaimed): void {
   entity.save();
 }
 
-export function handleMigrated(event: Migrated): void {
-  let entity = new CcaMigration(eventId(event));
-  entity.hash = event.transaction.hash.toHexString();
-  entity.logIndex = event.logIndex.toI32();
-  entity.blockNumber = event.block.number;
-  entity.timestamp = event.block.timestamp;
-  entity.initializer = event.params.initializer;
-  entity.poolKeyHash = event.parameters[1].value.toBytes();
-  entity.initialSqrtPriceX96 = event.params.initialSqrtPriceX96;
-  entity.plan = event.params.plan;
-  entity.save();
-}
-
 export function handleMigrationFailed(event: MigrationFailed): void {
+  if (event.params.initializer.toHexString() != CCA_INITIALIZER) return;
   let entity = new CcaMigrationFailure(eventId(event));
   entity.hash = event.transaction.hash.toHexString();
   entity.logIndex = event.logIndex.toI32();
@@ -90,6 +77,7 @@ export function handleMigrationFailed(event: MigrationFailed): void {
 }
 
 export function handleFundsRecovered(event: FundsRecovered): void {
+  if (event.params.initializer.toHexString() != CCA_INITIALIZER) return;
   let entity = new CcaFundsRecovery(eventId(event));
   entity.hash = event.transaction.hash.toHexString();
   entity.logIndex = event.logIndex.toI32();

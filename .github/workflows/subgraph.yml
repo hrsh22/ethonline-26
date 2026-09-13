@@ -5,12 +5,14 @@ on:
     paths:
       - "subgraphs/orbit-market/**"
       - "deployments/84532.json"
+      - "deployments/84532.staging.json"
       - ".github/workflows/subgraph.yml"
   push:
     branches: [main, staging]
     paths:
       - "subgraphs/orbit-market/**"
       - "deployments/84532.json"
+      - "deployments/84532.staging.json"
       - ".github/workflows/subgraph.yml"
   workflow_dispatch:
 
@@ -40,6 +42,8 @@ jobs:
           cache-dependency-path: subgraphs/orbit-market/package-lock.json
       - name: Install isolated tooling
         run: npm ci --ignore-scripts
+      - name: Reject stale checked staging bindings
+        run: npm run check:manifest
       - name: Generate event and schema bindings
         run: npm run codegen
       - name: Check schema compatibility and mapping behavior

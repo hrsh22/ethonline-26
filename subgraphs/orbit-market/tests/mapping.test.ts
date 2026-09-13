@@ -88,6 +88,11 @@ test("canonical reserves exclude other singleton pools and hook fee amounts", ()
     "[4434, 100]",
   );
   assert.entityCount("Swap", 1);
+  let swapId = "swap-" + e.transaction.hash.toHexString() + "-2";
+  assert.fieldEquals("Swap", swapId, "tokenIn", FUEL);
+  assert.fieldEquals("Swap", swapId, "tokenOut", WETH);
+  assert.fieldEquals("Swap", swapId, "amountIn", "100");
+  assert.fieldEquals("Swap", swapId, "amountOut", "10");
   assert.fieldEquals("LiquidityPool", POOL, "totalValueLockedUSD", "0");
   e.parameters[0] = new ethereum.EventParam(
     "id",

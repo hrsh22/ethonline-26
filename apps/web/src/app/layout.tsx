@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 
-import { applicationUrl, deploymentEnvironment } from "@/lib/deployment";
-import { identity } from "@/lib/identity";
+import { applicationUrl } from "@/lib/deployment";
 import { publishedMetadataUrls } from "@/lib/published-metadata";
+import {
+  publicApplicationDescription,
+  publicApplicationTitle,
+  publicBrand,
+} from "@/lib/public-brand";
 import { WalletProvider } from "@/providers/wallet-provider";
 
 import { applicationFontVariables } from "./fonts";
 import "./globals.css";
 
-const applicationTitle = `${identity.brand} | ${deploymentEnvironment.applicationLabel}`;
 const publicAssets = publishedMetadataUrls(applicationUrl);
 
 export const metadata: Metadata = {
@@ -20,9 +23,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: identity.brand,
+    title: publicBrand,
   },
-  description: identity.copy.metadataDescription,
+  description: publicApplicationDescription,
   ...(publicAssets === undefined
     ? {}
     : {
@@ -32,22 +35,22 @@ export const metadata: Metadata = {
         },
       }),
   openGraph: {
-    description: identity.copy.metadataDescription,
-    siteName: identity.brand,
-    title: applicationTitle,
+    description: publicApplicationDescription,
+    siteName: publicBrand,
+    title: publicApplicationTitle,
     type: "website",
     ...(publicAssets === undefined
       ? {}
       : { images: [publicAssets.openGraphImage] }),
   },
   title: {
-    default: applicationTitle,
-    template: `%s | ${identity.brand}`,
+    default: publicApplicationTitle,
+    template: `%s | ${publicBrand}`,
   },
   twitter: {
     card: "summary_large_image",
-    description: identity.copy.metadataDescription,
-    title: applicationTitle,
+    description: publicApplicationDescription,
+    title: publicApplicationTitle,
     ...(publicAssets === undefined
       ? {}
       : { images: [publicAssets.twitterImage] }),

@@ -1,9 +1,10 @@
 export const POOL =
-  "0x9f1ef7cad6150814c90d984b54ddce7d32a3b0c7a328f59682b8e6582e7ef433";
+  "0x152c106785f1fc8fdba9f236ec6a5ef48bc6e511d0800aa57d5d9a38834087e0";
 export const MANAGER = "0x05e73354cfdd6745c338b50bcfdfa3aa6fa03408";
-export const PROTOCOL = "0x55854a8973aade797cb4dc0762044ea7db549a24";
-export const FUEL = "0x3b8688e78696c2672f713db226cb27b1a28aceb1";
-export const WETH = "0x7106aaa3436e47092bc950472bce8a8636ae5fda";
-export const ROUTER = "0x9c011c2fdf480197988c6965bc2b9edaa467c658";
+export const PROTOCOL = "0x17aa5968d972367db7ebd9fa6370701fe73c6446";
+export const FUEL = "0xec1d2856dc9f4a432f55d5bba08f03ad7133d10a";
+export const WETH = "0x6492a45fad35b67fc12aaff971385ce502da91af";
+export const ROUTER = "0xd6aa53e8d9b22959b68ddb50f3767b6ae79d016e";
+export const CCA_INITIALIZER = "0x155840d4a0e1b5105b42f97c13b2316f551f2b41";
 export const GENESIS_VAULT = "0x0000000000000000000000000000000000000000";
-export const LIQUIDITY_VAULT = "0x7d47d7979cad6b0de08968ae564c32e982c32cec";
+export const LIQUIDITY_VAULT = "0x3d8f467793e86389f50a9ea8a63db1c0d2b1ff3a";

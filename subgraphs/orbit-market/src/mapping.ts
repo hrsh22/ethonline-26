@@ -85,10 +85,10 @@ export function pool(event: ethereum.Event): LiquidityPool {
   token(FUEL);
   token(WETH);
   let protocol = new DexAmmProtocol(PROTOCOL);
-  protocol.name = "ORBIT 4444 canonical Uniswap v4 market";
+  protocol.name = "Orbit canonical Uniswap v4 market";
   protocol.slug = "orbit-market";
   protocol.schemaVersion = "1.3.2";
-  protocol.subgraphVersion = "0.1.3";
+  protocol.subgraphVersion = "0.1.6";
   protocol.methodologyVersion = "1.0.0";
   protocol.network = "BASE_SEPOLIA";
   protocol.type = "EXCHANGE";
@@ -174,8 +174,8 @@ export function handleSwap(event: SwapEvent): void {
   s.to = event.params.sender.toHexString();
   s.blockNumber = event.block.number;
   s.timestamp = event.block.timestamp;
-  s.tokenIn = a0.lt(ZERO) ? FUEL : WETH;
-  s.tokenOut = a0.lt(ZERO) ? WETH : FUEL;
+  s.tokenIn = a0.lt(ZERO) ? WETH : FUEL;
+  s.tokenOut = a0.lt(ZERO) ? FUEL : WETH;
   s.amountIn = a0.lt(ZERO) ? a0.neg() : a1.neg();
   s.amountOut = a0.gt(ZERO) ? a0 : a1;
   s.amountInUSD = DZERO;

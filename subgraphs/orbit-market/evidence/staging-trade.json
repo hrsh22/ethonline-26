@@ -1,0 +1,68 @@
+{
+  "endpoint": "https://api.studio.thegraph.com/query/85163/orbit-market/0.1.6",
+  "manifest": "deployments/84532.staging.json",
+  "evidenceBlockHash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345",
+  "queriedAt": "2026-09-13T12:04:09.766Z",
+  "variables": {
+    "block": {
+      "hash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345"
+    },
+    "hash": "0xaa43abc1d1fecb522317bf656ff276770686135b90306963bd59f9bb53d4358b"
+  },
+  "result": {
+    "data": {
+      "swaps": [
+        {
+          "id": "swap-0xaa43abc1d1fecb522317bf656ff276770686135b90306963bd59f9bb53d4358b-119",
+          "hash": "0xaa43abc1d1fecb522317bf656ff276770686135b90306963bd59f9bb53d4358b",
+          "logIndex": 119,
+          "blockNumber": "46715533",
+          "timestamp": "1789199354",
+          "amountIn": "5820000000000000",
+          "amountOut": "1160956411569668706",
+          "tokenIn": {
+            "id": "0x6492a45fad35b67fc12aaff971385ce502da91af",
+            "symbol": "MOCK-WETH-TEST",
+            "decimals": 18
+          },
+          "tokenOut": {
+            "id": "0xec1d2856dc9f4a432f55d5bba08f03ad7133d10a",
+            "symbol": "FUEL",
+            "decimals": 18
+          },
+          "pool": {
+            "id": "0x152c106785f1fc8fdba9f236ec6a5ef48bc6e511d0800aa57d5d9a38834087e0",
+            "feeBasisToken": {
+              "id": "0x6492a45fad35b67fc12aaff971385ce502da91af",
+              "symbol": "MOCK-WETH-TEST"
+            }
+          }
+        }
+      ],
+      "hookFeeAccruals": [
+        {
+          "id": "0xaa43abc1d1fecb522317bf656ff276770686135b90306963bd59f9bb53d4358b-118",
+          "hash": "0xaa43abc1d1fecb522317bf656ff276770686135b90306963bd59f9bb53d4358b",
+          "logIndex": 118,
+          "blockNumber": "46715533",
+          "timestamp": "1789199354",
+          "trader": "0xa497893bbe4855b76db26f18beef34cd0ee3cfdd",
+          "wethVolume": "6000000000000000",
+          "feesWeth": "180000000000000",
+          "rewardsWeth": "120000000000000",
+          "liquidityWeth": "51000000000000",
+          "creatorWeth": "9000000000000"
+        }
+      ],
+      "_meta": {
+        "block": {
+          "number": 46765498,
+          "hash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345",
+          "timestamp": 1789299284
+        },
+        "hasIndexingErrors": false,
+        "deployment": "QmPwMqYxUm5F1MRBDcJ9SzoM8R4JYgxiW1BcNCgZ96dDnX"
+      }
+    }
+  }
+}

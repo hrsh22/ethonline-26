@@ -1,0 +1,67 @@
+{
+  "endpoint": "https://api.studio.thegraph.com/query/85163/orbit-market/0.1.6",
+  "manifest": "deployments/84532.staging.json",
+  "evidenceBlockHash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345",
+  "queriedAt": "2026-09-13T12:04:09.417Z",
+  "variables": {
+    "block": {
+      "hash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345"
+    }
+  },
+  "result": {
+    "data": {
+      "auctionBidSubmissions": [
+        {
+          "id": "0x9bfbab71eb3fb79751339dd884eac4ccb080e5c4f41ecf89e18ab5919295c251-134",
+          "bidId": "0",
+          "owner": "0xb61d5f617df5f1484c608f04a0a21cb311a3aa73",
+          "priceQ96": "792281625142643375935439500",
+          "amount": "20000000000000000000",
+          "blockNumber": "46694312",
+          "timestamp": "1789156912"
+        }
+      ],
+      "auctionBidExits": [],
+      "auctionTokenClaims": [],
+      "ccaMigrations": [],
+      "ccaMigrationFailures": [],
+      "ccaFundsRecoveries": [],
+      "ccaActivations": [
+        {
+          "id": "0x245681975db80dbf05847d9249100496814f748b9221be34d0aa3737f329c904-6",
+          "governanceOwner": "0x4325337ecece105484a5f0b2e6464d82d5febbec",
+          "blockNumber": "46715028",
+          "timestamp": "1789198344"
+        }
+      ],
+      "ccaEscrows": [
+        {
+          "id": "0xb61d5f617df5f1484c608f04a0a21cb311a3aa73",
+          "beneficiary": "0xd288b7e8e8c968ee0f21f0ba5fb726e9d88dbea9",
+          "createdHash": "0x1aea5352c22b3e9f3692f1647394c0282c246218030f553e81de072052380d49",
+          "createdLogIndex": 86,
+          "createdBlockNumber": "46694309",
+          "createdTimestamp": "1789156906"
+        },
+        {
+          "id": "0x4947f058c66bf58b6eafada3df9a50ebaacf89b1",
+          "beneficiary": "0xb78721b29c028b16ab25f4a2ade1d25fbf8b2d74",
+          "createdHash": "0xd75bfdc8baf3d6937693b728f91067b1b4402930efc8e6a4e402c9e5767a34a0",
+          "createdLogIndex": 66,
+          "createdBlockNumber": "46695549",
+          "createdTimestamp": "1789159386"
+        }
+      ],
+      "ccaEscrowWithdrawals": [],
+      "_meta": {
+        "block": {
+          "number": 46765498,
+          "hash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345",
+          "timestamp": 1789299284
+        },
+        "hasIndexingErrors": false,
+        "deployment": "QmPwMqYxUm5F1MRBDcJ9SzoM8R4JYgxiW1BcNCgZ96dDnX"
+      }
+    }
+  }
+}

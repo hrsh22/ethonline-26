@@ -1,82 +1,97 @@
 {
-  "endpoint": "https://api.studio.thegraph.com/query/85163/orbit-market/0.1.3",
-  "queriedAt": "2026-09-07T22:38:27.487Z",
-  "variables": {},
+  "endpoint": "https://api.studio.thegraph.com/query/85163/orbit-market/0.1.6",
+  "manifest": "deployments/84532.staging.json",
+  "evidenceBlockHash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345",
+  "queriedAt": "2026-09-13T12:04:08.180Z",
+  "variables": {
+    "block": {
+      "hash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345"
+    }
+  },
   "result": {
     "data": {
       "dexAmmProtocols": [
         {
-          "id": "0xb901845c33ce3345f49d686fb91bf05b2a2231d9",
-          "name": "ORBIT 4444 canonical Uniswap v4 market",
+          "id": "0x17aa5968d972367db7ebd9fa6370701fe73c6446",
+          "name": "Orbit canonical Uniswap v4 market",
           "schemaVersion": "1.3.2",
           "network": "BASE_SEPOLIA",
-          "cumulativeUniqueUsers": 6,
+          "cumulativeUniqueUsers": 16,
           "totalValueLockedUSD": "0"
         }
       ],
       "liquidityPools": [
         {
-          "id": "0xcf6ffb9f078721909ca4fb59177c1d58160405929272a0a5dcb0807306c6b43d",
+          "id": "0x152c106785f1fc8fdba9f236ec6a5ef48bc6e511d0800aa57d5d9a38834087e0",
           "inputTokens": [
             {
-              "id": "0x3ded7308789f311d435f013de681d0f08c961081",
-              "name": "ORBIT Fuel",
-              "symbol": "FUEL",
+              "id": "0x6492a45fad35b67fc12aaff971385ce502da91af",
+              "name": "WETH MOCK TEST Self-Funded",
+              "symbol": "MOCK-WETH-TEST",
               "decimals": 18
             },
             {
-              "id": "0xc827b184ac7db9d74f40c3833cd88c1ece7ecbf1",
-              "name": "WETH MOCK TEST Self-Funded",
-              "symbol": "MOCK-WETH-TEST",
+              "id": "0xec1d2856dc9f4a432f55d5bba08f03ad7133d10a",
+              "name": "ORBIT Fuel",
+              "symbol": "FUEL",
               "decimals": 18
             }
           ],
           "swaps": [
             {
-              "hash": "0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928",
-              "timestamp": "1788820422",
+              "hash": "0xc03a5afe88e1533e275aa11001d4c393be403339a6ad41c8eaa8ea5a0f08d681",
+              "timestamp": "1789283332",
               "tokenIn": {
-                "symbol": "MOCK-WETH-TEST",
-                "decimals": 18
-              },
-              "amountIn": "6790000000000000",
-              "tokenOut": {
                 "symbol": "FUEL",
                 "decimals": 18
               },
-              "amountOut": "1171360501692246067"
+              "amountIn": "27792195788537969920",
+              "tokenOut": {
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              },
+              "amountOut": "193999999999999999"
             },
             {
-              "hash": "0xc022d0c255f8d19b401c2a5bd688570a65212d16a0170dc8a962d8c574c22c8a",
-              "timestamp": "1788782420",
+              "hash": "0xa2443f05de0c3aeaad897f7df77b0fd42cb7b75a697c195ce8785243497722df",
+              "timestamp": "1789283328",
               "tokenIn": {
-                "symbol": "FUEL",
-                "decimals": 18
-              },
-              "amountIn": "49650902897932807501",
-              "tokenOut": {
                 "symbol": "MOCK-WETH-TEST",
                 "decimals": 18
               },
-              "amountOut": "290999999999999999"
+              "amountIn": "194000000000000000",
+              "tokenOut": {
+                "symbol": "FUEL",
+                "decimals": 18
+              },
+              "amountOut": "27792195788537969920"
             },
             {
-              "hash": "0x048ad48ede5d5f43ec255253d86bdfba670c2ebc967df7b2cd9406b0e181a662",
-              "timestamp": "1788782412",
+              "hash": "0x52508c90fa571d0be915766e9f9595a3dde3227698d34671d088494f02d3b57f",
+              "timestamp": "1789283326",
               "tokenIn": {
-                "symbol": "MOCK-WETH-TEST",
-                "decimals": 18
-              },
-              "amountIn": "291000000000000000",
-              "tokenOut": {
                 "symbol": "FUEL",
                 "decimals": 18
               },
-              "amountOut": "49650902897932807501"
+              "amountIn": "27792195788537969920",
+              "tokenOut": {
+                "symbol": "MOCK-WETH-TEST",
+                "decimals": 18
+              },
+              "amountOut": "193999999999999999"
             }
           ]
         }
-      ]
+      ],
+      "_meta": {
+        "block": {
+          "number": 46765498,
+          "hash": "0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345",
+          "timestamp": 1789299284
+        },
+        "hasIndexingErrors": false,
+        "deployment": "QmPwMqYxUm5F1MRBDcJ9SzoM8R4JYgxiW1BcNCgZ96dDnX"
+      }
     }
   }
 }

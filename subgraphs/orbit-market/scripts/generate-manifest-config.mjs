@@ -12,9 +12,7 @@ const manifestArgument = arguments_.find(
 );
 const manifestPath = resolve(
   directory,
-  manifestArgument ??
-    process.env.ORBIT_DEPLOYMENT_MANIFEST ??
-    "../../deployments/84532.json",
+  manifestArgument ?? "../../deployments/84532.staging.json",
 );
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 if (manifest.schemaVersion !== 2 && manifest.schemaVersion !== 3) {
@@ -181,12 +179,8 @@ const dataSources = [
           name: "CcaStrategy",
           contract: "ccaStrategy",
           startBlock: BigInt(manifest.cca.lifecycle.migrationBlock),
-          entities: ["CcaMigration", "CcaMigrationFailure", "CcaFundsRecovery"],
+          entities: ["CcaMigrationFailure", "CcaFundsRecovery"],
           handlers: [
-            [
-              "Migrated(indexed address,(indexed address,address,uint24,int24,address),uint160,bytes)",
-              "handleMigrated",
-            ],
             ["MigrationFailed(indexed address,bytes)", "handleMigrationFailed"],
             [
               "FundsRecovered(indexed address,indexed address,uint256)",
@@ -259,6 +253,7 @@ export const PROTOCOL = "${lower(manifest.contracts.canonicalMarketRegistry)}";
 export const FUEL = "${lower(manifest.contracts.fuelCore)}";
 export const WETH = "${lower(manifest.contracts.weth)}";
 export const ROUTER = "${lower(manifest.contracts.canonicalRouter)}";
+export const CCA_INITIALIZER = "${lower(manifest.contracts.continuousClearingAuction ?? "0x0000000000000000000000000000000000000000")}";
 export const GENESIS_VAULT = "${lower(manifest.contracts.genesisLiquidityVault ?? "0x0000000000000000000000000000000000000000")}";
 export const LIQUIDITY_VAULT = "${lower(manifest.contracts.protocolLiquidityVault)}";
 `,

@@ -1,5 +1,19 @@
-query CcaLifecycle {
-  auctionBidSubmissions(first: 100, orderBy: blockNumber, orderDirection: asc) {
+query CcaLifecycle($block: Block_height) {
+  _meta(block: $block) {
+    block {
+      number
+      hash
+      timestamp
+    }
+    hasIndexingErrors
+    deployment
+  }
+  auctionBidSubmissions(
+    block: $block
+    first: 100
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     bidId
     owner
@@ -8,7 +22,12 @@ query CcaLifecycle {
     blockNumber
     timestamp
   }
-  auctionBidExits(first: 100, orderBy: blockNumber, orderDirection: asc) {
+  auctionBidExits(
+    block: $block
+    first: 100
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     bidId
     owner
@@ -17,7 +36,12 @@ query CcaLifecycle {
     blockNumber
     timestamp
   }
-  auctionTokenClaims(first: 100, orderBy: blockNumber, orderDirection: asc) {
+  auctionTokenClaims(
+    block: $block
+    first: 100
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     bidId
     owner
@@ -25,7 +49,12 @@ query CcaLifecycle {
     blockNumber
     timestamp
   }
-  ccaMigrations(first: 20, orderBy: blockNumber, orderDirection: asc) {
+  ccaMigrations(
+    block: $block
+    first: 20
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     initializer
     poolKeyHash
@@ -34,14 +63,24 @@ query CcaLifecycle {
     blockNumber
     timestamp
   }
-  ccaMigrationFailures(first: 20, orderBy: blockNumber, orderDirection: asc) {
+  ccaMigrationFailures(
+    block: $block
+    first: 20
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     initializer
     reason
     blockNumber
     timestamp
   }
-  ccaFundsRecoveries(first: 20, orderBy: blockNumber, orderDirection: asc) {
+  ccaFundsRecoveries(
+    block: $block
+    first: 20
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     initializer
     recipient
@@ -49,13 +88,36 @@ query CcaLifecycle {
     blockNumber
     timestamp
   }
-  ccaActivations(first: 20, orderBy: blockNumber, orderDirection: asc) {
+  ccaActivations(
+    block: $block
+    first: 20
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     governanceOwner
     blockNumber
     timestamp
   }
-  ccaEscrowWithdrawals(first: 100, orderBy: blockNumber, orderDirection: asc) {
+  ccaEscrows(
+    block: $block
+    first: 100
+    orderBy: createdBlockNumber
+    orderDirection: asc
+  ) {
+    id
+    beneficiary
+    createdHash
+    createdLogIndex
+    createdBlockNumber
+    createdTimestamp
+  }
+  ccaEscrowWithdrawals(
+    block: $block
+    first: 100
+    orderBy: blockNumber
+    orderDirection: asc
+  ) {
     id
     escrow {
       id

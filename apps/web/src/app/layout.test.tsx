@@ -12,15 +12,40 @@ vi.mock("@/providers/wallet-provider", () => ({
     children,
 }));
 
-import RootLayout from "./layout";
+import RootLayout, { metadata } from "./layout";
 import NotFound from "./not-found";
 import GlobalNotFound, {
   metadata as globalNotFoundMetadata,
 } from "./global-not-found";
 import { metadata as routeNotFoundMetadata } from "./not-found";
+import applicationManifest from "./manifest";
 import { identity } from "@/lib/identity";
 
 describe("root document layout", () => {
+  it("publishes judge-facing Orbit metadata for the Base Sepolia demo", () => {
+    expect(metadata.title).toMatchObject({
+      default: "Orbit | Base Sepolia Demo",
+      template: "%s | Orbit",
+    });
+    expect(metadata.description).toBe(
+      "A Base Sepolia collectible economy with Privy wallet onboarding, Uniswap v4 trading, and Graph-indexed reward funding.",
+    );
+    expect(metadata.openGraph).toMatchObject({
+      description: metadata.description,
+      siteName: "Orbit",
+      title: "Orbit | Base Sepolia Demo",
+    });
+    expect(metadata.twitter).toMatchObject({
+      description: metadata.description,
+      title: "Orbit | Base Sepolia Demo",
+    });
+    expect(applicationManifest()).toMatchObject({
+      description: metadata.description,
+      name: "Orbit | Base Sepolia Demo",
+      short_name: "Orbit",
+    });
+  });
+
   it("lets Next.js neutralize smooth scrolling during route navigation", () => {
     const html = renderToStaticMarkup(
       <RootLayout params={Promise.resolve({})}>

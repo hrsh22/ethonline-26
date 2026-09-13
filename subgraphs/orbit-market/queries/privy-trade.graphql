@@ -1,5 +1,5 @@
-query PrivyTrade($hash: String!) {
-  _meta {
+query PrivyTrade($hash: String!, $block: Block_height) {
+  _meta(block: $block) {
     block {
       number
       hash
@@ -8,7 +8,7 @@ query PrivyTrade($hash: String!) {
     hasIndexingErrors
     deployment
   }
-  swaps(where: { hash: $hash }) {
+  swaps(block: $block, where: { hash: $hash }) {
     id
     hash
     logIndex
@@ -34,7 +34,7 @@ query PrivyTrade($hash: String!) {
       }
     }
   }
-  hookFeeAccruals(where: { hash: $hash }) {
+  hookFeeAccruals(block: $block, where: { hash: $hash }) {
     id
     hash
     logIndex

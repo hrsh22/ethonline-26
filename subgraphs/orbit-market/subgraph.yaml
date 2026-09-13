@@ -10,7 +10,7 @@ dataSources:
     source:
       address: "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408"
       abi: PoolManager
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -31,9 +31,9 @@ dataSources:
     name: CanonicalFeeHook
     network: base-sepolia
     source:
-      address: "0xA1e0baEb5B433Fe80521FF736E46F5C0b70520Cc"
+      address: "0xB97AdEe8d6736e8361913105870A175ab45D20cc"
       abi: CanonicalFeeHook
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -50,9 +50,9 @@ dataSources:
     name: EpochConverter
     network: base-sepolia
     source:
-      address: "0x6c8FE1106DA91C16dBa3bD28E3D43e5aA2a3C33f"
+      address: "0x961aD860Ca8A527a8c015f07805844d420773cB3"
       abi: EpochConverter
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -71,9 +71,9 @@ dataSources:
     name: RewardLedger
     network: base-sepolia
     source:
-      address: "0x74AF45929F1acb47b36Da85C725648c307F73f5f"
+      address: "0x324ba9273063B85Ca215DEEfF895F1337a824688"
       abi: RewardLedger
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -92,9 +92,9 @@ dataSources:
     name: ProtocolLiquidityVault
     network: base-sepolia
     source:
-      address: "0x7D47D7979CaD6b0de08968AE564c32E982c32Cec"
+      address: "0x3d8f467793e86389f50a9eA8a63db1C0d2B1FF3A"
       abi: ProtocolLiquidityVault
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -111,9 +111,9 @@ dataSources:
     name: ContinuousClearingAuction
     network: base-sepolia
     source:
-      address: "0x69C48DFee7be220376dF269740Fe943e24D50ab9"
+      address: "0x155840D4A0e1B5105B42F97C13b2316f551F2B41"
       abi: ContinuousClearingAuction
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -136,18 +136,16 @@ dataSources:
     source:
       address: "0xB06428b62c259eE982cE3D9BED47391dC9A5E000"
       abi: CcaStrategy
-      startBlock: 46607192
+      startBlock: 46700801
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
       language: wasm/assemblyscript
-      entities: [CcaMigration, CcaMigrationFailure, CcaFundsRecovery]
+      entities: [CcaMigrationFailure, CcaFundsRecovery]
       abis:
         - name: CcaStrategy
           file: ./abis/CcaStrategy.json
       eventHandlers:
-        - event: Migrated(indexed address,(indexed address,address,uint24,int24,address),uint160,bytes)
-          handler: handleMigrated
         - event: MigrationFailed(indexed address,bytes)
           handler: handleMigrationFailed
         - event: FundsRecovered(indexed address,indexed address,uint256)
@@ -157,9 +155,9 @@ dataSources:
     name: CcaLaunchCoordinator
     network: base-sepolia
     source:
-      address: "0x56d073811e6bAD3A587635654cAfc278668179d4"
+      address: "0x5cbC9E01c55B17dd47303c70EADA4e740b6B7A7b"
       abi: CcaLaunchCoordinator
-      startBlock: 46607192
+      startBlock: 46700801
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9
@@ -176,9 +174,9 @@ dataSources:
     name: CcaBidEscrowFactory
     network: base-sepolia
     source:
-      address: "0x051646c4aC4cA17c878A640fD497F11B9502113C"
+      address: "0xF3Cfb085d0DfDD520119d696ecbf8821Ed820414"
       abi: CcaBidEscrowFactory
-      startBlock: 46563991
+      startBlock: 46690000
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.9

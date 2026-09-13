@@ -1,8 +1,8 @@
-# ORBIT canonical market subgraph
+# Orbit canonical market subgraph
 
 A live Graph Studio analytics source for the Base Sepolia FUEL / test WETH Uniswap v4 market. It preserves every field/type and enum value in the [Messari DEX AMM 1.3.2 schema](vendor/dex-amm-1.3.2.graphql), with explicit v4, testnet and collectible reward extensions. Standard token, protocol, pool, native swap/deposit and daily/hourly metrics are populated; custom funding entities explain where Stock Rewards came from.
 
-[Free Studio development endpoint](https://api.studio.thegraph.com/query/85163/orbit-market/0.1.3) · [Studio project](https://thegraph.com/studio/subgraph/orbit-market)
+[Free Studio staging endpoint](https://api.studio.thegraph.com/query/85163/orbit-market/0.1.6) · [Studio project](https://thegraph.com/studio/subgraph/orbit-market)
 
 ## Reproduce
 
@@ -12,12 +12,12 @@ npm ci --ignore-scripts
 npm run codegen
 npm test
 npm run build
-node scripts/query-proof.mjs
+node scripts/query-proof.mjs https://api.studio.thegraph.com/query/85163/orbit-market/0.1.6
 ```
 
-This is an isolated npm package; generated code, WASM, test binaries and dependencies are ignored. `npm test` runs schema/manifest compatibility checks and native Matchstick AssemblyScript mapping tests. The Graph CLI dependency tree is development tooling, not bundled into the web/API runtime.
+This is an isolated npm package; generated code, WASM, test binaries and dependencies are ignored. `npm test` runs schema/manifest compatibility checks and native Matchstick AssemblyScript mapping tests. The Graph CLI dependency tree is development tooling and is not bundled into the web/API runtime.
 
-To deploy another free Studio version, place `GRAPH_STUDIO_DEPLOY_KEY` in the ignored repository-root `.env`, then run `npm run deploy:studio -- 0.1.3`. The script only targets Studio; it never publishes onchain or configures paid billing. Studio currently permits [3,000 development queries/day](https://thegraph.com/docs/en/subgraphs/developing/deploying-publishing/using-subgraph-studio/). The application must cache server-side and budget requests. No key is embedded in the public development URL. Studio can archive earlier versions when replacing a deployment, so consumers must use the version recorded here.
+To deploy another free Studio version, place `GRAPH_STUDIO_DEPLOY_KEY` in the ignored repository-root `.env.deployment.local`, update the package version, then run `npm run deploy:studio`. The script only targets Studio; it never publishes onchain or configures paid billing. Studio currently permits [3,000 development queries/day](https://thegraph.com/docs/en/subgraphs/developing/deploying-publishing/using-subgraph-studio/). The application caches server-side and budgets requests. No key is embedded in the public URL. Studio can archive earlier versions when replacing a deployment, so consumers must use the version recorded here.
 
 ## Standard and extensions
 
@@ -55,20 +55,22 @@ Fee logs may occur before or after a Swap in the same receipt. There is no arbit
 
 ## Sources, coverage and operational boundary
 
-Contract addresses and PoolId come from [`deployments/84532.json`](../../deployments/84532.json). Event ABIs are extracted from the compiled canonical Solidity artifacts. All sources begin at block 46,351,953, before the observed genesis event at block 46,352,949 (transaction `0x9ba52c33aef5c7b6f4e66352b708eb7f50f257fcdc68751c121ae1b99848cbad`). Only the exact canonical PoolId is accepted from PoolManager.
+Contract addresses and PoolId come from the public demo's [`deployments/84532.staging.json`](../../deployments/84532.staging.json). Event ABIs are extracted from the compiled canonical Solidity artifacts. Market, auction and escrow-factory sources begin at the CCA start block 46,690,000; migration and activation sources begin at block 46,700,801. Only the exact canonical PoolId is accepted from PoolManager.
 
-`subgraph.yaml` and `src/constants.ts` are generated from that manifest. For a CCA deployment, set `ORBIT_DEPLOYMENT_MANIFEST` to its v3 manifest before running `pnpm codegen`, `pnpm build`, or `pnpm deploy:studio`. V3 generation binds auction sources to `cca.lifecycle.startBlock`, migration and activation sources to `cca.lifecycle.migrationBlock`, and the escrow factory to the auction start. Factory events create dynamic escrow data sources, so only registered CCA escrows can produce `CcaEscrowWithdrawal` records.
+`subgraph.yaml` and `src/constants.ts` are generated from that explicit staging manifest by `pnpm generate`, and `pnpm check:manifest` rejects drift. Pass another v2 or v3 manifest path directly to `scripts/generate-manifest-config.mjs` for an intentional alternate generation. V3 generation binds market, auction and escrow-factory sources to `cca.lifecycle.startBlock`, and migration and activation sources to `cca.lifecycle.migrationBlock`. Factory events create dynamic escrow data sources, so only registered CCA escrows can produce `CcaEscrowWithdrawal` records.
 
-CCA bid submissions, exits, token claims, migration success, migration failure, recovered funds, Fuel activation, and escrow withdrawals have dedicated entities. They do not contribute to standardized `Swap` or fee entities. [`queries/cca-lifecycle.graphql`](queries/cca-lifecycle.graphql) reads the lifecycle records directly.
+CCA bid submissions, exits, token claims, migration failure, recovered funds, Fuel activation, and escrow withdrawals have dedicated entities. The current Studio index intentionally omits the strategy's successful `Migrated` event because its indexed tuple is not supported by the hosted Graph Node; the PoolManager and activation sources still capture the resulting market and activation. These records do not contribute to standardized `Swap` or fee entities. [`queries/cca-lifecycle.graphql`](queries/cca-lifecycle.graphql) reads the lifecycle records directly.
 
 Graph Node handles event ordering and reorg rollback. Read `_meta.hasIndexingErrors`, indexed block/hash/timestamp and deployment identity before accepting a response; an empty result while backfilling is not proof of no fees. This subgraph provides sponsor analytics through the API adapter. The SQLite Historical Read Model and direct block-pinned balances, roles, ownership and transaction recovery keep their existing responsibilities.
 
 ## Evidence
 
-Deployment `QmXBGqF3KLdY1P9osp4xVZ8e3eaAQNKHGuEmfE2MhtvnbC` (version 0.1.3) was queried successfully through block **46,526,207**, with `hasIndexingErrors=false`, 18 fee events, 4 successful conversions and complete known-pool inventory. The [standard response](evidence/standard-market.json) and [funding response](evidence/reward-funding.json) contain actual indexed entities, not fixtures.
+Studio version **0.1.6**, deployment `QmPwMqYxUm5F1MRBDcJ9SzoM8R4JYgxiW1BcNCgZ96dDnX`, indexes the same staging contracts used by [orbit.gamified.trade](https://orbit.gamified.trade). The checked responses are pinned to finalized Base Sepolia block **46,765,498**, hash `0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345`, and require `hasIndexingErrors=false`.
 
-The [Privy trade query](queries/privy-trade.graphql) and [live response](evidence/privy-trade.json) match transaction `0x86b97644279a23a0c281d51807cff93dc305c5d094e140ae6d6ba51fc2ebb928` at block 46,526,067. Its [independently decoded receipt](evidence/privy-trade-receipt.json) confirms the embedded wallet's 0.007 test-WETH turnover generated 0.00021 fee: 0.00014 rewards, 0.0000595 liquidity, 0.0000105 creator. The standard pool Swap records the **net** 0.00679 test-WETH input and 1.171360501692246067 FUEL output. Those different WETH amounts reflect the before-swap hook deduction, not a discrepancy. This is one concrete Privy → canonical Uniswap v4 → Graph evidence path.
+At that block the [funding response](evidence/reward-funding.json) contains 184 hook-fee events and 8 successful conversions. It records exactly 0.128048266397806156 test WETH in fees: 0.085365510931870743 for rewards, 0.036280342146045022 for locked liquidity, and 0.006402413319890391 for the creator. The [standard response](evidence/standard-market.json) identifies the staging PoolId and both deployed tokens.
 
-`node scripts/query-proof.mjs` writes live, key-free responses for the standard query and funding query under [evidence](evidence/). Mapping tests cover canonical pool filtering, signed native deltas, exact fee rounding/multiple logs, successful conversion spend versus retained budget, and conservative inventory invalidation without stopping funding history.
+The [staging trade response](evidence/staging-trade.json) matches transaction `0xaa43abc1d1fecb522317bf656ff276770686135b90306963bd59f9bb53d4358b`: 0.006 test-WETH turnover, a 0.00018 test-WETH hook charge, 0.00582 test-WETH net input, and 1.160956411569668706 FUEL output. The [lifecycle response](evidence/cca-lifecycle.json) records the staging bid, activation, and both registered CCA escrows. The hosted index deliberately omits only the strategy's successful `Migrated` log because Graph Node cannot decode its indexed tuple; PoolManager and `FuelActivated` events independently capture the resulting live market.
+
+`node scripts/query-proof.mjs` fetches these four live, key-free responses and rejects a wrong deployment, block/hash, pool, token, trade, lifecycle record, aggregate, or indexing-error state. Mapping tests cover canonical pool filtering, signed native deltas, exact fee rounding/multiple logs, successful conversion spend versus retained budget, and conservative inventory invalidation without stopping funding history.
 
 Reference provider attempts use IDs from [Messari's deployment registry](https://github.com/messari/subgraphs/blob/master/deployment/deployment.json). The initial SushiSwap Ethereum gateway response was an indexer availability error ([captured response](evidence/reference-query.json)); historical retries, Uniswap v3, Balancer and PancakeSwap also timed out. This does not establish successful cross-provider execution. No account billing change was made to bypass those errors.

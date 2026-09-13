@@ -1,8 +1,18 @@
-# ORBIT 4444
+# Orbit
 
-ORBIT 4444 is a Base-native collectible economy that combines liquid ownership, irreversible collectible commitment, and tokenized-stock rewards. This repository contains the protocol documentation and Base Sepolia implementation workspace.
+Orbit is a Base-native collectible economy that combines liquid ownership, irreversible collectible commitment, and tokenized-stock rewards. This repository contains the protocol documentation and Base Sepolia implementation workspace.
 
 Every Base Sepolia asset used by this project is a valueless test asset. Nothing in the POC represents a live stock, a financial claim, or production liquidity.
+
+## Judge quick links
+
+- [Live Base Sepolia app](https://orbit.gamified.trade)
+- [ETHGlobal showcase](https://ethglobal.com/showcase/orbit-ryd2b)
+- Uniswap v4: [canonical router](packages/contracts/src/market/CanonicalRouter.sol), [fee hook](packages/contracts/src/market/CanonicalFeeHook.sol), and [live staging trade](subgraphs/orbit-market/evidence/staging-trade.json)
+- The Graph: [subgraph mappings](subgraphs/orbit-market/src/mapping.ts), [fixed API adapter](apps/api/src/graph-analytics.ts), [staging reward funding](subgraphs/orbit-market/evidence/reward-funding.json), and [CCA lifecycle](subgraphs/orbit-market/evidence/cca-lifecycle.json)
+- Privy: [provider configuration](apps/web/src/providers/wallet-provider.tsx), [wallet-session adapter](apps/web/src/providers/privy-wallet-session.tsx), and the [live wallet onboarding flow](https://orbit.gamified.trade/start)
+- [Uniswap developer feedback](FEEDBACK.md)
+- Reproduce the integrations with the [ETHOnline integration runbook](docs/operations/ethonline-2026-integrations.md) and [subgraph build and query guide](subgraphs/orbit-market/README.md); review the [deployed staging validation](docs/operations/release-verification-2026-09-12.md)
 
 ## Toolchain
 

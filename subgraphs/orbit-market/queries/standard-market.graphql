@@ -1,4 +1,13 @@
 query StandardMarket($block: Block_height) {
+  _meta(block: $block) {
+    block {
+      number
+      hash
+      timestamp
+    }
+    hasIndexingErrors
+    deployment
+  }
   dexAmmProtocols(first: 1, block: $block) {
     id
     name
