@@ -38,4 +38,4 @@ The Graph indexes the deployed staging PoolManager, fee hook, conversion engine,
 
 The proof responses are pinned to finalized Base Sepolia block 46,765,498, hash `0x967c62ea5b813e05d9d7bbd9d2b2b19bcf153b178bf31492313d86aa4145a345`, and require a healthy index. At that block the index records 184 fee events and 8 successful reward conversions. The live API exposes the same source at `GET /v1/analytics/reward-funding`, using a two-minute server cache and a persistent daily query budget; the browser never receives a Graph key.
 
-In the demo, open **My Fleet → Rewards → Where rewards came from** to show how Uniswap trades accumulated funding and how much WETH successful stock-token conversions consumed. Funding is pooled, so Orbit does not claim a direct swap-to-user-reward relationship.
+In the demo, open **Protocol status → Where rewards came from** to show how Uniswap trades accumulated funding and how much WETH successful stock-token conversions consumed. Funding is pooled, so Orbit does not claim a direct swap-to-user-reward relationship.
